@@ -96,10 +96,11 @@ export function NotificationLogsPage({ notifications, unreadCount }: Notificatio
           </label>
           <label className="field-label">
             Search
-            <div className="relative mt-1">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="mt-1 flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white pl-3 pr-3 transition focus-within:border-azure focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:ring-blue-950">
+              <Search size={16} className="shrink-0 text-[#0063a9] dark:text-blue-300" />
+              <span className="h-5 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
               <input
-                className="field pl-8"
+                className="w-full bg-transparent py-2 text-sm text-ink outline-none placeholder:text-slate-400 dark:text-slate-100"
                 placeholder="Company or respondent..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
