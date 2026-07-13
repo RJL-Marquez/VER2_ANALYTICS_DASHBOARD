@@ -22,7 +22,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
   return (
     <div className="min-h-screen bg-cloud text-ink dark:bg-slate-950 dark:text-slate-100 flex flex-col">
       {/* Top Header Layer */}
-      <header className="sticky top-0 z-20 h-20 border-b border-[#00436f] bg-gradient-to-b from-[#0074c4] to-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-[0_2px_4px_rgba(0,0,0,0.12),0_6px_16px_rgba(0,24,48,0.16)]">
+      <header className="sticky top-0 z-20 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-sm">
         <div className="flex items-center h-full flex-1 min-w-0">
           {/* Brand Box / Logo Area - Fixed Width, unaffected by collapsing */}
           <div className="relative z-10 flex items-center justify-center h-full bg-[#0063a9] shrink-0 w-[220px] px-4">
