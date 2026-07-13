@@ -45,10 +45,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
   return (
     <div
-      className="relative min-h-screen w-full flex items-center justify-center lg:justify-end px-4 sm:px-8 lg:px-20 bg-[#0b1220] bg-cover bg-center"
+      className="relative min-h-screen w-full flex items-center justify-center lg:justify-start px-4 sm:px-8 lg:px-20 bg-[#0b1220] bg-cover bg-center"
       style={{
         backgroundImage:
-          "linear-gradient(115deg, rgba(6,20,38,0.82) 0%, rgba(0,64,110,0.55) 55%, rgba(0,99,169,0.35) 100%), url('/login_image.jpg')",
+          "linear-gradient(115deg, rgba(6,20,38,0.82) 0%, rgba(0,64,110,0.55) 55%, rgba(0,99,169,0.35) 100%), url('/login_image.png')",
       }}
     >
       {/* Brand mark, top-left */}
@@ -72,7 +72,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <label className="block">
             <span className="field-label">Email address</span>
             <div className="relative mt-1">
-              <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
               <input
                 type="email"
                 autoComplete="username"
@@ -87,7 +87,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <label className="block">
             <span className="field-label">Password</span>
             <div className="relative mt-1">
-              <LockKeyhole size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <LockKeyhole size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
