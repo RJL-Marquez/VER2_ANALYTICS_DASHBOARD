@@ -1,4 +1,4 @@
-import { ComparisonMode, FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../types/survey';
+import { FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../types/survey';
 
 export const initialFilters: FilterState = {
   surveyType: 'All',
@@ -81,8 +81,7 @@ export function ratingDistribution(responses: SurveyResponse[]) {
   }));
 }
 
-export function averageBySurveyType(responses: SurveyResponse[]) {
-  const types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+export function averageBySurveyType(responses: SurveyResponse[], types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']) {
   return types.map((surveyType) => ({
     surveyType,
     average: Number(formatNumber(averageRating(responses.filter((response) => response.surveyType === surveyType)))),
@@ -116,8 +115,7 @@ export function questionPerformance(responses: SurveyResponse[]) {
     }));
 }
 
-export function responseVolume(responses: SurveyResponse[]) {
-  const types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+export function responseVolume(responses: SurveyResponse[], types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']) {
   return types.map((surveyType) => ({
     surveyType,
     responses: responses.filter((response) => response.surveyType === surveyType).length,
@@ -136,9 +134,4 @@ export function naFrequency(responses: SurveyResponse[]) {
   }));
 }
 
-export function visibleSurveyTypes(mode: ComparisonMode): SurveyType[] {
-  if (mode === 'Contractor vs Supplier') return ['Contractor', 'Supplier'];
-  if (mode === 'Supplier vs Subcontractor') return ['Supplier', 'Subcontractor'];
-  if (mode === 'Contractor vs Subcontractor') return ['Contractor', 'Subcontractor'];
-  return ['Contractor', 'Supplier', 'Subcontractor'];
-}
+

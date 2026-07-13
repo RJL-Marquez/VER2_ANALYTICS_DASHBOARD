@@ -1,6 +1,5 @@
 export type SurveyType = 'Contractor' | 'Supplier' | 'Subcontractor';
 export type Rating = 0 | 1 | 2 | 3 | 4 | 'N/A';
-export type ComparisonMode = 'All Three' | 'Contractor vs Supplier' | 'Supplier vs Subcontractor' | 'Contractor vs Subcontractor';
 
 export interface SurveyResponse {
   responseId: string;

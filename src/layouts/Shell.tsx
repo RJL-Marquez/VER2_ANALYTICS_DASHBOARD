@@ -117,11 +117,11 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
         </div>
 
         {/* Page Content - Below Header */}
-        <main className={`min-w-0 flex-1 transition-colors duration-300 ${activePage === 'reports' ? 'bg-azure dark:bg-blue-950 text-white' : ''}`}>
+        <main className="min-w-0 flex-1 transition-colors duration-300">
           <div className="px-4 py-6 lg:px-8">
             <div className="mb-6">
-              <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${activePage === 'reports' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>Centralized stakeholder satisfaction reporting</p>
-              <h2 className={`text-2xl font-bold tracking-tight ${activePage === 'reports' ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{title}</h2>
+              <p className="text-xs font-medium uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">Centralized stakeholder satisfaction reporting</p>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h2>
             </div>
             {children}
           </div>

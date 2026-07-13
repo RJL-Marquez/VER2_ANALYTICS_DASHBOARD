@@ -10,7 +10,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SurveyExplorerPage } from './pages/SurveyExplorerPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
-import { ComparisonMode, FilterState } from './types/survey';
+import { FilterState, SurveyType } from './types/survey';
 
 type PageKey = 'dashboard' | 'analytics' | 'explorer' | 'reports';
 
@@ -25,7 +25,7 @@ export default function App() {
   const { responses, questions, companies, isLoading, error } = useSurveyData();
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('All Three');
+  const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<SurveyType[]>(['Contractor', 'Supplier', 'Subcontractor']);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
 
@@ -38,7 +38,21 @@ export default function App() {
 
   const pageContent = {
     dashboard: <DashboardPage responses={filteredResponses} isLoading={isLoading} error={error} />,
-    analytics: <AnalyticsPage responses={filteredResponses} comparisonMode={comparisonMode} onComparisonModeChange={setComparisonMode} />,
+    analytics: (
+      <AnalyticsPage
+        responses={filteredResponses}
+        selectedSurveyTypes={selectedSurveyTypes}
+        onToggleSurveyType={(type) =>
+          setSelectedSurveyTypes((current) =>
+            current.includes(type)
+              ? current.length > 1
+                ? current.filter((value) => value !== type)
+                : current
+              : [...current, type]
+          )
+        }
+      />
+    ),
     explorer: <SurveyExplorerPage responses={filteredResponses} />,
     reports: <ReportsPage responses={filteredResponses} />,
   }[activePage];
