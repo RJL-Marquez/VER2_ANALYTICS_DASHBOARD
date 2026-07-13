@@ -66,11 +66,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <label className="block">
             <span className="field-label">Email address</span>
             <div className="relative mt-1">
-              <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
+              <Mail size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
               <input
                 type="email"
                 autoComplete="username"
-                className="field pl-9"
+                className="field pl-11"
                 placeholder="name@mgenesis.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -81,11 +81,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <label className="block">
             <span className="field-label">Password</span>
             <div className="relative mt-1">
-              <LockKeyhole size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
+              <LockKeyhole size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                className="field pl-9 pr-10"
+                className="field pl-11 pr-10"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
