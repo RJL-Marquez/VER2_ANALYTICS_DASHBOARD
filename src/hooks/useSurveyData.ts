@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { sharePointService } from '../services/sharepointService';
 import { QuestionDefinition, ResponseNotification, SurveyResponse, SurveyType } from '../types/survey';
 
-const NOTIFICATION_HISTORY_LIMIT = 20;
-const INITIAL_NOTIFICATION_SEED = 5;
+const NOTIFICATION_HISTORY_LIMIT = 200;
+const INITIAL_NOTIFICATION_SEED = 15;
 const SIMULATION_INTERVAL_MS = 25000;
 
 function toNotification(rows: SurveyResponse[]): ResponseNotification | null {

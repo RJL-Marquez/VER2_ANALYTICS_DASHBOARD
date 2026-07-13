@@ -7,6 +7,7 @@ interface NotificationBellProps {
   notifications: ResponseNotification[];
   unreadCount: number;
   onOpen: () => void;
+  onViewAll: () => void;
 }
 
 const surveyTypeColors: Record<SurveyType, string> = {
@@ -15,7 +16,7 @@ const surveyTypeColors: Record<SurveyType, string> = {
   Subcontractor: '#7c3aed',
 };
 
-export function NotificationBell({ notifications, unreadCount, onOpen }: NotificationBellProps) {
+export function NotificationBell({ notifications, unreadCount, onOpen, onViewAll }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [, forceTick] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,7 +78,7 @@ export function NotificationBell({ notifications, unreadCount, onOpen }: Notific
             </div>
           ) : (
             <ul className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-              {notifications.map((item) => (
+              {notifications.slice(0, 8).map((item) => (
                 <li key={item.id} className="flex items-start gap-3 px-4 py-3">
                   <span
                     className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
@@ -101,6 +102,17 @@ export function NotificationBell({ notifications, unreadCount, onOpen }: Notific
               ))}
             </ul>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onViewAll();
+            }}
+            className="w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-semibold text-azure transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60"
+          >
+            View all notifications
+          </button>
         </div>
       )}
     </div>

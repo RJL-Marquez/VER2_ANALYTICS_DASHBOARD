@@ -19,3 +19,15 @@ export function formatRelativeTime(isoDate: string, now: Date = new Date()): str
 
   return new Date(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+export function formatLogDate(isoDate: string): string {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+export function formatLogTime(isoDate: string): string {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}

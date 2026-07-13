@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, FileText, LayoutDashboard, Moon, Search, Sun, Table2 } from 'lucide-react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2 } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -7,19 +7,21 @@ import { Shell } from './layouts/Shell';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
+import { NotificationLogsPage } from './pages/NotificationLogsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SurveyExplorerPage } from './pages/SurveyExplorerPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType } from './types/survey';
 
-type PageKey = 'dashboard' | 'analytics' | 'explorer' | 'reports';
+type PageKey = 'dashboard' | 'analytics' | 'explorer' | 'reports' | 'notifications';
 
 const pages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
+  { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -44,6 +46,7 @@ export default function App() {
     analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} />,
     reports: <ReportsPage responses={filteredResponses} />,
+    notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
   }[activePage];
 
   return (
@@ -51,12 +54,20 @@ export default function App() {
       <Shell
         pages={pages}
         activePage={activePage}
-        onPageChange={setActivePage}
+        onPageChange={(page) => {
+          setActivePage(page);
+          if (page === 'notifications') markNotificationsRead();
+        }}
         title={activeTitle}
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
             <div className="pr-3">
-              <NotificationBell notifications={notifications} unreadCount={unreadCount} onOpen={markNotificationsRead} />
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onOpen={markNotificationsRead}
+                onViewAll={() => setActivePage('notifications')}
+              />
             </div>
             <div className="px-3">
               <button
@@ -79,20 +90,24 @@ export default function App() {
         <div className="space-y-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1">{pageContent}</div>
-            <aside className="xl:w-80">
-              <FilterPanel
-                filters={filters}
-                questions={questions}
-                companies={companies}
-                onChange={setFilters}
-                onReset={() => setFilters(initialFilters)}
-              />
-            </aside>
+            {activePage !== 'notifications' && (
+              <aside className="xl:w-80">
+                <FilterPanel
+                  filters={filters}
+                  questions={questions}
+                  companies={companies}
+                  onChange={setFilters}
+                  onReset={() => setFilters(initialFilters)}
+                />
+              </aside>
+            )}
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-            <Search size={16} />
-            <span>Data source: mock SharePoint list records. Replace `sharepointService.ts` to connect live Microsoft 365 data.</span>
-          </div>
+          {activePage !== 'notifications' && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              <Search size={16} />
+              <span>Data source: mock SharePoint list records. Replace `sharepointService.ts` to connect live Microsoft 365 data.</span>
+            </div>
+          )}
         </div>
       </Shell>
     </div>
