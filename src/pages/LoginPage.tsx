@@ -65,12 +65,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
             <span className="field-label">Email address</span>
-            <div className="relative mt-1">
-              <Mail size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
+            <div className="mt-1 flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white pl-3 pr-3 transition focus-within:border-azure focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:ring-blue-950">
+              <Mail size={16} className="shrink-0 text-[#0063a9] dark:text-blue-300" />
+              <span className="h-5 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
               <input
                 type="email"
                 autoComplete="username"
-                className="field pl-11"
+                className="w-full bg-transparent py-2 text-sm text-ink outline-none placeholder:text-slate-400 dark:text-slate-100"
                 placeholder="name@mgenesis.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -80,12 +81,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           <label className="block">
             <span className="field-label">Password</span>
-            <div className="relative mt-1">
-              <LockKeyhole size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0063a9] dark:text-blue-300" />
+            <div className="mt-1 flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white pl-3 pr-3 transition focus-within:border-azure focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:ring-blue-950">
+              <LockKeyhole size={16} className="shrink-0 text-[#0063a9] dark:text-blue-300" />
+              <span className="h-5 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                className="field pl-11 pr-10"
+                className="w-full bg-transparent py-2 text-sm text-ink outline-none placeholder:text-slate-400 dark:text-slate-100"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -93,7 +95,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
