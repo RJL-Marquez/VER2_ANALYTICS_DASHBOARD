@@ -1,7 +1,7 @@
 import { FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../types/survey';
 
 export const initialFilters: FilterState = {
-  surveyType: 'All',
+  surveyType: [],
   dateFrom: '',
   dateTo: '',
   questionId: '',
@@ -23,7 +23,7 @@ export function applyFilters(responses: SurveyResponse[], filters: FilterState) 
 
   return responses.filter((response) => {
     const submitted = response.submissionDate.slice(0, 10);
-    const matchesSurvey = filters.surveyType === 'All' || response.surveyType === filters.surveyType;
+    const matchesSurvey = filters.surveyType.length === 0 || filters.surveyType.includes(response.surveyType);
     const matchesFrom = !filters.dateFrom || submitted >= filters.dateFrom;
     const matchesTo = !filters.dateTo || submitted <= filters.dateTo;
     const matchesQuestion = !filters.questionId || response.questionId === filters.questionId;

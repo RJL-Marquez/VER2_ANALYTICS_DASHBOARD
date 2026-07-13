@@ -17,7 +17,7 @@ export interface SurveyResponse {
 }
 
 export interface FilterState {
-  surveyType: 'All' | SurveyType;
+  surveyType: SurveyType[];
   dateFrom: string;
   dateTo: string;
   questionId: string;

@@ -15,11 +15,9 @@ import { averageBySurveyType, naFrequency, questionPerformance, responseVolume }
 
 interface AnalyticsPageProps {
   responses: SurveyResponse[];
-  selectedSurveyTypes: SurveyType[];
-  onToggleSurveyType: (type: SurveyType) => void;
+  activeSurveyTypes: SurveyType[];
 }
 
-const surveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 const surveyTypeColors: Record<SurveyType, string> = {
   Contractor: '#2563eb',
   Supplier: '#0f9f6e',
@@ -30,12 +28,12 @@ function truncateQuestion(text: string, max = 44) {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
-export function AnalyticsPage({ responses, selectedSurveyTypes, onToggleSurveyType }: AnalyticsPageProps) {
+export function AnalyticsPage({ responses, activeSurveyTypes }: AnalyticsPageProps) {
   if (!responses.length) {
     return <StateMessage title="No analytics available" message="Adjust filters to compare survey groups." />;
   }
 
-  const comparableResponses = responses.filter((response) => selectedSurveyTypes.includes(response.surveyType));
+  const comparableResponses = responses;
 
   const rankedQuestions = questionPerformance(comparableResponses);
   const topQuestions = rankedQuestions.slice(0, 5);
@@ -51,30 +49,18 @@ export function AnalyticsPage({ responses, selectedSurveyTypes, onToggleSurveyTy
             <h3 className="text-base font-semibold">Survey Comparison</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Compare satisfaction patterns across stakeholder groups.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {surveyTypeOptions.map((type) => {
-              const active = selectedSurveyTypes.includes(type);
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => onToggleSurveyType(type)}
-                  aria-pressed={active}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition cursor-pointer ${
-                    active
-                      ? 'border-transparent text-white shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                  style={active ? { backgroundColor: surveyTypeColors[type] } : undefined}
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: active ? 'rgba(255,255,255,0.85)' : surveyTypeColors[type] }}
-                  />
-                  {type}
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap items-center gap-2">
+            {activeSurveyTypes.map((type) => (
+              <span
+                key={type}
+                className="inline-flex items-center gap-2 rounded-full border border-transparent px-3.5 py-1.5 text-sm font-medium text-white shadow-sm"
+                style={{ backgroundColor: surveyTypeColors[type] }}
+              >
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.85)' }} />
+                {type}
+              </span>
+            ))}
+            <span className="text-xs text-slate-400 dark:text-slate-500">Use the Survey Type filter to change this.</span>
           </div>
         </div>
       </section>
@@ -82,13 +68,13 @@ export function AnalyticsPage({ responses, selectedSurveyTypes, onToggleSurveyTy
       <div className="grid gap-5 xl:grid-cols-2">
         <ChartCard title="Average Rating by Survey Type" subtitle="Side-by-side stakeholder comparison">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={averageBySurveyType(comparableResponses, selectedSurveyTypes)}>
+            <BarChart data={averageBySurveyType(comparableResponses, activeSurveyTypes)}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="surveyType" />
               <YAxis domain={[0, 4]} />
               <Tooltip />
               <Bar dataKey="average" radius={[6, 6, 0, 0]}>
-                {averageBySurveyType(comparableResponses, selectedSurveyTypes).map((entry) => (
+                {averageBySurveyType(comparableResponses, activeSurveyTypes).map((entry) => (
                   <Cell key={entry.surveyType} fill={surveyTypeColors[entry.surveyType]} />
                 ))}
               </Bar>
@@ -97,13 +83,13 @@ export function AnalyticsPage({ responses, selectedSurveyTypes, onToggleSurveyTy
         </ChartCard>
         <ChartCard title="Response Volume" subtitle="Filtered response counts by survey">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={responseVolume(comparableResponses, selectedSurveyTypes)}>
+            <BarChart data={responseVolume(comparableResponses, activeSurveyTypes)}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="surveyType" />
               <YAxis allowDecimals={false} />
               <Tooltip />
               <Bar dataKey="responses" radius={[6, 6, 0, 0]}>
-                {responseVolume(comparableResponses, selectedSurveyTypes).map((entry) => (
+                {responseVolume(comparableResponses, activeSurveyTypes).map((entry) => (
                   <Cell key={entry.surveyType} fill={surveyTypeColors[entry.surveyType]} />
                 ))}
               </Bar>

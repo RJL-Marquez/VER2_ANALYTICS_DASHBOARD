@@ -21,15 +21,17 @@ const pages = [
   { key: 'reports' as const, label: 'Reports', icon: FileText },
 ];
 
+const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+
 export default function App() {
   const { responses, questions, companies, isLoading, error } = useSurveyData();
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<SurveyType[]>(['Contractor', 'Supplier', 'Subcontractor']);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
 
   const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
+  const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
   const activeTitle = pages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
 
   if (!account) {
@@ -38,21 +40,7 @@ export default function App() {
 
   const pageContent = {
     dashboard: <DashboardPage responses={filteredResponses} isLoading={isLoading} error={error} />,
-    analytics: (
-      <AnalyticsPage
-        responses={filteredResponses}
-        selectedSurveyTypes={selectedSurveyTypes}
-        onToggleSurveyType={(type) =>
-          setSelectedSurveyTypes((current) =>
-            current.includes(type)
-              ? current.length > 1
-                ? current.filter((value) => value !== type)
-                : current
-              : [...current, type]
-          )
-        }
-      />
-    ),
+    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} />,
     reports: <ReportsPage responses={filteredResponses} />,
   }[activePage];

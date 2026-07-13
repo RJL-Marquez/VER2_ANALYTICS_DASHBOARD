@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { FilterState, QuestionDefinition, Rating } from '../types/survey';
+import { FilterState, QuestionDefinition, Rating, SurveyType } from '../types/survey';
 
 interface FilterPanelProps {
   filters: FilterState;
@@ -12,12 +12,26 @@ interface FilterPanelProps {
 
 const ratings: Array<'All' | Rating> = ['All', 0, 1, 2, 3, 4, 'N/A'];
 
+const surveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const surveyTypeColors: Record<SurveyType, string> = {
+  Contractor: '#2563eb',
+  Supplier: '#0f9f6e',
+  Subcontractor: '#7c3aed',
+};
+
 export function FilterPanel({ filters, questions, companies, onChange, onReset }: FilterPanelProps) {
   const update = <Key extends keyof FilterState>(key: Key, value: FilterState[Key]) => onChange({ ...filters, [key]: value });
 
+  const toggleSurveyType = (type: SurveyType) => {
+    const next = filters.surveyType.includes(type)
+      ? filters.surveyType.filter((value) => value !== type)
+      : [...filters.surveyType, type];
+    update('surveyType', next);
+  };
+
   const filteredQuestions = useMemo(() => {
-    if (filters.surveyType === 'All') return questions;
-    return questions.filter((question) => question.surveyTypes.includes(filters.surveyType));
+    if (filters.surveyType.length === 0) return questions;
+    return questions.filter((question) => question.surveyTypes.some((type) => filters.surveyType.includes(type)));
   }, [questions, filters.surveyType]);
 
   return (
@@ -30,15 +44,35 @@ export function FilterPanel({ filters, questions, companies, onChange, onReset }
         </button>
       </div>
       <div className="space-y-4">
-        <label className="field-label">
+        <div className="field-label">
           Survey Type
-          <select className="field" value={filters.surveyType} onChange={(event) => update('surveyType', event.target.value as FilterState['surveyType'])}>
-            <option>All</option>
-            <option>Contractor</option>
-            <option>Supplier</option>
-            <option>Subcontractor</option>
-          </select>
-        </label>
+          <div className="mt-1 space-y-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            {surveyTypeOptions.map((type) => {
+              const checked = filters.surveyType.includes(type);
+              return (
+                <label
+                  key={type}
+                  className="flex cursor-pointer items-center gap-2.5 text-sm font-normal text-slate-600 dark:text-slate-300"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
+                    checked={checked}
+                    onChange={() => toggleSurveyType(type)}
+                  />
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: surveyTypeColors[type] }}
+                  />
+                  {type}
+                </label>
+              );
+            })}
+          </div>
+          {filters.surveyType.length === 0 && (
+            <p className="mt-1 text-xs font-normal text-slate-400 dark:text-slate-500">None selected — showing all types.</p>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="field-label">
             From
