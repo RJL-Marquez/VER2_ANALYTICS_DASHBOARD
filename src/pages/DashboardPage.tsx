@@ -175,7 +175,7 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
             </p>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500 font-mono">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
             <div className="flex items-center gap-1.5">
               <span>Weighted rating:</span>
               <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(summary.averageRating, 2)} / 4.00</span>
@@ -183,7 +183,7 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
               <span>Highest rated:</span>
-              <span className="font-semibold text-azure">{formatNumber(highestScore, 2)} / 4.00</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(highestScore, 2)} / 4.00</span>
             </div>
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
