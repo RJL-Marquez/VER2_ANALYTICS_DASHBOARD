@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -9,8 +11,8 @@ export default {
         steel: '#40516d',
         azure: '#2563eb',
         mint: '#0f9f6e',
-        amber: '#d97706',
-        rose: '#e11d48',
+        amber: { ...colors.amber, DEFAULT: '#d97706' },
+        rose: { ...colors.rose, DEFAULT: '#e11d48' },
         cloud: '#f5f7fb',
       },
       boxShadow: {

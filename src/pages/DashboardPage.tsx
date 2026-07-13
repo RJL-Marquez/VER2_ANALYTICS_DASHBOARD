@@ -303,8 +303,10 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
               item.average >= 3
                 ? { text: 'text-emerald-700 dark:text-emerald-400', bar: 'bg-emerald-500' }
                 : item.average >= 2
-                  ? { text: 'text-amber-700 dark:text-amber-400', bar: 'bg-amber-500' }
-                  : { text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500' };
+                  ? { text: 'text-yellow-700 dark:text-yellow-400', bar: 'bg-yellow-500' }
+                  : item.average >= 1
+                    ? { text: 'text-orange-700 dark:text-orange-400', bar: 'bg-orange-500' }
+                    : { text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500' };
 
             return (
               <li key={item.question} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
