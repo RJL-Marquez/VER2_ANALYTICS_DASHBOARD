@@ -22,10 +22,10 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
   return (
     <div className="min-h-screen bg-cloud text-ink dark:bg-slate-950 dark:text-slate-100 flex flex-col">
       {/* Top Header Layer */}
-      <header className="sticky top-0 z-20 h-16 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-sm">
+      <header className="sticky top-0 z-20 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-sm">
         <div className="flex items-center h-full flex-1 min-w-0">
           {/* Brand Box / Logo Area - Fixed Width, unaffected by collapsing */}
-          <div className="relative z-10 flex items-center justify-center h-full bg-[#0063a9] shrink-0 w-[171px] px-4">
+          <div className="relative z-10 flex items-center justify-center h-full bg-[#0063a9] shrink-0 w-[220px] px-4">
             <button
                onClick={() => {
                  const homePage = pages.find((p) => p.key === ('dashboard' as any))?.key || pages[0]?.key;
@@ -37,7 +37,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
               <img
                 src="/microgenesis_logo.png"
                 alt="Microgenesis Logo"
-                className="transition duration-200 group-hover:opacity-90 shrink-0 h-8 max-w-full object-contain brightness-0 invert"
+                className="transition duration-200 group-hover:opacity-90 shrink-0 h-10 max-w-full object-contain brightness-0 invert"
                 referrerPolicy="no-referrer"
               />
             </button>
@@ -79,7 +79,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
       {/* Main layout below header */}
       <div className="flex flex-1">
         {/* Sidebar - Below Header */}
-        <div className={`relative sticky top-16 h-[calc(100vh-64px)] hidden border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 lg:block transition-all duration-300 shrink-0 ${isSidebarCollapsed ? 'w-16' : 'w-[171px]'}`}>
+        <div className={`relative sticky top-20 h-[calc(100vh-80px)] hidden border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 lg:block transition-all duration-300 shrink-0 ${isSidebarCollapsed ? 'w-16' : 'w-[220px]'}`}>
           {/* Toggle Sidebar Button on the right border, aligned lower down below menu items and fully visible */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
