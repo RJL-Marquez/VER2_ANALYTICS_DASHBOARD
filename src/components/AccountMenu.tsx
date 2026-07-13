@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { CircleUserRound, ExternalLink, LogOut } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 
 interface AccountMenuProps {
   email: string;
@@ -8,79 +8,74 @@ interface AccountMenuProps {
 
 export function AccountMenu({ email, onLogout }: AccountMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const initials = email
     .split('@')[0]
-    .split(/[.\-_]/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
+    .split('.')
+    .map((name) => name[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2) || 'AD';
 
   return (
-    <div className="relative hidden lg:block" ref={containerRef}>
+    <div className="relative" ref={menuRef} id="account-menu-container">
       <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 rounded-lg bg-[#00528c]/40 hover:bg-[#00528c]/60 px-3 py-1.5 transition text-white text-sm font-medium border border-blue-400/25 cursor-pointer outline-none"
         type="button"
-        onClick={() => setIsOpen((value) => !value)}
-        className={`inline-flex h-10 items-center gap-2 rounded-lg pl-2 pr-3 transition cursor-pointer ${
-          isOpen ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
-        }`}
-        title="Account"
+        id="account-menu-trigger"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white">
-          {initials || <CircleUserRound size={18} />}
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-[#0063a9] font-bold text-xs shadow-sm shrink-0">
+          {initials}
+        </div>
+        <span className="hidden md:inline truncate max-w-28 text-blue-100 group-hover:text-white">
+          {email}
         </span>
-        <span className="hidden xl:block max-w-[160px] truncate text-xs font-medium">{email}</span>
+        <ChevronDown size={14} className={`text-blue-200 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-panel z-30 overflow-hidden dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-3 px-4 py-3.5 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-100 dark:border-slate-800">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0063a9] text-sm font-bold text-white">
-              {initials || <CircleUserRound size={20} />}
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Signed in as</p>
-              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{email}</p>
+        <div
+          className="absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-none dark:border-slate-800 dark:bg-slate-950 z-50"
+          id="account-menu-dropdown"
+        >
+          <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Signed in as</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={email}>
+              {email}
+            </p>
+          </div>
+          
+          <div className="mt-1">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+              <User size={14} />
+              <span>Administrator Role</span>
             </div>
-          </div>
-
-          <div className="py-1">
+            
             <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                window.open('https://myaccount.microsoft.com/', '_blank', 'noopener,noreferrer');
-              }}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              <ExternalLink size={16} className="text-slate-400 dark:text-slate-500" />
-              View my account
-            </button>
-          </div>
-
-          <div className="border-t border-slate-100 dark:border-slate-800 py-1">
-            <button
-              type="button"
               onClick={() => {
                 setIsOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30 transition cursor-pointer"
+              type="button"
+              id="logout-button"
             >
-              <LogOut size={16} />
-              Log out
+              <LogOut size={15} />
+              <span>Sign out</span>
             </button>
           </div>
         </div>

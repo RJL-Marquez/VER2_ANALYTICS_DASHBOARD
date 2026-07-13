@@ -1,6 +1,14 @@
 export type SurveyType = 'Contractor' | 'Supplier' | 'Subcontractor';
 export type Rating = 0 | 1 | 2 | 3 | 4 | 'N/A';
 
+export interface PartnerCompany {
+  id: string;
+  name: string;
+  type: SurveyType;
+  affiliation?: string;
+  createdAt: string;
+}
+
 export interface SurveyResponse {
   responseId: string;
   surveyType: SurveyType;
@@ -51,3 +59,18 @@ export interface ResponseNotification {
   submissionDate: string;
   questionCount: number;
 }
+
+export interface CustomForm {
+  id: string;
+  title: string;
+  surveyType: SurveyType;
+  description: string;
+  createdAt: string;
+  questions: {
+    questionId: string;
+    questionNumber: number;
+    question: string;
+    questionCategory: string;
+  }[];
+}
+

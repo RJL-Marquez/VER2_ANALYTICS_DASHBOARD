@@ -14,9 +14,10 @@ interface ShellProps<T extends string> {
   title: string;
   action: ReactNode;
   children: ReactNode;
+  surveyFormsDropdown?: ReactNode;
 }
 
-export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children }: ShellProps<T>) {
+export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children, surveyFormsDropdown }: ShellProps<T>) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
@@ -113,6 +114,12 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
                 );
               })}
             </nav>
+
+            {surveyFormsDropdown && (
+              <div className="mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
+                {surveyFormsDropdown}
+              </div>
+            )}
           </aside>
         </div>
 
