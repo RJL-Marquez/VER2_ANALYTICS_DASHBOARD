@@ -35,7 +35,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
               title="Go to Dashboard"
             >
               <img
-                src="/src/assets/images/microgenesis_logo.png"
+                src="/microgenesis_logo.png"
                 alt="Microgenesis Logo"
                 className="transition duration-200 group-hover:opacity-90 shrink-0 h-8 max-w-full object-contain brightness-0 invert"
                 referrerPolicy="no-referrer"
