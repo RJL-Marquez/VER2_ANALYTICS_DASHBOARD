@@ -291,16 +291,40 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
         </ChartCard>
       </div>
 
-      <ChartCard title="Question Performance" subtitle="Average rating by survey question">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={questions} layout="vertical" margin={{ left: 80 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            <XAxis type="number" domain={[0, 4]} />
-            <YAxis dataKey="question" type="category" width={170} tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Bar dataKey="average" fill="#2563eb" radius={[0, 6, 6, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      <ChartCard
+        title="Question Performance"
+        subtitle="All questions, ranked by average rating (highest to lowest)"
+        contentClassName="max-h-[32rem] overflow-y-auto pr-1"
+      >
+        <ol className="divide-y divide-slate-100 dark:divide-slate-800">
+          {questions.map((item, index) => {
+            const pct = Math.max(0, Math.min(100, (item.average / 4) * 100));
+            const tone =
+              item.average >= 3
+                ? { text: 'text-emerald-700 dark:text-emerald-400', bar: 'bg-emerald-500' }
+                : item.average >= 2
+                  ? { text: 'text-amber-700 dark:text-amber-400', bar: 'bg-amber-500' }
+                  : { text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500' };
+
+            return (
+              <li key={item.question} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{item.question}</p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div className={`h-1.5 rounded-full ${tone.bar}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{item.responses} responses</span>
+                  </div>
+                </div>
+                <span className={`shrink-0 text-sm font-semibold tabular-nums ${tone.text}`}>{item.average.toFixed(1)}</span>
+              </li>
+            );
+          })}
+        </ol>
       </ChartCard>
     </div>
   );
