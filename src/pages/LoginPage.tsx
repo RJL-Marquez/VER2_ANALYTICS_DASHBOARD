@@ -5,7 +5,7 @@ interface LoginPageProps {
   onLogin: (email: string) => void;
 }
 
-const DEMO_EMAIL = 'rencejoseph.marquez@mgenesis.com';
+const DEMO_EMAIL = 'admin@mgenesis.com';
 const DEMO_PASSWORD = '12345678';
 
 export function LoginPage({ onLogin }: LoginPageProps) {
