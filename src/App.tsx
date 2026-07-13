@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BarChart3, FileText, LayoutDashboard, Moon, Search, Sun, Table2 } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
+import { NotificationBell } from './components/NotificationBell';
 import { Shell } from './layouts/Shell';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -24,7 +25,7 @@ const pages = [
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
 export default function App() {
-  const { responses, questions, companies, isLoading, error } = useSurveyData();
+  const { responses, questions, companies, isLoading, error, notifications, unreadCount, markNotificationsRead } = useSurveyData();
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
@@ -54,7 +55,8 @@ export default function App() {
         title={activeTitle}
         action={
           <div className="flex items-center gap-3">
-            <button className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-blue-400/30 bg-[#00528c] text-blue-100 hover:text-white hover:bg-[#00487b] hover:border-blue-300/40 transition shadow-sm cursor-pointer" type="button" onClick={() => setDarkMode((value) => !value)} title="Toggle dark mode">
+            <NotificationBell notifications={notifications} unreadCount={unreadCount} onOpen={markNotificationsRead} />
+            <button className="header-action-btn inline-flex h-10 w-10 items-center justify-center rounded-lg text-blue-50 hover:text-white transition cursor-pointer" type="button" onClick={() => setDarkMode((value) => !value)} title="Toggle dark mode">
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <AccountMenu email={account} onLogout={() => setAccount(null)} />

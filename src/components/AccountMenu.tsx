@@ -33,7 +33,7 @@ export function AccountMenu({ email, onLogout }: AccountMenuProps) {
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="inline-flex h-10 items-center gap-2 rounded-lg border border-blue-400/30 bg-[#00528c] pl-2 pr-3 text-blue-100 hover:text-white hover:bg-[#00487b] hover:border-blue-300/40 transition shadow-sm cursor-pointer"
+        className="header-action-btn inline-flex h-10 items-center gap-2 rounded-lg pl-2 pr-3 text-blue-50 hover:text-white transition cursor-pointer"
         title="Account"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white">

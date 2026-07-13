@@ -42,3 +42,12 @@ export interface KpiSummary {
   highestRatedQuestion: string;
   lowestRatedQuestion: string;
 }
+
+export interface ResponseNotification {
+  id: string;
+  company: string;
+  surveyType: SurveyType;
+  respondentType: string;
+  submissionDate: string;
+  questionCount: number;
+}

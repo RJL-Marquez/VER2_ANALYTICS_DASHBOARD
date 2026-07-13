@@ -1,4 +1,4 @@
-import { generateMockResponses } from '../data/mockResponses';
+import { generateLiveSubmission, generateMockResponses } from '../data/mockResponses';
 import { surveyQuestions } from '../data/questions';
 import { QuestionDefinition, SurveyResponse, SurveyType } from '../types/survey';
 
@@ -6,6 +6,8 @@ export interface SurveyDataSource {
   getResponses(): Promise<SurveyResponse[]>;
   getSurveyTypes(): Promise<SurveyType[]>;
   getQuestions(): Promise<QuestionDefinition[]>;
+  /** Optional: simulates a new respondent submitting the form, for live demo/notification purposes. */
+  simulateNewSubmission?(): Promise<SurveyResponse[]>;
 }
 
 class MockSharePointService implements SurveyDataSource {
@@ -22,6 +24,12 @@ class MockSharePointService implements SurveyDataSource {
   async getQuestions(): Promise<QuestionDefinition[]> {
     return surveyQuestions;
   }
+
+  simulateNewSubmission = async (): Promise<SurveyResponse[]> => {
+    const newRows = generateLiveSubmission();
+    this.responses = [...this.responses, ...newRows];
+    return newRows;
+  };
 }
 
 class SharePointApiService implements SurveyDataSource {

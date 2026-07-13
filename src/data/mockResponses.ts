@@ -100,3 +100,42 @@ export function generateMockResponses(total = 432): SurveyResponse[] {
     };
   });
 }
+
+let liveSubmissionCounter = 0;
+
+/**
+ * Simulates a single new respondent completing the survey right now.
+ * Produces one SurveyResponse row per applicable question, all sharing
+ * the same respondent/company/timestamp - mirroring a real form submission.
+ */
+export function generateLiveSubmission(): SurveyResponse[] {
+  liveSubmissionCounter += 1;
+  const batchSeed = Date.now() + liveSubmissionCounter;
+
+  const surveyType = surveyTypes[Math.floor(Math.random() * surveyTypes.length)];
+  const applicableQuestions = surveyQuestions.filter((question) => question.surveyTypes.includes(surveyType));
+  const company = companies[Math.floor(Math.random() * companies.length)];
+  const respondentType = respondentTypes[Math.floor(Math.random() * respondentTypes.length)];
+  const department = departments[Math.floor(Math.random() * departments.length)];
+  const submissionDate = new Date().toISOString();
+
+  return applicableQuestions.map((question, questionIndex) => {
+    const seed = batchSeed + questionIndex * 17;
+    const rating = weightedRating(seed, surveyType, question.questionNumber);
+
+    return {
+      responseId: `SP-LIVE-${batchSeed}-${questionIndex}`,
+      surveyType,
+      respondentType,
+      submissionDate,
+      company,
+      department,
+      questionId: question.questionId,
+      questionNumber: question.questionNumber,
+      question: question.question,
+      questionCategory: question.questionCategory,
+      rating,
+      comment: commentForRating(rating, seed + 3),
+    };
+  });
+}
