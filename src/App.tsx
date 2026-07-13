@@ -54,12 +54,25 @@ export default function App() {
         onPageChange={setActivePage}
         title={activeTitle}
         action={
-          <div className="flex items-center gap-3">
-            <NotificationBell notifications={notifications} unreadCount={unreadCount} onOpen={markNotificationsRead} />
-            <button className="header-action-btn inline-flex h-10 w-10 items-center justify-center rounded-lg text-blue-50 hover:text-white transition cursor-pointer" type="button" onClick={() => setDarkMode((value) => !value)} title="Toggle dark mode">
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <AccountMenu email={account} onLogout={() => setAccount(null)} />
+          <div className="flex items-center divide-x divide-blue-400/25">
+            <div className="pr-3">
+              <NotificationBell notifications={notifications} unreadCount={unreadCount} onOpen={markNotificationsRead} />
+            </div>
+            <div className="px-3">
+              <button
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition cursor-pointer ${
+                  darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
+                }`}
+                type="button"
+                onClick={() => setDarkMode((value) => !value)}
+                title="Toggle dark mode"
+              >
+                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+            </div>
+            <div className="pl-3">
+              <AccountMenu email={account} onLogout={() => setAccount(null)} />
+            </div>
           </div>
         }
       >

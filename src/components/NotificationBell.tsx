@@ -50,7 +50,9 @@ export function NotificationBell({ notifications, unreadCount, onOpen }: Notific
       <button
         type="button"
         onClick={handleToggle}
-        className="header-action-btn relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-blue-50 hover:text-white transition cursor-pointer"
+        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-lg transition cursor-pointer ${
+          isOpen ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
+        }`}
         title="Recent activity"
       >
         <Bell size={18} />

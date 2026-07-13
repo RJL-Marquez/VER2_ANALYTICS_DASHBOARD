@@ -84,16 +84,6 @@ select {
   @apply bg-white text-azure shadow-sm dark:bg-slate-800 dark:text-blue-200;
 }
 
-.header-action-btn {
-  background: #00528c;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.header-action-btn:hover {
-  background: #00487b;
-}
-
 .recharts-cartesian-axis-tick-value,
 .recharts-legend-item-text {
   fill: #64748b;
