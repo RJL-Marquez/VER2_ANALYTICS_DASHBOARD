@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (email: string) => void;
@@ -35,12 +35,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         setIsSubmitting(false);
       }
     }, 400);
-  }
-
-  function fillDemoCredentials() {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    setError('');
   }
 
   return (
@@ -136,25 +130,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <div className="mt-6 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-400">
-          <div className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300 mb-1">
-            <ShieldCheck size={14} />
-            Demo account
-          </div>
-          <p className="leading-relaxed">
-            Email: <span className="font-mono">{DEMO_EMAIL}</span>
-            <br />
-            Password: <span className="font-mono">{DEMO_PASSWORD}</span>
-          </p>
-          <button
-            type="button"
-            onClick={fillDemoCredentials}
-            className="mt-2 font-medium text-[#0063a9] hover:underline cursor-pointer dark:text-blue-300"
-          >
-            Autofill demo credentials
-          </button>
-        </div>
       </div>
     </div>
   );
