@@ -188,18 +188,18 @@ export function PartnerCompaniesPage({
       {/* Top Options Bar (Tabs + Add Button) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Tabs */}
-        <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950 sm:max-w-md w-full sm:w-auto">
+        <div className="flex flex-nowrap overflow-x-auto rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950 sm:max-w-md w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
           {(['All', 'Contractor', 'Supplier', 'Subcontractor'] as const).map((tab) => (
             <button
               key={tab}
-              className={`flex-1 rounded-md py-2 px-4 text-xs font-bold transition-all duration-150 cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap rounded-md py-2 px-4 text-xs font-bold transition-all duration-150 cursor-pointer ${
                 activeTab === tab
                   ? 'bg-[#0063a9] text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'All' ? 'All Partners' : `${tab}s`}
+              {tab === 'All' ? 'All' : `${tab}s`}
             </button>
           ))}
         </div>

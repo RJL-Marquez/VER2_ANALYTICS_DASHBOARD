@@ -11,6 +11,7 @@ import {
 import { ChartCard } from '../components/ChartCard';
 import { CompanyPerformancePanel } from '../components/CompanyPerformancePanel';
 import { StateMessage } from '../components/StateMessage';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { SurveyResponse, SurveyType } from '../types/survey';
 import { averageBySurveyType, naFrequency, questionPerformance, responseVolume } from '../utils/analytics';
 
@@ -30,6 +31,8 @@ function truncateQuestion(text: string, max = 44) {
 }
 
 export function AnalyticsPage({ responses, activeSurveyTypes }: AnalyticsPageProps) {
+  const isMobile = useIsMobile();
+
   if (!responses.length) {
     return <StateMessage title="No analytics available" message="Adjust filters to compare survey groups." />;
   }
@@ -129,15 +132,15 @@ export function AnalyticsPage({ responses, activeSurveyTypes }: AnalyticsPagePro
             </span>
           </div>
           <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={spreadQuestions} layout="vertical" margin={{ left: 10 }}>
+            <BarChart data={spreadQuestions} layout="vertical" margin={{ left: 4, right: isMobile ? 16 : 8 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" domain={[0, 4]} />
+              <XAxis type="number" domain={[0, 4]} tick={{ fontSize: isMobile ? 10 : 12 }} />
               <YAxis
                 dataKey="question"
                 type="category"
-                width={190}
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: string) => truncateQuestion(value)}
+                width={isMobile ? 96 : 190}
+                tick={{ fontSize: isMobile ? 9 : 12 }}
+                tickFormatter={(value: string) => truncateQuestion(value, isMobile ? 16 : 44)}
                 interval={0}
               />
               <Tooltip labelFormatter={(value: string) => value} wrapperStyle={{ maxWidth: 320, whiteSpace: 'normal' }} />

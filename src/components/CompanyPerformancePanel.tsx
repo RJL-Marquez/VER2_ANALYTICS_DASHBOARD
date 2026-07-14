@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   CartesianGrid,
   Line,
@@ -24,6 +25,7 @@ interface CompanyPerformancePanelProps {
 const surveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
 export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelProps) {
+  const isMobile = useIsMobile();
   const [surveyType, setSurveyType] = useState<SurveyType>('Contractor');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
 
@@ -142,11 +144,15 @@ export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelPr
                 <h4 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
                   {activeComposite.company} — section breakdown vs peer average
                 </h4>
-                <div className="h-64">
+                <div className="h-64 w-full overflow-hidden">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={radarData} outerRadius="75%">
+                    <RadarChart
+                      data={radarData}
+                      outerRadius={isMobile ? '55%' : '75%'}
+                      margin={isMobile ? { top: 8, right: 28, bottom: 8, left: 28 } : undefined}
+                    >
                       <PolarGrid />
-                      <PolarAngleAxis dataKey="section" tick={{ fontSize: 11 }} />
+                      <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 9 : 11 }} />
                       <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                       <Radar
                         name={activeComposite.company}
