@@ -95,7 +95,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col lg:flex-row items-center justify-center gap-10 py-10 px-4 sm:px-8 bg-[#0b1220] bg-cover bg-center"
+      className="relative min-h-screen w-full flex flex-col lg:flex-row items-center justify-center gap-10 pt-24 pb-10 px-4 sm:px-8 sm:pt-10 bg-[#0b1220] bg-cover bg-center"
       style={{
         backgroundImage:
           "linear-gradient(115deg, rgba(6,20,38,0.85) 0%, rgba(0,64,110,0.60) 55%, rgba(0,99,169,0.40) 100%), url('/login_image.png')",
