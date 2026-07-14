@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck, MessageSquare } from 'lucide-react';
+import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck } from 'lucide-react';
 import { CustomForm, Rating, PartnerCompany } from '../types/survey';
 import { isValidDDMMYYYY } from '../utils/time';
 
@@ -801,18 +801,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                           </div>
                         </div>
                       )}
-
-                      {/* Comment Input */}
-                      <div className="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50/50 pl-3 pr-3 transition-colors focus-within:bg-white focus-within:border-slate-200 dark:border-slate-800 dark:bg-slate-900/40 dark:focus-within:bg-slate-900">
-                        <MessageSquare size={14} className="text-slate-400 shrink-0" />
-                        <input
-                          type="text"
-                          className="w-full bg-transparent py-2 text-xs text-slate-700 placeholder:text-slate-400 dark:text-slate-200 outline-none"
-                          placeholder="Add a comment..."
-                          value={comments[q.questionId] || ''}
-                          onChange={(e) => handleCommentChange(q.questionId, e.target.value)}
-                        />
-                      </div>
                     </div>
                   </div>
                 );
