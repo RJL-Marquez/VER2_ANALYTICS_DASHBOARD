@@ -212,7 +212,8 @@ export function generateLiveSubmission(): SurveyResponse[] {
 
   const surveyType = surveyTypes[Math.floor(Math.random() * surveyTypes.length)];
   const applicableQuestions = surveyQuestions.filter((question) => question.surveyTypes.includes(surveyType));
-  const company = companies[Math.floor(Math.random() * companies.length)];
+  const companyPool = companiesByType[surveyType];
+  const company = companyPool[Math.floor(Math.random() * companyPool.length)];
   const respondentType = respondentTypes[Math.floor(Math.random() * respondentTypes.length)];
   const department = departments[Math.floor(Math.random() * departments.length)];
   const submissionDate = new Date().toISOString();

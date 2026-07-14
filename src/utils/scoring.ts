@@ -78,13 +78,31 @@ export function computeCompanyComposite(
     percentScores.push(fraction * 100);
   });
 
-  const sections: SectionScore[] = [...sectionMap.entries()].map(([section, v]) => ({
-    section,
-    earned: Number(v.earned.toFixed(1)),
-    possible: v.possible,
-    percent: v.possible ? Number(((v.earned / v.possible) * 100).toFixed(1)) : 0,
-    responses: v.responses,
-  }));
+  // Build the section list from the form's full rubric (questionWeights), not
+  // just the sections that happen to have a rated answer in this slice of
+  // responses. This guarantees every chart that reads `sections` (the radar
+  // chart in particular) always has one entry per canonical section - so it
+  // renders as a complete pentagon/shape instead of collapsing to a single
+  // point when a company only has partial data (e.g. a single evaluation,
+  // or a month-filtered trend slice that only touched one section).
+  const canonicalSections: string[] = [];
+  weights.forEach((w) => {
+    if (!canonicalSections.includes(w.section)) canonicalSections.push(w.section);
+  });
+
+  const sections: SectionScore[] = canonicalSections.map((section) => {
+    const v = sectionMap.get(section);
+    if (!v) {
+      return { section, earned: 0, possible: 0, percent: 0, responses: 0 };
+    }
+    return {
+      section,
+      earned: Number(v.earned.toFixed(1)),
+      possible: v.possible,
+      percent: v.possible ? Number(((v.earned / v.possible) * 100).toFixed(1)) : 0,
+      responses: v.responses,
+    };
+  });
 
   const totalEarned = sections.reduce((sum, s) => sum + s.earned, 0);
   const totalPossible = sections.reduce((sum, s) => sum + s.possible, 0);
@@ -144,6 +162,7 @@ export function getSectionPeerAverages(responses: SurveyResponse[], surveyType: 
 
   leaderboard.forEach((composite) => {
     composite.sections.forEach((s) => {
+      if (s.responses === 0) return; // no rated data for this section yet - don't let it skew the peer average
       const bucket = sectionTotals.get(s.section) ?? { sum: 0, count: 0 };
       bucket.sum += s.percent;
       bucket.count += 1;
