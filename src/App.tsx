@@ -308,11 +308,15 @@ export default function App() {
               type="button"
               title={survey.title}
             >
+<<<<<<< HEAD
               <span
                 className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                   isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
                 }`}
               />
+=======
+              <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
+>>>>>>> c59a13645268153fb99cc7cccc547f60e84630e3
               <span className="truncate">{survey.title}</span>
             </button>
           );
