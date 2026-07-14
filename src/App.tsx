@@ -309,7 +309,6 @@ export default function App() {
               title={survey.title}
             >
 =======
-<<<<<<< HEAD
 >>>>>>> 24009ff83041c43c24d2aadcc092b5c54e2eefad
 >>>>>>> accfa85c238fe95451bc194e27419f9eeca28eaa
               <span
