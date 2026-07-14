@@ -95,7 +95,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col lg:flex-row items-center justify-center gap-10 pt-14 pb-10 px-4 sm:px-8 sm:pt-10 bg-[#0b1220] bg-cover bg-center"
+      className="relative min-h-screen w-full flex flex-col items-center justify-center pt-24 pb-10 px-4 sm:px-8 bg-[#0b1220] bg-cover bg-center overflow-y-auto"
       style={{
         backgroundImage:
           "linear-gradient(115deg, rgba(6,20,38,0.85) 0%, rgba(0,64,110,0.60) 55%, rgba(0,99,169,0.40) 100%), url('/login_image.png')",
@@ -110,9 +110,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         />
       </div>
 
-      <div className="mt-4 sm:mt-0 flex flex-col lg:flex-row items-stretch justify-center gap-8 max-w-5xl w-full">
+      <div className="flex flex-col items-center justify-center gap-8 max-w-md w-full">
         {/* Login card */}
-        <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-white/95 backdrop-blur-sm shadow-2xl p-6 sm:p-8 dark:bg-slate-900/95 flex-1">
+        <div className="relative w-full rounded-2xl border border-white/10 bg-white/95 backdrop-blur-sm shadow-2xl p-6 sm:p-8 dark:bg-slate-900/95">
           <div className="mb-6">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#0063a9] dark:text-blue-300">Microsoft Forms</p>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">Survey Analytics</h1>
@@ -192,7 +192,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         {/* Quick Select Panel */}
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 text-white flex-1">
+        <div className="w-full rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 text-white">
           <div className="flex items-center gap-2 mb-4">
             <Users className="text-[#0063a9]" size={20} />
             <h2 className="text-lg font-bold">Demo Simulation Accounts</h2>
