@@ -1,11 +1,17 @@
 import { useState, useMemo } from 'react';
+<<<<<<< HEAD
 import { ArrowLeft, ExternalLink, Trash, Calendar, CalendarClock, Users, ClipboardCheck, MessageSquare, AlertTriangle, Eye, Pencil, Building2, Check } from 'lucide-react';
 import { CustomForm, SurveyResponse, PartnerCompany } from '../types/survey';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
+=======
+import { ArrowLeft, ExternalLink, Trash, Calendar, Users, ListFilter, ClipboardCheck, MessageSquare, AlertTriangle, Eye } from 'lucide-react';
+import { CustomForm, SurveyResponse } from '../types/survey';
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 interface SurveyDetailsPageProps {
   survey: CustomForm;
   responses: SurveyResponse[];
+<<<<<<< HEAD
   partnerCompanies?: PartnerCompany[];
   userEmail?: string;
   onBack: () => void;
@@ -39,6 +45,17 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
     };
   }, [partnerCompanies, responses, userEmail, survey.surveyType]);
 
+=======
+  onBack: () => void;
+  onFillForm: (surveyId: string) => void;
+  onDelete: (surveyId: string) => void;
+}
+
+export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDelete }: SurveyDetailsPageProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   // Filter responses specific to this survey
   const surveyResponses = useMemo(() => {
     // A response belongs to this survey if it matches the survey's type and its question IDs
@@ -122,6 +139,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
             <ClipboardCheck size={16} />
             <span>Launch Form Filling</span>
           </button>
+<<<<<<< HEAD
 
           {isAdmin && onEdit && (
             <button
@@ -136,6 +154,10 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
           )}
           
           {isCustom && isAdmin && (
+=======
+          
+          {isCustom && (
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="inline-flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 text-rose px-3 py-2 text-sm font-medium hover:bg-rose-100 transition cursor-pointer dark:bg-rose-950/20 dark:border-rose-900"
@@ -160,16 +182,23 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{survey.description}</p>
             </div>
 
+<<<<<<< HEAD
             <div className="grid gap-4 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-4 text-xs text-slate-500 dark:text-slate-400">
+=======
+            <div className="grid gap-4 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-3 text-xs text-slate-500 dark:text-slate-400">
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-slate-400" />
                 <span>Created: {new Date(survey.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-2">
+<<<<<<< HEAD
                 <CalendarClock size={14} className="text-slate-400" />
                 <span>Deadline: {survey.deadlineDate || 'No deadline set'}</span>
               </div>
               <div className="flex items-center gap-2">
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
                 <Users size={14} className="text-slate-400" />
                 <span>Target: {survey.surveyType}s</span>
               </div>
@@ -180,6 +209,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Questions list (admin only) / Company completion tracker (everyone else) */}
           {isAdmin ? (
             <div className="panel space-y-4">
@@ -232,6 +262,27 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
               )}
             </div>
           )}
+=======
+          {/* Questions list */}
+          <div className="panel space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Form Questions List</h4>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {survey.questions.map((q) => (
+                <div key={q.questionId} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    {q.questionNumber}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{q.question}</p>
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
+                      {q.questionCategory}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         </div>
 
         {/* Right column - Performance / Stats */}
@@ -413,12 +464,15 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                 </span>
               </div>
               <div>
+<<<<<<< HEAD
                 <span className="font-semibold block text-slate-400">Address:</span>
                 <span className="text-slate-700 dark:text-slate-300 font-medium text-sm mt-0.5 block">
                   {activeSubmissionDetail.answers[0]?.address || 'N/A'}
                 </span>
               </div>
               <div>
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
                 <span className="font-semibold block text-slate-400">Submission Date & Time:</span>
                 <span className="text-slate-700 dark:text-slate-300 font-medium text-sm mt-0.5 block">
                   {new Date(activeSubmissionDetail.submissionDate).toLocaleString()}

@@ -21,7 +21,10 @@ interface PartnerCompaniesPageProps {
   responses: SurveyResponse[];
   onAddCompany: (name: string, type: SurveyType, affiliation?: string) => void;
   onRemoveCompany: (id: string) => void;
+<<<<<<< HEAD
   isAdmin?: boolean;
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 }
 
 export function PartnerCompaniesPage({
@@ -29,7 +32,10 @@ export function PartnerCompaniesPage({
   responses,
   onAddCompany,
   onRemoveCompany,
+<<<<<<< HEAD
   isAdmin,
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 }: PartnerCompaniesPageProps) {
   const [activeTab, setActiveTab] = useState<SurveyType | 'All'>('All');
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -202,6 +208,7 @@ export function PartnerCompaniesPage({
         </div>
 
         {/* Register Button */}
+<<<<<<< HEAD
         {isAdmin ? (
           <button
             onClick={() => {
@@ -219,6 +226,19 @@ export function PartnerCompaniesPage({
             ⚠️ Registration Restricted
           </span>
         )}
+=======
+        <button
+          onClick={() => {
+            setErrorMessage('');
+            setIsRegisterOpen(true);
+          }}
+          className="bg-[#0063a9] hover:bg-[#00528c] text-white flex items-center justify-center gap-1.5 py-2 px-5 text-xs font-bold rounded-lg shadow-xs transition duration-150 cursor-pointer"
+          type="button"
+        >
+          <Plus size={16} />
+          <span>Register New Partner</span>
+        </button>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       </div>
 
       {/* Expanded Partners list */}
@@ -304,6 +324,7 @@ export function PartnerCompaniesPage({
                     </div>
 
                     {/* Delete action button */}
+<<<<<<< HEAD
                     {isAdmin && (
                       <button
                         onClick={() => startDelete(c)}
@@ -314,6 +335,16 @@ export function PartnerCompaniesPage({
                         <Trash size={16} />
                       </button>
                     )}
+=======
+                    <button
+                      onClick={() => startDelete(c)}
+                      className="text-slate-300 hover:text-rose-600 dark:text-slate-700 dark:hover:text-rose-400 transition p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg shrink-0 cursor-pointer self-start sm:self-center"
+                      title="Remove Partner Company"
+                      type="button"
+                    >
+                      <Trash size={16} />
+                    </button>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
                   </div>
 
                   {/* Multi-column specs details grid */}

@@ -136,6 +136,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
             </label>
 
+<<<<<<< HEAD
             <label className="block">
               <span className="field-label">Password</span>
               <div className="mt-1 flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white pl-3 pr-3 transition focus-within:border-azure focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:ring-blue-950">
@@ -227,6 +228,31 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             ))}
           </div>
         </div>
+=======
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-lg bg-[#0063a9] py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#00528c] transition disabled:opacity-70 cursor-pointer font-bold"
+          >
+            {isSubmitting ? 'Signing in…' : 'Sign in as Administrator'}
+          </button>
+
+          <div className="relative flex py-1 items-center" id="respondent-separator">
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+            <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Public Access</span>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onLogin('respondent')}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-bold text-[#0063a9] hover:border-blue-200 hover:text-blue-700 transition dark:bg-slate-950 dark:text-blue-300 dark:border-slate-800 cursor-pointer shadow-xs"
+            id="btn-login-respondent"
+          >
+            Take a Stakeholder Survey
+          </button>
+        </form>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       </div>
     </div>
   );

@@ -1,12 +1,20 @@
 import { useState } from 'react';
+<<<<<<< HEAD
 import { Plus, Trash, ArrowLeft, Save, AlertCircle, FileText, Sparkles, CalendarClock } from 'lucide-react';
 import { SurveyType, CustomForm } from '../types/survey';
 import { isValidDDMMYYYY } from '../utils/time';
+=======
+import { Plus, Trash, ArrowLeft, Save, AlertCircle, FileText, Sparkles } from 'lucide-react';
+import { SurveyType, CustomForm } from '../types/survey';
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 interface CreateSurveyPageProps {
   onBack: () => void;
   onSave: (survey: Omit<CustomForm, 'id' | 'createdAt'>) => void;
+<<<<<<< HEAD
   surveyToEdit?: CustomForm;
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 }
 
 const CATEGORIES = [
@@ -23,6 +31,7 @@ const CATEGORIES = [
 interface QuestionInput {
   question: string;
   questionCategory: string;
+<<<<<<< HEAD
   section?: string;
   inputType?: 'rating' | 'text' | 'select' | 'typed-rating';
   options?: string[];
@@ -48,6 +57,17 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
         }))
       : [{ question: '', questionCategory: 'Delivery' }]
   );
+=======
+}
+
+export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
+  const [title, setTitle] = useState('');
+  const [surveyType, setSurveyType] = useState<SurveyType>('Contractor');
+  const [description, setDescription] = useState('');
+  const [questions, setQuestions] = useState<QuestionInput[]>([
+    { question: '', questionCategory: 'Delivery' },
+  ]);
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   const [error, setError] = useState('');
 
   const handleAddQuestion = () => {
@@ -114,6 +134,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
       return;
     }
 
+<<<<<<< HEAD
     if (deadlineDate.trim() && !isValidDDMMYYYY(deadlineDate)) {
       setDeadlineError('Enter a valid deadline date in dd/mm/yyyy format (e.g. 05/03/2026).');
       setError('Please fix the deadline date before saving.');
@@ -121,12 +142,15 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
     }
     setDeadlineError('');
 
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     if (questions.some((q) => !q.question.trim())) {
       setError('All questions must contain text. Please fill or remove empty questions.');
       return;
     }
 
     const formattedQuestions = questions.map((q, idx) => ({
+<<<<<<< HEAD
       questionId: surveyToEdit && surveyToEdit.questions[idx]
         ? surveyToEdit.questions[idx].questionId
         : `Q-CUST-${Date.now()}-${idx + 1}`,
@@ -137,14 +161,23 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
       inputType: q.inputType || 'rating',
       options: q.options && q.options.length > 0 ? q.options : undefined,
       validationRange: q.validationRange || undefined,
+=======
+      questionId: `Q-CUST-${Date.now()}-${idx + 1}`,
+      questionNumber: idx + 1,
+      question: q.question.trim(),
+      questionCategory: q.questionCategory,
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     }));
 
     onSave({
       title: title.trim(),
       surveyType,
       description: description.trim() || `Custom survey for ${surveyType} stakeholders.`,
+<<<<<<< HEAD
       deadlineDate: deadlineDate.trim() || undefined,
       maxRating,
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       questions: formattedQuestions,
     });
   };
@@ -216,6 +249,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
               </select>
             </div>
 
+<<<<<<< HEAD
             <div>
               <label htmlFor="survey-deadline" className="field-label flex items-center gap-1.5">
                 <CalendarClock size={13} className="text-slate-400" />
@@ -276,6 +310,8 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
               </p>
             </div>
 
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
@@ -313,6 +349,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
             {questions.map((q, idx) => (
               <div
                 key={idx}
+<<<<<<< HEAD
                 className="group relative flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40"
               >
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
@@ -458,6 +495,47 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
                     )}
                   </div>
                 </div>
+=======
+                className="group relative flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 md:flex-row md:items-center"
+              >
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  {idx + 1}
+                </div>
+
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    className="field mt-0"
+                    placeholder="Enter question text (e.g. Does the service provider maintain standard quality over time?)"
+                    value={q.question}
+                    onChange={(e) => handleQuestionChange(idx, e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="w-full md:w-48 shrink-0">
+                  <select
+                    className="field mt-0"
+                    value={q.questionCategory}
+                    onChange={(e) => handleCategoryChange(idx, e.target.value)}
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveQuestion(idx)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 md:opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer self-end md:self-auto"
+                  title="Remove question"
+                >
+                  <Trash size={16} />
+                </button>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
               </div>
             ))}
           </div>
@@ -477,7 +555,11 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
             id="btn-save-survey"
           >
             <Save size={16} />
+<<<<<<< HEAD
             <span>{surveyToEdit ? 'Save Changes' : 'Create and Publish Form'}</span>
+=======
+            <span>Create and Publish Form</span>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
           </button>
         </div>
       </form>

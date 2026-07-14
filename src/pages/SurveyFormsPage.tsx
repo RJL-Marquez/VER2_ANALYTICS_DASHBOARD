@@ -1,18 +1,30 @@
 import { useMemo, useState } from 'react';
+<<<<<<< HEAD
 import { ClipboardList, Plus, Search, Eye, FormInput, X, Check, Award, Building2, CalendarClock } from 'lucide-react';
 import { CustomForm, SurveyType, PartnerCompany } from '../types/survey';
 import { StateMessage } from '../components/StateMessage';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
+=======
+import { ClipboardList, Plus, Search, Eye, FormInput, FileText } from 'lucide-react';
+import { CustomForm, SurveyType } from '../types/survey';
+import { StateMessage } from '../components/StateMessage';
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 interface SurveyFormsPageProps {
   surveys: CustomForm[];
   responses: any[];
+<<<<<<< HEAD
   partnerCompanies?: PartnerCompany[];
   userEmail?: string;
   onSelectSurvey: (id: string) => void;
   onNavigateToCreate: () => void;
   onFillForm: (id: string) => void;
   isAdmin?: boolean;
+=======
+  onSelectSurvey: (id: string) => void;
+  onNavigateToCreate: () => void;
+  onFillForm: (id: string) => void;
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 }
 
 const surveyTypeOptions: Array<'All' | SurveyType> = ['All', 'Contractor', 'Supplier', 'Subcontractor'];
@@ -29,6 +41,7 @@ const surveyTypeBadges: Record<SurveyType, string> = {
   Subcontractor: 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20',
 };
 
+<<<<<<< HEAD
 export function SurveyFormsPage({
   surveys,
   responses,
@@ -105,6 +118,11 @@ export function SurveyFormsPage({
     if (!deadlineDate) return 'No deadline set';
     return deadlineDate;
   };
+=======
+export function SurveyFormsPage({ surveys, responses, onSelectSurvey, onNavigateToCreate, onFillForm }: SurveyFormsPageProps) {
+  const [surveyType, setSurveyType] = useState<'All' | SurveyType>('All');
+  const [search, setSearch] = useState('');
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
   const filteredSurveys = useMemo(() => {
     return surveys.filter((survey) => {
@@ -154,6 +172,7 @@ export function SurveyFormsPage({
           </div>
         </div>
 
+<<<<<<< HEAD
         {!isAdmin ? (
           <button
             onClick={() => setIsModalOpen(true)}
@@ -214,6 +233,23 @@ export function SurveyFormsPage({
             </button>
           </div>
         )}
+=======
+        <div className="panel p-5 flex items-center justify-between border-dashed border-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/25 dark:bg-transparent">
+          <div className="space-y-1 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Template Engine</span>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Custom Microsoft Forms</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Instantly generate feedback schemas</p>
+          </div>
+          <button
+            onClick={onNavigateToCreate}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm transition cursor-pointer shrink-0"
+            type="button"
+          >
+            <Plus size={15} />
+            <span>Create Form</span>
+          </button>
+        </div>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       </section>
 
       {/* Main List Section */}
@@ -272,6 +308,7 @@ export function SurveyFormsPage({
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                   <th className="px-4 py-3.5">Survey Title</th>
                   <th className="px-4 py-3.5">Category Type</th>
+<<<<<<< HEAD
                   {isAdmin ? (
                     <>
                       <th className="px-4 py-3.5">Question Count</th>
@@ -284,6 +321,11 @@ export function SurveyFormsPage({
                       <th className="px-4 py-3.5">Status</th>
                     </>
                   )}
+=======
+                  <th className="px-4 py-3.5">Question Count</th>
+                  <th className="px-4 py-3.5">Approx. Responses</th>
+                  <th className="px-4 py-3.5">Creation Date</th>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -291,9 +333,17 @@ export function SurveyFormsPage({
                 {filteredSurveys.map((survey) => {
                   const numQuestions = survey.questions?.length ?? 0;
                   const numResponses = responseCounts[survey.surveyType] ?? 0;
+<<<<<<< HEAD
                   const deadlineLabel = formatDeadline(survey.deadlineDate);
                   const totalForType = companyTotalsByType[survey.surveyType] || 0;
                   const completedForType = companyCompletedByType[survey.surveyType] || 0;
+=======
+                  const displayDate = new Date(survey.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  });
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
                   return (
                     <tr key={survey.id} className="align-middle hover:bg-slate-50/40 dark:hover:bg-slate-900/10">
@@ -312,6 +362,7 @@ export function SurveyFormsPage({
                           {survey.surveyType}
                         </span>
                       </td>
+<<<<<<< HEAD
                       {isAdmin ? (
                         <>
                           <td className="px-4 py-3.5 font-medium text-slate-600 dark:text-slate-300">
@@ -375,6 +426,38 @@ export function SurveyFormsPage({
                             </button>
                           </div>
                         )}
+=======
+                      <td className="px-4 py-3.5 font-medium text-slate-600 dark:text-slate-300">
+                        {numQuestions} {numQuestions === 1 ? 'question' : 'questions'}
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-slate-600 dark:text-slate-300">
+                        {numResponses} {numResponses === 1 ? 'response' : 'responses'}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                        {displayDate}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            onClick={() => onSelectSurvey(survey.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer"
+                            type="button"
+                            title="Manage questions and details"
+                          >
+                            <Eye size={13} />
+                            <span>Manage</span>
+                          </button>
+                          <button
+                            onClick={() => onFillForm(survey.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-[#0063a9] hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1.5 text-xs font-bold transition cursor-pointer"
+                            type="button"
+                            title="Open submission ingress form"
+                          >
+                            <FormInput size={13} />
+                            <span>Fill Ingress</span>
+                          </button>
+                        </div>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
                       </td>
                     </tr>
                   );
@@ -384,6 +467,7 @@ export function SurveyFormsPage({
           </div>
         )}
       </section>
+<<<<<<< HEAD
 
       {/* Pending Companies Modal */}
       {isModalOpen && (
@@ -530,6 +614,8 @@ export function SurveyFormsPage({
           </div>
         </div>
       )}
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     </div>
   );
 }

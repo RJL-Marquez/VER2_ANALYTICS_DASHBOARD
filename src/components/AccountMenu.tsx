@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+<<<<<<< HEAD
 import { LogOut, User, ChevronDown, Award, MapPin } from 'lucide-react';
+=======
+import { LogOut, User, ChevronDown } from 'lucide-react';
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 interface AccountMenuProps {
   email: string;
@@ -37,7 +41,11 @@ export function AccountMenu({ email, designation, department, role, onLogout }: 
     <div className="relative" ref={menuRef} id="account-menu-container">
       <button
         onClick={() => setIsOpen(!isOpen)}
+<<<<<<< HEAD
         className="flex items-center gap-2 rounded-lg bg-[#00528c]/40 hover:bg-[#00528c]/60 px-3 py-1.5 transition text-white text-sm font-medium border border-blue-400/25 cursor-pointer outline-none animate-fade-in"
+=======
+        className="flex items-center gap-2 rounded-lg bg-[#00528c]/40 hover:bg-[#00528c]/60 px-3 py-1.5 transition text-white text-sm font-medium border border-blue-400/25 cursor-pointer outline-none"
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         type="button"
         id="account-menu-trigger"
       >
@@ -52,16 +60,26 @@ export function AccountMenu({ email, designation, department, role, onLogout }: 
 
       {isOpen && (
         <div
+<<<<<<< HEAD
           className="absolute right-0 mt-2 w-64 origin-top-right rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-none dark:border-slate-800 dark:bg-slate-950 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
           id="account-menu-dropdown"
         >
           <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Account Session</p>
             <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={email}>
+=======
+          className="absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-none dark:border-slate-800 dark:bg-slate-950 z-50"
+          id="account-menu-dropdown"
+        >
+          <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Signed in as</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={email}>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
               {email}
             </p>
           </div>
           
+<<<<<<< HEAD
           <div className="mt-1 divide-y divide-slate-100 dark:divide-slate-800">
             <div className="flex flex-col gap-2 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-400">
               <div className="flex items-center gap-2">
@@ -98,6 +116,26 @@ export function AccountMenu({ email, designation, department, role, onLogout }: 
                 <span>Sign out</span>
               </button>
             </div>
+=======
+          <div className="mt-1">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+              <User size={14} />
+              <span>Administrator Role</span>
+            </div>
+            
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onLogout();
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30 transition cursor-pointer"
+              type="button"
+              id="logout-button"
+            >
+              <LogOut size={15} />
+              <span>Sign out</span>
+            </button>
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
           </div>
         </div>
       )}

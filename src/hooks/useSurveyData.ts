@@ -89,11 +89,16 @@ export function useSurveyData() {
 
         // 1. Handle Surveys (Forms)
         let loadedSurveys: CustomForm[] = [];
+<<<<<<< HEAD
         const savedSurveys = localStorage.getItem('survey_analytics_surveys_v4');
+=======
+        const savedSurveys = localStorage.getItem('survey_analytics_surveys');
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         if (savedSurveys) {
           loadedSurveys = JSON.parse(savedSurveys);
         } else {
           // Create 3 standard default surveys based on initial static questions
+<<<<<<< HEAD
           const contractorQuestions = [
             {
               questionId: 'Q-CON-03',
@@ -819,6 +824,32 @@ export function useSurveyData() {
     "inputType": "text"
   }
 ];
+=======
+          const contractorQuestions = surveyQuestions
+            .filter((q) => q.surveyTypes.includes('Contractor'))
+            .map((q) => ({
+              questionId: q.questionId,
+              questionNumber: q.questionNumber,
+              question: q.question,
+              questionCategory: q.questionCategory,
+            }));
+          const supplierQuestions = surveyQuestions
+            .filter((q) => q.surveyTypes.includes('Supplier'))
+            .map((q) => ({
+              questionId: q.questionId,
+              questionNumber: q.questionNumber,
+              question: q.question,
+              questionCategory: q.questionCategory,
+            }));
+          const subcontractorQuestions = surveyQuestions
+            .filter((q) => q.surveyTypes.includes('Subcontractor'))
+            .map((q) => ({
+              questionId: q.questionId,
+              questionNumber: q.questionNumber,
+              question: q.question,
+              questionCategory: q.questionCategory,
+            }));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
           loadedSurveys = [
             {
@@ -827,7 +858,10 @@ export function useSurveyData() {
               surveyType: 'Contractor',
               description: 'Standard satisfaction reporting for external courier and logistics contractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
+<<<<<<< HEAD
               deadlineDate: '31/12/2026',
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
               questions: contractorQuestions,
             },
             {
@@ -836,7 +870,10 @@ export function useSurveyData() {
               surveyType: 'Supplier',
               description: 'Product quality and commercial terms assessment for inventory suppliers.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
+<<<<<<< HEAD
               deadlineDate: '31/12/2026',
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
               questions: supplierQuestions,
             },
             {
@@ -845,20 +882,32 @@ export function useSurveyData() {
               surveyType: 'Subcontractor',
               description: 'On-site execution, compliance, and schedule feedback for active subcontractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
+<<<<<<< HEAD
               deadlineDate: '31/12/2026',
               questions: subcontractorQuestions,
             },
           ];
           localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(loadedSurveys));
+=======
+              questions: subcontractorQuestions,
+            },
+          ];
+          localStorage.setItem('survey_analytics_surveys', JSON.stringify(loadedSurveys));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         }
 
         // 2. Handle Partner Companies
         let loadedCompanies: PartnerCompany[] = [];
+<<<<<<< HEAD
         const savedCompanies = localStorage.getItem('survey_analytics_partner_companies_v4');
+=======
+        const savedCompanies = localStorage.getItem('survey_analytics_partner_companies');
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         if (savedCompanies) {
           loadedCompanies = JSON.parse(savedCompanies);
         } else {
           loadedCompanies = [
+<<<<<<< HEAD
             // Courier (Contractor)
             { id: 'pc-1', name: 'Airspeed International Corp', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
             { id: 'pc-2', name: 'Alphacon Logistics International Corp', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
@@ -905,16 +954,40 @@ export function useSurveyData() {
             { id: 'pc-41', name: 'PAX8 Philippines Inc', type: 'Supplier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
           ];
           localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(loadedCompanies));
+=======
+            { id: 'pc-1', name: 'Apex Buildworks', type: 'Contractor', affiliation: 'Core Logistics', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-2', name: 'Northstar Materials', type: 'Supplier', affiliation: 'Raw Materials', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-3', name: 'BluePeak Industrial', type: 'Subcontractor', affiliation: 'Heavy Machinery', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-4', name: 'CivicLine Contractors', type: 'Contractor', affiliation: 'Civil Engineering', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-5', name: 'MetroGrid Services', type: 'Subcontractor', affiliation: 'MEP Infrastructure', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-6', name: 'HarborPoint Supply', type: 'Supplier', affiliation: 'Pipes & Fittings', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-7', name: 'Summit Electrical', type: 'Subcontractor', affiliation: 'Electrical Systems', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-8', name: 'PrimeAxis Logistics', type: 'Contractor', affiliation: 'Fleet Management', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-9', name: 'Greenfield Mechanical', type: 'Subcontractor', affiliation: 'HVAC Services', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-10', name: 'Keystone Fabrication', type: 'Supplier', affiliation: 'Steel & Rebar', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-11', name: 'Orbit Safety Group', type: 'Contractor', affiliation: 'HSE Auditing', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-12', name: 'BrightPath Engineering', type: 'Supplier', affiliation: 'Lighting & Smart Tech', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+          ];
+          localStorage.setItem('survey_analytics_partner_companies', JSON.stringify(loadedCompanies));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         }
 
         // 3. Handle Responses
         let loadedResponses: SurveyResponse[] = [];
+<<<<<<< HEAD
         const savedResponses = localStorage.getItem('survey_analytics_responses_v4');
+=======
+        const savedResponses = localStorage.getItem('survey_analytics_responses');
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         if (savedResponses) {
           loadedResponses = JSON.parse(savedResponses);
         } else {
           loadedResponses = generateMockResponses();
+<<<<<<< HEAD
           localStorage.setItem('survey_analytics_responses_v4', JSON.stringify(loadedResponses));
+=======
+          localStorage.setItem('survey_analytics_responses', JSON.stringify(loadedResponses));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         }
 
         if (isMountedRef.current) {
@@ -955,6 +1028,7 @@ export function useSurveyData() {
 
     const updatedSurveys = [surveyWithId, ...surveys];
     setSurveys(updatedSurveys);
+<<<<<<< HEAD
     localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(updatedSurveys));
     return surveyWithId;
   };
@@ -992,6 +1066,35 @@ export function useSurveyData() {
     const targetSurvey = surveys.find((s) => s.id === surveyId);
     if (!targetSurvey) return null;
 
+=======
+    localStorage.setItem('survey_analytics_surveys', JSON.stringify(updatedSurveys));
+    return surveyWithId;
+  };
+
+  // Delete a survey form
+  const deleteSurvey = (surveyId: string) => {
+    const updatedSurveys = surveys.filter((s) => s.id !== surveyId);
+    setSurveys(updatedSurveys);
+    localStorage.setItem('survey_analytics_surveys', JSON.stringify(updatedSurveys));
+
+    // Also optionally clean up custom responses submitted specifically to this survey?
+    // Let's filter out responses that match the deleted survey's questions and aren't default ones.
+    // However, to be safe, let's keep responses unless specifically wanted, or just clean them up.
+    // Actually, cleaning them up keeps analytics clean! Let's do it if we want, or keep it simple.
+  };
+
+  // Submit a survey response
+  const submitResponse = (
+    surveyId: string,
+    company: string,
+    department: string,
+    respondentType: string,
+    answers: { questionId: string; questionNumber: number; question: string; questionCategory: string; rating: Rating; comment: string }[]
+  ) => {
+    const targetSurvey = surveys.find((s) => s.id === surveyId);
+    if (!targetSurvey) return null;
+
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     const responseId = `RESP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const submissionDate = new Date().toISOString();
 
@@ -1002,19 +1105,29 @@ export function useSurveyData() {
       submissionDate,
       company,
       department,
+<<<<<<< HEAD
       address,
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       questionId: ans.questionId,
       questionNumber: ans.questionNumber,
       question: ans.question,
       questionCategory: ans.questionCategory,
       rating: ans.rating,
       comment: ans.comment || 'Submitted successfully.',
+<<<<<<< HEAD
       respondentEmail,
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     }));
 
     const updatedResponses = [...responses, ...newResponses];
     setResponses(updatedResponses);
+<<<<<<< HEAD
     localStorage.setItem('survey_analytics_responses_v4', JSON.stringify(updatedResponses));
+=======
+    localStorage.setItem('survey_analytics_responses', JSON.stringify(updatedResponses));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
     // Add notification
     const notification = toNotification(newResponses);
@@ -1037,7 +1150,11 @@ export function useSurveyData() {
     };
     const updated = [...partnerCompanies, newCompany];
     setPartnerCompanies(updated);
+<<<<<<< HEAD
     localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(updated));
+=======
+    localStorage.setItem('survey_analytics_partner_companies', JSON.stringify(updated));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     return newCompany;
   };
 
@@ -1045,16 +1162,25 @@ export function useSurveyData() {
   const removePartnerCompany = (id: string) => {
     const updated = partnerCompanies.filter((c) => c.id !== id);
     setPartnerCompanies(updated);
+<<<<<<< HEAD
     localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(updated));
+=======
+    localStorage.setItem('survey_analytics_partner_companies', JSON.stringify(updated));
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   };
 
   // Reset to initial mock data state
   const resetAllData = () => {
     localStorage.removeItem('survey_analytics_surveys');
+<<<<<<< HEAD
     localStorage.removeItem('survey_analytics_surveys_v4');
     localStorage.removeItem('survey_analytics_responses');
     localStorage.removeItem('survey_analytics_responses_v4');
     localStorage.removeItem('survey_analytics_partner_companies_v4');
+=======
+    localStorage.removeItem('survey_analytics_responses');
+    localStorage.removeItem('survey_analytics_partner_companies');
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     window.location.reload();
   };
 
@@ -1107,7 +1233,10 @@ export function useSurveyData() {
     unreadCount,
     markNotificationsRead,
     createSurvey,
+<<<<<<< HEAD
     updateSurvey,
+=======
+>>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     deleteSurvey,
     submitResponse,
     resetAllData,
