@@ -212,6 +212,22 @@ export function responseVolume(responses: SurveyResponse[], types: SurveyType[] 
   }));
 }
 
+export function categoryPerformance(responses: SurveyResponse[]) {
+  const groups = new Map<string, SurveyResponse[]>();
+  responses.forEach((response) => {
+    groups.set(response.questionCategory, [...(groups.get(response.questionCategory) ?? []), response]);
+  });
+
+  return [...groups.entries()]
+    .map(([category, categoryResponses]) => ({
+      category,
+      average: Number(formatNumber(averageRating(categoryResponses))),
+      responses: categoryResponses.length,
+      naCount: categoryResponses.filter((response) => response.rating === 'N/A').length,
+    }))
+    .sort((left, right) => right.average - left.average);
+}
+
 export function naFrequency(responses: SurveyResponse[]) {
   const groups = new Map<string, SurveyResponse[]>();
   responses.forEach((response) => {

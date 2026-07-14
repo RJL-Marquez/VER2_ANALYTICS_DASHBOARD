@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users } from 'lucide-react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -15,6 +15,7 @@ import { SurveyDetailsPage } from './pages/SurveyDetailsPage';
 import { SurveyFillerPage } from './pages/SurveyFillerPage';
 import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
 import { SurveyFormsPage } from './pages/SurveyFormsPage';
+import { PresentPage } from './pages/PresentPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
@@ -71,12 +72,13 @@ function getUserProfile(email: string | null) {
   };
 }
 
-type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
+type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
 
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
+  { key: 'present' as const, label: 'Present', icon: Presentation },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
   { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
@@ -132,7 +134,7 @@ export default function App() {
 
   const visiblePages = useMemo(() => {
     if (isAdmin) return adminPages;
-    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer');
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present');
   }, [isAdmin]);
 
   const handleLogin = (email: string) => {
@@ -204,6 +206,7 @@ export default function App() {
       />
     ),
     analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
+    present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} />,
     reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
@@ -385,7 +388,7 @@ export default function App() {
             <div className="min-w-0 flex-1">{pageContent}</div>
             
             {/* Show Filter Panel only on Admin-view pages that need filters */}
-            {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && (
+            {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && (
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
@@ -399,7 +402,7 @@ export default function App() {
             )}
           </div>
           
-          {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && (
+          {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && activePage !== 'present' && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <Search size={16} className="text-[#0063a9] dark:text-blue-400 shrink-0" />
