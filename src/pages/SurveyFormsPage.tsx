@@ -120,25 +120,6 @@ export function SurveyFormsPage({
     });
   }, [surveys, surveyType, search]);
 
-  // Compute responses count per surveyType or custom criteria if possible.
-  // Since we don't store surveyId on responses, let's group responseId counts by surveyType for standard surveys, 
-  // or count total unique responseIds.
-  const responseCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    const processedResponseIds = new Set<string>();
-
-    responses.forEach((resp) => {
-      const respId = resp.responseId;
-      if (!processedResponseIds.has(respId)) {
-        processedResponseIds.add(respId);
-        const type = resp.surveyType as SurveyType;
-        counts[type] = (counts[type] || 0) + 1;
-      }
-    });
-
-    return counts;
-  }, [responses]);
-
   return (
     <div className="space-y-5">
       {/* Cards Row */}
@@ -274,8 +255,7 @@ export function SurveyFormsPage({
                   <th className="px-4 py-3.5">Category Type</th>
                   {isAdmin ? (
                     <>
-                      <th className="px-4 py-3.5">Question Count</th>
-                      <th className="px-4 py-3.5">Approx. Responses</th>
+                      <th className="px-4 py-3.5">Status</th>
                       <th className="px-4 py-3.5">Deadline Date</th>
                     </>
                   ) : (
@@ -289,8 +269,6 @@ export function SurveyFormsPage({
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredSurveys.map((survey) => {
-                  const numQuestions = survey.questions?.length ?? 0;
-                  const numResponses = responseCounts[survey.surveyType] ?? 0;
                   const deadlineLabel = formatDeadline(survey.deadlineDate);
                   const totalForType = companyTotalsByType[survey.surveyType] || 0;
                   const completedForType = companyCompletedByType[survey.surveyType] || 0;
@@ -314,11 +292,8 @@ export function SurveyFormsPage({
                       </td>
                       {isAdmin ? (
                         <>
-                          <td className="px-4 py-3.5 font-medium text-slate-600 dark:text-slate-300">
-                            {numQuestions} {numQuestions === 1 ? 'question' : 'questions'}
-                          </td>
-                          <td className="px-4 py-3.5 font-medium text-slate-600 dark:text-slate-300">
-                            {numResponses} {numResponses === 1 ? 'response' : 'responses'}
+                          <td className="px-4 py-3.5">
+                            <CompletionStatusBar completed={completedForType} total={totalForType} />
                           </td>
                           <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
                             <span className="inline-flex items-center gap-1.5">

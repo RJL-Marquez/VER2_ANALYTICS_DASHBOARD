@@ -38,7 +38,7 @@ export function CompletionStatusBar({ completed, total, className = '' }: Comple
       <div className={className}>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 px-2.5 py-1 text-xs font-bold">
           <CheckCircle2 size={13} />
-          <span>Completed</span>
+          <span>Survey Completed</span>
         </span>
       </div>
     );
