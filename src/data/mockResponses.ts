@@ -1,8 +1,7 @@
 import { surveyQuestions } from './questions';
 import { Rating, SurveyResponse, SurveyType } from '../types/survey';
 
-const companies = [
-  // Courier / Contractor
+const courierCompanies = [
   'Airspeed International Corp',
   'Alphacon Logistics International Corp',
   'Cloverxpress Freight Inc',
@@ -11,7 +10,9 @@ const companies = [
   'Road2go Trucking Services OPC',
   'RZ1 Freight Express Corporation',
   'Yello X Supply Chain Solutions',
-  // Subcontractor
+];
+
+const subcontractorCompanies = [
   'Aimvest Electrical Services',
   'Cara Electrical and Network Solutions Inc',
   'Cgalz Enterprises',
@@ -25,7 +26,9 @@ const companies = [
   'Technivision ICT Solutions, Inc',
   'Unikkon Network Philippines Inc',
   'ZIMOSystem Solutions Inc',
-  // Supplier
+];
+
+const supplierCompanies = [
   'VSTECS Phils. Inc',
   'Wordtext Systems, Inc',
   'Exclusive Networks-Ph Inc',
@@ -47,6 +50,16 @@ const companies = [
   'Sencolink Technologies Inc',
   'PAX8 Philippines Inc',
 ];
+
+// Companies grouped by the survey type they're actually evaluated on -
+// this must stay in sync with the default partner company list seeded in
+// useSurveyData.ts, so a company never ends up with responses for a form
+// type it was never registered under.
+const companiesByType: Record<SurveyType, string[]> = {
+  Contractor: courierCompanies,
+  Subcontractor: subcontractorCompanies,
+  Supplier: supplierCompanies,
+};
 
 const departments = [
   'Accounts Payable - Trade',
@@ -117,48 +130,73 @@ function commentForRating(rating: Rating, seed: number) {
 
 function dateForIndex(index: number) {
   const start = new Date('2025-01-03T08:00:00');
-  start.setDate(start.getDate() + Math.floor(index * 0.78));
+  start.setDate(start.getDate() + Math.floor(index * 2.1));
   return start.toISOString();
 }
 
-export function generateMockResponses(total = 432): SurveyResponse[] {
-  return Array.from({ length: total }, (_, index) => {
-    const question = surveyQuestions[index % surveyQuestions.length];
-    const surveyType = pick(question.surveyTypes, index + 21);
-    const rating = weightedRating(index + 73, surveyType, question.questionNumber);
-    const company = pick(companies, index + 91);
-    const rType = pick(respondentTypes, index + 13);
-    const dept = pick(departments, index + 45);
+function respondentEmailFor(rType: string, dept: string) {
+  if (rType === 'Rank & File' && dept === 'Accounts Payable - Trade') return 'rankfile@mgenesis.com';
+  if (rType === 'Supervisory' && dept === 'Logistics') return 'supervisory@mgenesis.com';
+  if (rType === 'Managerial' && dept === 'Procurement Group') return 'managerial@mgenesis.com';
+  if (rType === 'Director' && dept === 'TASS') return 'director@mgenesis.com';
+  if (rType === 'Executive' && dept === 'Business Solutions Manager') return 'executive@mgenesis.com';
+  return undefined;
+}
 
-    let respondentEmail: string | undefined = undefined;
-    if (rType === 'Rank & File' && dept === 'Accounts Payable - Trade') {
-      respondentEmail = 'rankfile@mgenesis.com';
-    } else if (rType === 'Supervisory' && dept === 'Logistics') {
-      respondentEmail = 'supervisory@mgenesis.com';
-    } else if (rType === 'Managerial' && dept === 'Procurement Group') {
-      respondentEmail = 'managerial@mgenesis.com';
-    } else if (rType === 'Director' && dept === 'TASS') {
-      respondentEmail = 'director@mgenesis.com';
-    } else if (rType === 'Executive' && dept === 'Business Solutions Manager') {
-      respondentEmail = 'executive@mgenesis.com';
-    }
+/**
+ * A real Microsoft Forms submission only exists once every question on the
+ * form has been answered (N/A is still an answer). So each simulated
+ * "submission" here answers every question that applies to its survey
+ * type, for one company, in one sitting - mirroring generateLiveSubmission
+ * below. This guarantees that any company with at least one submission has
+ * every section represented on the radar chart; a section can only go
+ * missing there if every question in it happened to be rated N/A, which is
+ * astronomically unlikely across a handful of submissions.
+ */
+export function generateMockResponses(): SurveyResponse[] {
+  const rows: SurveyResponse[] = [];
+  let submissionIndex = 0;
 
-    return {
-      responseId: `SP-${String(index + 1).padStart(5, '0')}`,
-      surveyType,
-      respondentType: rType,
-      submissionDate: dateForIndex(index),
-      company,
-      department: dept,
-      questionId: question.questionId,
-      questionNumber: question.questionNumber,
-      question: question.question,
-      questionCategory: question.questionCategory,
-      rating,
-      comment: commentForRating(rating, index + 111),
-      respondentEmail,
-    };
+  (Object.keys(companiesByType) as SurveyType[]).forEach((surveyType) => {
+    const applicableQuestions = surveyQuestions.filter((q) => q.surveyTypes.includes(surveyType));
+
+    companiesByType[surveyType].forEach((company, companyIndex) => {
+      const companySeed = companyIndex * 31 + surveyType.length * 7;
+      const submissionCount = 3 + Math.floor(seededRandom(companySeed + 3) * 4); // 3-6 submissions per company
+
+      for (let s = 0; s < submissionCount; s += 1) {
+        submissionIndex += 1;
+        const seedBase = submissionIndex * 97 + companyIndex * 13 + s * 5;
+        const rType = pick(respondentTypes, seedBase + 13);
+        const dept = pick(departments, seedBase + 45);
+        const respondentEmail = respondentEmailFor(rType, dept);
+        const submissionDate = dateForIndex(submissionIndex);
+
+        applicableQuestions.forEach((question, questionIndex) => {
+          const seed = seedBase + questionIndex * 17 + question.questionNumber;
+          const rating = weightedRating(seed, surveyType, question.questionNumber);
+
+          rows.push({
+            responseId: `SP-${String(rows.length + 1).padStart(5, '0')}`,
+            surveyType,
+            respondentType: rType,
+            submissionDate,
+            company,
+            department: dept,
+            questionId: question.questionId,
+            questionNumber: question.questionNumber,
+            question: question.question,
+            questionCategory: question.questionCategory,
+            rating,
+            comment: commentForRating(rating, seed + 111),
+            respondentEmail,
+          });
+        });
+      }
+    });
   });
+
+  return rows;
 }
 
 let liveSubmissionCounter = 0;

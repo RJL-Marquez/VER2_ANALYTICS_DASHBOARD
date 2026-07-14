@@ -68,7 +68,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
       </header>
 
       {/* Navigation for Smaller Screens: tap-to-open dropdown instead of a scrollable tab row */}
-      <div className="sticky top-20 z-10 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 lg:hidden">
+      <div className="sticky top-20 z-30 relative bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 lg:hidden">
         <button
           type="button"
           onClick={() => setIsMobileNavOpen((value) => !value)}
@@ -82,30 +82,34 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
         </button>
 
         {isMobileNavOpen && (
-          <div className="mt-1.5 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
-            {pages.map((page) => {
-              const Icon = page.icon;
-              const active = activePage === page.key;
-              return (
-                <button
-                  key={page.key}
-                  type="button"
-                  onClick={() => {
-                    onPageChange(page.key);
-                    setIsMobileNavOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-sm font-medium transition ${
-                    active
-                      ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  <Icon size={16} className="shrink-0" />
-                  <span className="truncate">{page.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <>
+            {/* Backdrop: closes the menu on outside tap, sits above content but below the menu itself */}
+            <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setIsMobileNavOpen(false)} />
+            <div className="absolute left-4 right-4 top-full mt-1.5 z-40 max-h-[70vh] overflow-y-auto divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white shadow-lg dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
+              {pages.map((page) => {
+                const Icon = page.icon;
+                const active = activePage === page.key;
+                return (
+                  <button
+                    key={page.key}
+                    type="button"
+                    onClick={() => {
+                      onPageChange(page.key);
+                      setIsMobileNavOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-sm font-medium transition ${
+                      active
+                        ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
+                        : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900'
+                    }`}
+                  >
+                    <Icon size={16} className="shrink-0" />
+                    <span className="truncate">{page.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
