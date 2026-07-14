@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartCard } from '../components/ChartCard';
+import { CompanyPerformancePanel } from '../components/CompanyPerformancePanel';
 import { StateMessage } from '../components/StateMessage';
 import { SurveyResponse, SurveyType } from '../types/survey';
 import { averageBySurveyType, naFrequency, questionPerformance, responseVolume } from '../utils/analytics';
@@ -43,6 +44,8 @@ export function AnalyticsPage({ responses, activeSurveyTypes }: AnalyticsPagePro
 
   return (
     <div className="space-y-5">
+      <CompanyPerformancePanel responses={comparableResponses} />
+
       <section className="panel">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
