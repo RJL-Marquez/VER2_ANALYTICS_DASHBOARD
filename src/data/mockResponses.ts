@@ -2,23 +2,67 @@ import { surveyQuestions } from './questions';
 import { Rating, SurveyResponse, SurveyType } from '../types/survey';
 
 const companies = [
-  'Apex Buildworks',
-  'Northstar Materials',
-  'BluePeak Industrial',
-  'CivicLine Contractors',
-  'MetroGrid Services',
-  'HarborPoint Supply',
-  'Summit Electrical',
-  'PrimeAxis Logistics',
-  'Greenfield Mechanical',
-  'Keystone Fabrication',
-  'Orbit Safety Group',
-  'BrightPath Engineering',
+  // Courier / Contractor
+  'Airspeed International Corp',
+  'Alphacon Logistics International Corp',
+  'Cloverxpress Freight Inc',
+  'Lite Xpress International Inc',
+  'Lucky Charm Express Movers Inc',
+  'Road2go Trucking Services OPC',
+  'RZ1 Freight Express Corporation',
+  'Yello X Supply Chain Solutions',
+  // Subcontractor
+  'Aimvest Electrical Services',
+  'Cara Electrical and Network Solutions Inc',
+  'Cgalz Enterprises',
+  'Datalec Technology Corporation',
+  'Glimpse-DC Electronics Industries Inc',
+  'J & C Obenita Construction OPC',
+  'L-Gertrude Construction Services',
+  'MTeknik Technologies Solutions, Inc',
+  'Paragon Electromech Development Corporation',
+  'Skyconvergence Inc',
+  'Technivision ICT Solutions, Inc',
+  'Unikkon Network Philippines Inc',
+  'ZIMOSystem Solutions Inc',
+  // Supplier
+  'VSTECS Phils. Inc',
+  'Wordtext Systems, Inc',
+  'Exclusive Networks-Ph Inc',
+  'Touchstream Digital, Inc',
+  'Bridge Distribution, Inc',
+  'Softwareone Philippines Corporation',
+  'AptSecure Technologies Inc',
+  'Westcon Group Philippines',
+  'M-Security Tech Philippines, Inc',
+  'Banbros Commercial, Incorporated',
+  'Westcon Solutions Philippines Inc',
+  'Ardent Networks Inc',
+  'Mec Computer Corporation',
+  'Streamline Works Inc',
+  'Wyntech Corp',
+  'ACW Distribution (Phils), Inc',
+  'Apuma, March Maanap',
+  'Versatech International Inc',
+  'Sencolink Technologies Inc',
+  'PAX8 Philippines Inc',
 ];
 
-const departments = ['Procurement', 'Operations', 'Facilities', 'Finance', 'Project Delivery', 'Compliance'];
+const departments = [
+  'Accounts Payable - Trade',
+  'Business Solutions Manager',
+  'Logistics',
+  'Procurement Group',
+  'TASS'
+];
 const surveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
-const respondentTypes = ['Project Manager', 'Account Lead', 'Site Supervisor', 'Coordinator', 'Commercial Contact'];
+const respondentTypes = [
+  'Rank & File',
+  'Supervisory',
+  'Managerial',
+  'Director',
+  'Executive'
+];
 
 const positiveComments = [
   'Clear coordination and professional follow-through.',
@@ -83,20 +127,36 @@ export function generateMockResponses(total = 432): SurveyResponse[] {
     const surveyType = pick(question.surveyTypes, index + 21);
     const rating = weightedRating(index + 73, surveyType, question.questionNumber);
     const company = pick(companies, index + 91);
+    const rType = pick(respondentTypes, index + 13);
+    const dept = pick(departments, index + 45);
+
+    let respondentEmail: string | undefined = undefined;
+    if (rType === 'Rank & File' && dept === 'Accounts Payable - Trade') {
+      respondentEmail = 'rankfile@mgenesis.com';
+    } else if (rType === 'Supervisory' && dept === 'Logistics') {
+      respondentEmail = 'supervisory@mgenesis.com';
+    } else if (rType === 'Managerial' && dept === 'Procurement Group') {
+      respondentEmail = 'managerial@mgenesis.com';
+    } else if (rType === 'Director' && dept === 'TASS') {
+      respondentEmail = 'director@mgenesis.com';
+    } else if (rType === 'Executive' && dept === 'Business Solutions Manager') {
+      respondentEmail = 'executive@mgenesis.com';
+    }
 
     return {
       responseId: `SP-${String(index + 1).padStart(5, '0')}`,
       surveyType,
-      respondentType: pick(respondentTypes, index + 13),
+      respondentType: rType,
       submissionDate: dateForIndex(index),
       company,
-      department: pick(departments, index + 45),
+      department: dept,
       questionId: question.questionId,
       questionNumber: question.questionNumber,
       question: question.question,
       questionCategory: question.questionCategory,
       rating,
       comment: commentForRating(rating, index + 111),
+      respondentEmail,
     };
   });
 }

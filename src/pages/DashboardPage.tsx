@@ -1,5 +1,6 @@
 import { Award, Ban, ClipboardList, Star, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Bar,
   BarChart,
@@ -15,16 +16,71 @@ import {
 import { ChartCard } from '../components/ChartCard';
 import { StatCard } from '../components/StatCard';
 import { StateMessage } from '../components/StateMessage';
-import { SurveyResponse } from '../types/survey';
+import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
 import { formatNumber, getKpiSummary, monthlyTrend, questionPerformance, ratingDistribution } from '../utils/analytics';
 
 interface DashboardPageProps {
   responses: SurveyResponse[];
+  allResponses: SurveyResponse[];
+  partnerCompanies: PartnerCompany[];
   isLoading: boolean;
   error: string | null;
+  surveyTypeFilter: SurveyType[];
 }
 
-const chartColors = ['#e11d48', '#d97706', '#2563eb', '#0f9f6e', '#172033', '#64748b'];
+const chartColors = ['#2563eb', '#10b981', '#f97316', '#64748b', '#172033', '#e11d48'];
+
+const categoryColors: Record<string, {
+  text: string;
+  bg: string;
+  border: string;
+  stroke: string;
+  badgeBg: string;
+  borderT: string;
+  borderClass: string;
+  label: string;
+}> = {
+  Contractor: {
+    text: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50/40 dark:bg-blue-950/10',
+    border: 'border-blue-100 dark:border-blue-900/30',
+    stroke: 'stroke-blue-600 dark:stroke-blue-400',
+    badgeBg: 'bg-blue-100 text-blue-850 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800',
+    borderT: 'border-t-blue-500',
+    borderClass: 'border-blue-500',
+    label: 'Contractor',
+  },
+  Supplier: {
+    text: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50/40 dark:bg-emerald-950/10',
+    border: 'border-emerald-100 dark:border-emerald-900/30',
+    stroke: 'stroke-emerald-600 dark:stroke-emerald-400',
+    badgeBg: 'bg-emerald-100 text-emerald-850 dark:bg-emerald-900/50 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-850',
+    borderT: 'border-t-emerald-500',
+    borderClass: 'border-emerald-500',
+    label: 'Supplier',
+  },
+  Subcontractor: {
+    text: 'text-orange-600 dark:text-orange-400',
+    bg: 'bg-orange-50/40 dark:bg-orange-950/10',
+    border: 'border-orange-100 dark:border-orange-900/30',
+    stroke: 'stroke-orange-600 dark:stroke-orange-400',
+    badgeBg: 'bg-orange-100 text-orange-850 dark:bg-orange-900/50 dark:text-orange-200 border border-orange-200 dark:border-orange-800',
+    borderT: 'border-t-orange-500',
+    borderClass: 'border-orange-500',
+    label: 'Subcontractor',
+  },
+  'N/A': {
+    text: 'text-slate-600 dark:text-slate-400',
+    bg: 'bg-slate-50/40 dark:bg-slate-950/10',
+    border: 'border-slate-100 dark:border-slate-800/30',
+    stroke: 'stroke-slate-600 dark:stroke-slate-400',
+    badgeBg: 'bg-slate-100 text-slate-800 dark:bg-slate-900/50 dark:text-slate-200 border border-slate-200 dark:border-slate-800',
+    borderT: 'border-t-slate-500',
+    borderClass: 'border-slate-500',
+    label: 'Overall',
+  }
+};
 
 function getSatisfactionColor(p: number) {
   if (p < 50) {
@@ -85,7 +141,22 @@ function getSatisfactionColor(p: number) {
   }
 }
 
-export function DashboardPage({ responses, isLoading, error }: DashboardPageProps) {
+export function DashboardPage({ responses, allResponses = [], partnerCompanies = [], isLoading, error, surveyTypeFilter = [] }: DashboardPageProps) {
+  const [selectedChampionType, setSelectedChampionType] = useState<'Overall' | 'Contractor' | 'Supplier' | 'Subcontractor'>('Overall');
+
+  const activeCategory = useMemo(() => {
+    return surveyTypeFilter && surveyTypeFilter.length === 1 ? surveyTypeFilter[0] : 'All';
+  }, [surveyTypeFilter]);
+
+  // Sync category state with page category filter changes
+  useEffect(() => {
+    if (activeCategory === 'All') {
+      setSelectedChampionType('Overall');
+    } else {
+      setSelectedChampionType(activeCategory);
+    }
+  }, [activeCategory]);
+
   if (isLoading) {
     return <StateMessage title="Loading analytics" message="Reading centralized survey list records." />;
   }
@@ -108,17 +179,98 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
   const highestScore = sortedQuestions[0]?.average ?? 4.0;
   const lowestScore = sortedQuestions[sortedQuestions.length - 1]?.average ?? 0.0;
 
-  const score = summary.overallSatisfactionScore;
-  const color = getSatisfactionColor(score);
+  // Calculate satisfaction averages per company across all surveys combined (unfiltered/constant responses!)
+  const companyAverages = useMemo(() => {
+    const companyMap: Record<string, { name: string; sum: number; count: number; type: string }> = {};
+    
+    // Create map of company name to type from partnerCompanies
+    const typeMap = new Map<string, string>();
+    partnerCompanies.forEach((c) => typeMap.set(c.name, c.type));
+
+    allResponses.forEach((r) => {
+      if (r.rating === 'N/A') return;
+      if (!companyMap[r.company]) {
+        const type = typeMap.get(r.company) || r.surveyType;
+        companyMap[r.company] = { name: r.company, sum: 0, count: 0, type };
+      }
+      companyMap[r.company].sum += r.rating as number;
+      companyMap[r.company].count += 1;
+    });
+
+    // Make sure all registered companies are represented even if they have 0 responses
+    partnerCompanies.forEach((c) => {
+      if (!companyMap[c.name]) {
+        companyMap[c.name] = { name: c.name, sum: 0, count: 0, type: c.type };
+      }
+    });
+
+    return Object.values(companyMap)
+      .map((c) => {
+        const average = c.count > 0 ? c.sum / c.count : 0;
+        const scorePercentage = (average / 4) * 100;
+        return {
+          name: c.name,
+          average,
+          scorePercentage,
+          count: c.count,
+          type: c.type,
+        };
+      })
+      .sort((a, b) => b.average - a.average);
+  }, [allResponses, partnerCompanies]);
+
+  const topCompany = useMemo(() => {
+    return companyAverages[0] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, type: 'N/A', count: 0 };
+  }, [companyAverages]);
+
+  const topContractor = useMemo(() => companyAverages.find((c) => c.type === 'Contractor'), [companyAverages]);
+  const topSupplier = useMemo(() => companyAverages.find((c) => c.type === 'Supplier'), [companyAverages]);
+  const topSubcontractor = useMemo(() => companyAverages.find((c) => c.type === 'Subcontractor'), [companyAverages]);
+
+  const displayedCompany = useMemo(() => {
+    if (selectedChampionType === 'Overall') return topCompany;
+    if (selectedChampionType === 'Contractor') return topContractor || { name: 'No Registered Contractors', average: 0, scorePercentage: 0, type: 'Contractor', count: 0 };
+    if (selectedChampionType === 'Supplier') return topSupplier || { name: 'No Registered Suppliers', average: 0, scorePercentage: 0, type: 'Supplier', count: 0 };
+    if (selectedChampionType === 'Subcontractor') return topSubcontractor || { name: 'No Registered Subcontractors', average: 0, scorePercentage: 0, type: 'Subcontractor', count: 0 };
+    return topCompany;
+  }, [selectedChampionType, topCompany, topContractor, topSupplier, topSubcontractor]);
+
+  const score = displayedCompany.scorePercentage;
+  const activeColor = categoryColors[displayedCompany.type] || categoryColors['N/A'];
+  const standingDetails = getSatisfactionColor(score);
+
+  // Averages for companies under the currently active category (for Performance Highlights)
+  const categoryCompanyAverages = useMemo(() => {
+    return companyAverages.filter((c) => {
+      if (activeCategory === 'All') return true;
+      return c.type === activeCategory;
+    });
+  }, [companyAverages, activeCategory]);
+
+  const highestCompany = useMemo(() => {
+    return categoryCompanyAverages[0] || { name: 'No Registered Partners', average: 0, count: 0, type: 'N/A' };
+  }, [categoryCompanyAverages]);
+
+  const lowestCompany = useMemo(() => {
+    return categoryCompanyAverages[categoryCompanyAverages.length - 1] || { name: 'No Registered Partners', average: 0, count: 0, type: 'N/A' };
+  }, [categoryCompanyAverages]);
+
+  // Performance highlights texts based on company ratings
+  const highestLabel = activeCategory === 'All' 
+    ? 'Highest Rated Company' 
+    : `Highest Rated ${activeCategory}`;
+
+  const lowestLabel = activeCategory === 'All' 
+    ? 'Lowest Rated Company' 
+    : `Lowest Rated ${activeCategory}`;
 
   return (
     <div className="space-y-6">
-      {/* Prominent KPI Section: Overall Satisfaction (Star) */}
-      <div className="panel flex flex-col md:flex-row items-center justify-between p-6 md:p-8 border-2 border-slate-100 dark:border-slate-800/40 shadow-lg relative overflow-hidden bg-gradient-to-r from-white to-slate-50/50 dark:from-slate-950 dark:to-slate-900/40 gap-6 md:gap-10">
+      {/* Prominent KPI Section: Overall Satisfaction */}
+      <div className={`panel flex flex-col md:flex-row items-center justify-between p-6 md:p-8 border-2 border-slate-100 dark:border-slate-800/40 shadow-lg relative overflow-hidden bg-gradient-to-r from-white to-slate-50/50 dark:from-slate-950 dark:to-slate-900/40 gap-6 md:gap-10`}>
         
         {/* Left Side: Circular Gauge */}
         <div className="relative flex items-center justify-center w-48 h-48 shrink-0">
-          {/* SVG Circle Progress Ring */}
           <svg className="w-full h-full transform -rotate-90">
             {/* Underlay Track */}
             <circle
@@ -133,28 +285,30 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
               cx="96"
               cy="96"
               r="75"
-              className={`${color.stroke} fill-none`}
+              className={`${activeColor.stroke} fill-none`}
               strokeWidth="10"
               strokeDasharray="471.2"
               initial={{ strokeDashoffset: 471.2 }}
               animate={{ strokeDashoffset: 471.2 - (471.2 * score) / 100 }}
+              key={displayedCompany.name}
               transition={{ duration: 1.5, ease: 'easeOut' }}
               strokeLinecap="round"
             />
           </svg>
           
           {/* Centered Number Overlay */}
-          <div className="absolute flex flex-col items-center justify-center">
+          <div className="absolute flex flex-col items-center justify-center text-center px-4">
             <motion.span
-              className={`text-4xl sm:text-5xl font-light tracking-tight ${color.text}`}
+              className={`text-4xl font-light tracking-tight ${activeColor.text}`}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
+              key={displayedCompany.name}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
               {formatNumber(score, 0)}%
             </motion.span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">
-              Satisfaction
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1 block max-w-[120px] truncate" title={displayedCompany.name}>
+              {displayedCompany.name}
             </span>
           </div>
         </div>
@@ -162,39 +316,144 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
         {/* Right Side: Overall Satisfaction Texts on its Side */}
         <div className="flex-1 text-center md:text-left space-y-4">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-            <span className="text-xs font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Primary KPI Metric</span>
-            <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${color.badgeBg}`}>
-              {color.label}
+            <span className="text-xs font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+              {activeCategory === 'All' ? 'Top Performing Partner' : `Top Performing ${activeCategory}`}
+            </span>
+            <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeColor.badgeBg}`}>
+              {displayedCompany.type} Champion
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Overall Partner Satisfaction</h3>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
-              {color.description}
+            <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              {displayedCompany.name}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
+              {displayedCompany.name === 'No Registered Partners' || displayedCompany.name.startsWith('No Registered')
+                ? 'No evaluations are registered. Employees can submit evaluations using the published survey forms.'
+                : `${displayedCompany.name} is recognized as the top-performing ${displayedCompany.type.toLowerCase()} partner, earning the highest combined satisfaction score of ${formatNumber(displayedCompany.average, 2)} out of 4.00 across all survey categories from Microgenesis employees.`
+              }
             </p>
           </div>
 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
             <div className="flex items-center gap-1.5">
-              <span>Weighted rating:</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(summary.averageRating, 2)} / 4.00</span>
+              <span>Combined average:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(displayedCompany.average, 2)} / 4.00</span>
             </div>
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
-              <span>Highest rated:</span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(highestScore, 2)} / 4.00</span>
+              <span>Evaluations:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{displayedCompany.count} answers</span>
             </div>
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
-              <span>Lowest rated:</span>
-              <span className="font-semibold text-rose-500 dark:text-rose-400">{formatNumber(lowestScore, 2)} / 4.00</span>
+              <span>Standing category:</span>
+              <span className={`font-semibold ${activeColor.text}`}>{standingDetails.label}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Primary Stats Row - Only Total Responses and Average Rating on Desktop */}
+      {/* Category Champions Section (Interactive toggle, ONLY shown on "All" view) */}
+      {activeCategory === 'All' && (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {/* Contractor Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Contractor' ? 'Overall' : 'Contractor')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-blue-500 bg-blue-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Contractor' ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Top Contractor</span>
+                <Award className="text-blue-500 shrink-0" size={16} />
+              </div>
+              {topContractor ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topContractor.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topContractor.count} evaluation answers</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topContractor && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                  {topContractor.average.toFixed(2)} / 4.00 ({Math.round(topContractor.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Supplier Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Supplier' ? 'Overall' : 'Supplier')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-emerald-500 bg-emerald-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Supplier' ? 'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Top Supplier</span>
+                <Award className="text-emerald-500 shrink-0" size={16} />
+              </div>
+              {topSupplier ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSupplier.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSupplier.count} evaluation answers</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topSupplier && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  {topSupplier.average.toFixed(2)} / 4.00 ({Math.round(topSupplier.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Subcontractor Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Subcontractor' ? 'Overall' : 'Subcontractor')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-orange-500 bg-orange-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Subcontractor' ? 'ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Top Subcontractor</span>
+                <Award className="text-orange-500 shrink-0" size={16} />
+              </div>
+              {topSubcontractor ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSubcontractor.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSubcontractor.count} evaluation answers</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topSubcontractor && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
+                  {topSubcontractor.average.toFixed(2)} / 4.00 ({Math.round(topSubcontractor.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Primary Stats Row - Total Responses and Portfolio Average Rating */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <StatCard
           label="Total Responses"
@@ -203,9 +462,9 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
           icon={ClipboardList}
         />
         <StatCard
-          label="Average Rating"
+          label="Portfolio Average Rating"
           value={`${formatNumber(summary.averageRating, 2)} / 4.00`}
-          detail="Total average performance score across all evaluation answers, excluding N/A."
+          detail="Total average performance score across all partner evaluations combined, excluding N/A."
           icon={Star}
         />
       </div>
@@ -219,33 +478,93 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
               <span className="rounded bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 text-[10px] font-bold text-azure">Extremes</span>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Highest Rated Criteria */}
-              <div className="space-y-1 pb-3 sm:pb-0 border-b sm:border-b-0 border-slate-100 dark:border-slate-800/40">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <TrendingUp size={14} className="shrink-0" />
-                  <span>Highest Rated Criteria</span>
+            <div className="space-y-5">
+              {/* Highest Rated Partner Row */}
+              <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/40">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                    <TrendingUp size={14} className="shrink-0" />
+                    <span>{highestLabel}</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate mt-1" title={highestCompany.name}>
+                    {highestCompany.name}
+                  </h4>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Rating: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{highestCompany.average.toFixed(2)}</span> / 4.00
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Based on {highestCompany.count} evaluations
+                  </p>
                 </div>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  {formatNumber(highestScore, 2)} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ 4.00</span>
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed" title={summary.highestRatedQuestion}>
-                  "{summary.highestRatedQuestion}"
-                </p>
+                {/* Right side circular progress */}
+                <div className="relative flex items-center justify-center w-24 h-24 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-slate-100 dark:stroke-slate-800/40 fill-none"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-emerald-500 dark:stroke-emerald-400 fill-none"
+                      strokeWidth="6"
+                      strokeDasharray="238.76"
+                      strokeDashoffset={238.76 - (238.76 * (highestCompany.average / 4))}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {Math.round((highestCompany.average / 4) * 100)}%
+                  </div>
+                </div>
               </div>
 
-              {/* Lowest Rated Criteria */}
-              <div className="space-y-1 pt-3 sm:pt-0 sm:pl-4 sm:border-l border-slate-150 dark:border-slate-800/60">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-rose-500 dark:text-rose-400">
-                  <Users size={14} className="shrink-0" />
-                  <span>Lowest Rated Criteria</span>
+              {/* Lowest Rated Partner Row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-500 dark:text-rose-400 whitespace-nowrap">
+                    <Users size={14} className="shrink-0" />
+                    <span>{lowestLabel}</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate mt-1" title={lowestCompany.name}>
+                    {lowestCompany.name}
+                  </h4>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Rating: <span className="text-rose-500 dark:text-rose-400 font-bold">{lowestCompany.average.toFixed(2)}</span> / 4.00
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Based on {lowestCompany.count} evaluations
+                  </p>
                 </div>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  {formatNumber(lowestScore, 2)} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ 4.00</span>
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed" title={summary.lowestRatedQuestion}>
-                  "{summary.lowestRatedQuestion}"
-                </p>
+                {/* Right side circular progress */}
+                <div className="relative flex items-center justify-center w-24 h-24 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-slate-100 dark:stroke-slate-800/40 fill-none"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-rose-500 dark:stroke-rose-400 fill-none"
+                      strokeWidth="6"
+                      strokeDasharray="238.76"
+                      strokeDashoffset={238.76 - (238.76 * (lowestCompany.average / 4))}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-sm font-bold text-rose-500 dark:text-rose-400">
+                    {Math.round((lowestCompany.average / 4) * 100)}%
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -270,7 +589,7 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
               <Tooltip />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {distribution.map((entry, index) => (
-                  <Cell key={entry.rating} fill={chartColors[index]} />
+                  <Cell key={entry.rating} fill={chartColors[index % chartColors.length]} />
                 ))}
               </Bar>
             </BarChart>
@@ -285,7 +604,7 @@ export function DashboardPage({ responses, isLoading, error }: DashboardPageProp
               <YAxis yAxisId="right" orientation="right" allowDecimals={false} />
               <Tooltip />
               <Line yAxisId="left" type="monotone" dataKey="average" stroke="#2563eb" strokeWidth={3} dot={false} />
-              <Line yAxisId="right" type="monotone" dataKey="responses" stroke="#0f9f6e" strokeWidth={2} dot={false} />
+              <Line yAxisId="right" type="monotone" dataKey="responses" stroke="#10b981" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>

@@ -14,9 +14,10 @@ interface ShellProps<T extends string> {
   title: string;
   action: ReactNode;
   children: ReactNode;
+  surveyFormsDropdown?: ReactNode;
 }
 
-export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children }: ShellProps<T>) {
+export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children, surveyFormsDropdown }: ShellProps<T>) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
@@ -55,26 +56,28 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-3 pl-4">
-          <div className="flex rounded-lg border border-blue-400/20 bg-[#00528c] p-1 lg:hidden">
-            {pages.map((page) => (
-              <button
-                key={page.key}
-                className={`max-w-32 truncate rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activePage === page.key 
-                    ? 'bg-white text-[#0063a9] font-bold shadow-sm' 
-                    : 'text-blue-100 hover:text-white hover:bg-white/5'
-                }`}
-                type="button"
-                onClick={() => onPageChange(page.key)}
-              >
-                {page.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-3 px-4 shrink-0">
           {action}
         </div>
       </header>
+
+      {/* Sub-header Navigation Bar for Smaller Screens (Tab-style) */}
+      <div className="sticky top-20 z-10 bg-[#00528c] border-b border-slate-200 dark:border-slate-900 px-4 pt-3 pb-0 flex items-end gap-1.5 lg:hidden overflow-x-auto no-scrollbar shadow-sm">
+        {pages.map((page) => (
+          <button
+            key={page.key}
+            className={`whitespace-nowrap rounded-t-lg rounded-b-none px-4 py-2.5 text-xs font-bold transition-all cursor-pointer border-t border-x relative -mb-[1px] ${
+              activePage === page.key 
+                ? 'bg-cloud dark:bg-slate-950 text-[#0063a9] dark:text-blue-400 font-extrabold border-slate-200 dark:border-slate-900 border-b-transparent z-10 shadow-xs' 
+                : 'text-blue-100 hover:text-white hover:bg-white/5 border-transparent'
+            }`}
+            type="button"
+            onClick={() => onPageChange(page.key)}
+          >
+            {page.label}
+          </button>
+        ))}
+      </div>
 
       {/* Main layout below header */}
       <div className="flex flex-1">
@@ -113,6 +116,12 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
                 );
               })}
             </nav>
+
+            {surveyFormsDropdown && (
+              <div className="mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
+                {surveyFormsDropdown}
+              </div>
+            )}
           </aside>
         </div>
 

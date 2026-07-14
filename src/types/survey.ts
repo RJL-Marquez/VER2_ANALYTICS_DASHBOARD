@@ -1,5 +1,13 @@
 export type SurveyType = 'Contractor' | 'Supplier' | 'Subcontractor';
-export type Rating = 0 | 1 | 2 | 3 | 4 | 'N/A';
+export type Rating = number | 'N/A';
+
+export interface PartnerCompany {
+  id: string;
+  name: string;
+  type: SurveyType;
+  affiliation?: string;
+  createdAt: string;
+}
 
 export interface SurveyResponse {
   responseId: string;
@@ -8,12 +16,14 @@ export interface SurveyResponse {
   submissionDate: string;
   company: string;
   department?: string;
+  address?: string;
   questionId: string;
   questionNumber: number;
   question: string;
   questionCategory: string;
   rating: Rating;
   comment: string;
+  respondentEmail?: string;
 }
 
 export interface FilterState {
@@ -50,4 +60,29 @@ export interface ResponseNotification {
   respondentType: string;
   submissionDate: string;
   questionCount: number;
+  respondentEmail?: string;
+  department?: string;
+  designation?: string;
 }
+
+export interface CustomForm {
+  id: string;
+  title: string;
+  surveyType: SurveyType;
+  description: string;
+  createdAt: string;
+  deadlineDate?: string;
+  maxRating?: number;
+  questions: {
+    questionId: string;
+    questionNumber: number;
+    question: string;
+    questionCategory: string;
+    inputType?: 'text' | 'rating' | 'typed-rating' | 'select' | 'checkbox' | 'date-range' | 'matrix';
+    options?: string[];
+    subQuestions?: { id: string; label: string; description?: string; validationRange?: { min: number; max: number; allowNa: boolean } }[];
+    validationRange?: { min: number; max: number; allowNa: boolean };
+    section?: string;
+  }[];
+}
+

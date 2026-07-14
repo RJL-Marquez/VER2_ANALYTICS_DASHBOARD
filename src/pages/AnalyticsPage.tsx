@@ -20,8 +20,8 @@ interface AnalyticsPageProps {
 
 const surveyTypeColors: Record<SurveyType, string> = {
   Contractor: '#2563eb',
-  Supplier: '#0f9f6e',
-  Subcontractor: '#7c3aed',
+  Supplier: '#10b981',
+  Subcontractor: '#f97316',
 };
 
 function truncateQuestion(text: string, max = 44) {

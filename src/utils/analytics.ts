@@ -14,6 +14,51 @@ export function numericRating(rating: Rating): number | null {
   return rating === 'N/A' ? null : rating;
 }
 
+export type CompletionStatus = 'not-started' | 'in-progress' | 'completed' | 'no-companies';
+
+export interface CompletionStyle {
+  status: CompletionStatus;
+  percentage: number;
+  barColorClass: string;
+  textColorClass: string;
+}
+
+/**
+ * Determines the visual treatment for a company-evaluation completion percentage:
+ * - red under 50%, orange 50-64%, yellow 65-74%, light green 75-89%, darker green 90-99%.
+ * - "completed" when 100% (bar goes away, replaced with a "Completed" badge elsewhere).
+ * - "not-started" when 0 (no bar at all, just a "Not Yet Started" label elsewhere).
+ */
+export function getCompletionStyle(completed: number, total: number): CompletionStyle {
+  if (total <= 0) {
+    return { status: 'no-companies', percentage: 0, barColorClass: 'bg-slate-300 dark:bg-slate-700', textColorClass: 'text-slate-400' };
+  }
+
+  const percentage = Math.round((completed / total) * 100);
+
+  if (completed <= 0) {
+    return { status: 'not-started', percentage: 0, barColorClass: 'bg-slate-300 dark:bg-slate-700', textColorClass: 'text-slate-400' };
+  }
+
+  if (completed >= total) {
+    return { status: 'completed', percentage: 100, barColorClass: 'bg-emerald-600 dark:bg-emerald-500', textColorClass: 'text-emerald-600 dark:text-emerald-400' };
+  }
+
+  if (percentage < 50) {
+    return { status: 'in-progress', percentage, barColorClass: 'bg-rose-500', textColorClass: 'text-rose-600 dark:text-rose-400' };
+  }
+  if (percentage < 65) {
+    return { status: 'in-progress', percentage, barColorClass: 'bg-orange-500', textColorClass: 'text-orange-600 dark:text-orange-400' };
+  }
+  if (percentage < 75) {
+    return { status: 'in-progress', percentage, barColorClass: 'bg-yellow-400', textColorClass: 'text-yellow-600 dark:text-yellow-400' };
+  }
+  if (percentage < 90) {
+    return { status: 'in-progress', percentage, barColorClass: 'bg-green-400', textColorClass: 'text-green-600 dark:text-green-400' };
+  }
+  return { status: 'in-progress', percentage, barColorClass: 'bg-emerald-700 dark:bg-emerald-600', textColorClass: 'text-emerald-700 dark:text-emerald-400' };
+}
+
 export function formatNumber(value: number, digits = 1) {
   return Number.isFinite(value) ? value.toFixed(digits) : '0.0';
 }
@@ -63,8 +108,36 @@ export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
   const naCount = responses.filter((response) => response.rating === 'N/A').length;
   const average = averageRating(responses);
 
+  // Calculate normalized satisfaction percentage based on the survey's max rating
+  let totalScoreRatio = 0;
+  let countWithRatio = 0;
+  responses.forEach((resp) => {
+    const r = numericRating(resp.rating);
+    if (r !== null) {
+      let maxOfThis = 4;
+      try {
+        const saved = localStorage.getItem('survey_analytics_surveys');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const found = parsed.find((s: any) => s.questions?.some((q: any) => q.questionId === resp.questionId));
+          if (found && found.maxRating !== undefined) {
+            maxOfThis = found.maxRating;
+          }
+        }
+      } catch (e) {}
+
+      if (r > maxOfThis) {
+        maxOfThis = r;
+      }
+      totalScoreRatio += (r / maxOfThis);
+      countWithRatio++;
+    }
+  });
+
+  const satScore = countWithRatio > 0 ? (totalScoreRatio / countWithRatio) * 100 : 0;
+
   return {
-    overallSatisfactionScore: (average / 4) * 100,
+    overallSatisfactionScore: satScore,
     totalResponses: responses.length,
     averageRating: average,
     naPercentage: responses.length ? (naCount / responses.length) * 100 : 0,
@@ -74,8 +147,25 @@ export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
 }
 
 export function ratingDistribution(responses: SurveyResponse[]) {
-  const ratings: Rating[] = [0, 1, 2, 3, 4, 'N/A'];
-  return ratings.map((rating) => ({
+  const uniqueRatings = new Set<Rating>();
+  responses.forEach((response) => {
+    uniqueRatings.add(response.rating);
+  });
+
+  const list = [...uniqueRatings].sort((a, b) => {
+    if (a === 'N/A') return 1;
+    if (b === 'N/A') return -1;
+    return (a as number) - (b as number);
+  });
+
+  if (list.length === 0) {
+    return [0, 1, 2, 3, 4, 'N/A'].map((r) => ({
+      rating: String(r),
+      count: 0,
+    }));
+  }
+
+  return list.map((rating) => ({
     rating: String(rating),
     count: responses.filter((response) => response.rating === rating).length,
   }));

@@ -4,9 +4,10 @@ import { averageBySurveyType, formatNumber, getKpiSummary, questionPerformance }
 
 interface ReportsPageProps {
   responses: SurveyResponse[];
+  isAdmin?: boolean;
 }
 
-export function ReportsPage({ responses }: ReportsPageProps) {
+export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
   const summary = getKpiSummary(responses);
   const questionRows = questionPerformance(responses).slice(0, 5);
   const surveyRows = averageBySurveyType(responses);
@@ -18,9 +19,10 @@ export function ReportsPage({ responses }: ReportsPageProps) {
           title="Summary Report"
           detail={`${responses.length} responses, ${formatNumber(summary.averageRating)} average rating`}
           icon={FileBarChart}
+          isAdmin={isAdmin}
         />
-        <ReportCard title="Question Report" detail={`${questionRows.length} ranked question groups`} icon={FileSpreadsheet} />
-        <ReportCard title="Survey Report" detail="Contractor, Supplier, and Subcontractor comparison" icon={Printer} />
+        <ReportCard title="Question Report" detail={`${questionRows.length} ranked question groups`} icon={FileSpreadsheet} isAdmin={isAdmin} />
+        <ReportCard title="Survey Report" detail="Contractor, Supplier, and Subcontractor comparison" icon={Printer} isAdmin={isAdmin} />
       </section>
 
       <section className="panel">
@@ -30,14 +32,22 @@ export function ReportsPage({ responses }: ReportsPageProps) {
             <p className="text-sm text-slate-500 dark:text-slate-400">Prototype report view for stakeholder briefings.</p>
           </div>
           <div className="flex gap-2">
-            <button className="primary-button" type="button">
-              <Download size={16} />
-              Export PDF
-            </button>
-            <button className="secondary-button" type="button">
-              <Download size={16} />
-              Export CSV
-            </button>
+            {isAdmin ? (
+              <>
+                <button className="primary-button" type="button">
+                  <Download size={16} />
+                  Export PDF
+                </button>
+                <button className="secondary-button" type="button">
+                  <Download size={16} />
+                  Export CSV
+                </button>
+              </>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30 px-3 py-2 rounded-lg">
+                ⚠️ Exporting restricted to Admin
+              </span>
+            )}
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -69,7 +79,7 @@ export function ReportsPage({ responses }: ReportsPageProps) {
   );
 }
 
-function ReportCard({ title, detail, icon: Icon }: { title: string; detail: string; icon: typeof FileBarChart }) {
+function ReportCard({ title, detail, icon: Icon, isAdmin }: { title: string; detail: string; icon: typeof FileBarChart; isAdmin?: boolean }) {
   return (
     <article className="panel">
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-azure dark:bg-blue-950/60">
@@ -77,10 +87,14 @@ function ReportCard({ title, detail, icon: Icon }: { title: string; detail: stri
       </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{detail}</p>
-      <button className="mt-4 ghost-button" type="button">
-        <Download size={15} />
-        Export
-      </button>
+      {isAdmin ? (
+        <button className="mt-4 ghost-button" type="button">
+          <Download size={15} />
+          Export
+        </button>
+      ) : (
+        <p className="mt-4 text-[11px] font-bold text-slate-400 select-none">⚠️ Export restricted</p>
+      )}
     </article>
   );
 }

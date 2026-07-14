@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2 } from 'lucide-react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, ChevronDown, ChevronRight, FilePlus, ClipboardCheck, ArrowLeft, LogOut, HelpCircle, ShieldAlert, Users } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -10,14 +10,73 @@ import { LoginPage } from './pages/LoginPage';
 import { NotificationLogsPage } from './pages/NotificationLogsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SurveyExplorerPage } from './pages/SurveyExplorerPage';
+import { CreateSurveyPage } from './pages/CreateSurveyPage';
+import { SurveyDetailsPage } from './pages/SurveyDetailsPage';
+import { SurveyFillerPage } from './pages/SurveyFillerPage';
+import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
+import { SurveyFormsPage } from './pages/SurveyFormsPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
-import { FilterState, SurveyType } from './types/survey';
+import { FilterState, SurveyType, CustomForm } from './types/survey';
 
-type PageKey = 'dashboard' | 'analytics' | 'explorer' | 'reports' | 'notifications';
+const DEMO_ACCOUNTS = [
+  {
+    email: 'admin@mgenesis.com',
+    role: 'Admin',
+    designation: 'Executive',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'rankfile@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Accounts Payable - Trade'
+  },
+  {
+    email: 'supervisory@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Logistics'
+  },
+  {
+    email: 'managerial@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Procurement Group'
+  },
+  {
+    email: 'director@mgenesis.com',
+    role: 'Employee',
+    designation: 'Director',
+    department: 'TASS'
+  },
+  {
+    email: 'executive@mgenesis.com',
+    role: 'Employee',
+    designation: 'Executive',
+    department: 'Business Solutions Manager'
+  }
+];
 
-const pages = [
+function getUserProfile(email: string | null) {
+  if (!email) return null;
+  const normalized = email.trim().toLowerCase();
+  const matched = DEMO_ACCOUNTS.find((acc) => acc.email === normalized);
+  if (matched) return matched;
+  return {
+    email: normalized,
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Logistics'
+  };
+}
+
+type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
+
+const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
+  { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
+  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
@@ -27,49 +86,292 @@ const pages = [
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
 export default function App() {
-  const { responses, questions, companies, isLoading, error, notifications, unreadCount, markNotificationsRead } = useSurveyData();
+  const {
+    responses,
+    surveys,
+    questions,
+    companies,
+    partnerCompanies,
+    addPartnerCompany,
+    removePartnerCompany,
+    isLoading,
+    error,
+    notifications,
+    unreadCount,
+    markNotificationsRead,
+    createSurvey,
+    updateSurvey,
+    deleteSurvey,
+    submitResponse,
+    resetAllData
+  } = useSurveyData();
+
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
+  const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
+  const [isFormsMenuOpen, setIsFormsMenuOpen] = useState(true);
 
   const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
   const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
-  const activeTitle = pages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
 
+  const activeTitle = useMemo(() => {
+    if (activePage === 'partner-companies') return 'Administrative Partner Registry';
+    if (activePage === 'create-form') return editingSurveyId ? 'Edit Survey Form' : 'Create Survey Form';
+    if (activePage === 'view-form') {
+      const selected = surveys.find((s) => s.id === selectedSurveyId);
+      return selected ? `Survey: ${selected.title}` : 'Survey Details';
+    }
+    if (activePage === 'fill-form') return 'Fill Out Stakeholder Survey';
+    return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
+  }, [activePage, selectedSurveyId, surveys, editingSurveyId]);
+
+  const profile = useMemo(() => getUserProfile(account), [account]);
+  const isAdmin = profile?.role === 'Admin';
+
+  const visiblePages = useMemo(() => {
+    if (isAdmin) return adminPages;
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer');
+  }, [isAdmin]);
+
+  const handleLogin = (email: string) => {
+    setAccount(email);
+    const prof = getUserProfile(email);
+    if (prof && prof.role === 'Admin') {
+      setActivePage('dashboard');
+    } else {
+      setActivePage('survey-forms');
+    }
+  };
+
+  // Auth Guard
   if (!account) {
-    return <LoginPage onLogin={(email) => setAccount(email)} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
+  // Handler for custom survey submission
+  const handleSurveySubmit = (
+    surveyId: string,
+    company: string,
+    department: string,
+    respondentType: string,
+    address: string | undefined,
+    answers: any[]
+  ) => {
+    submitResponse(surveyId, company, department, respondentType, address, answers, account || undefined);
+  };
+
+  // ----------------------------------------------------
+  // ADMIN EXPERIENCE (ALL ANALYTICS SECURED HERE)
+  // ----------------------------------------------------
   const pageContent = {
-    dashboard: <DashboardPage responses={filteredResponses} isLoading={isLoading} error={error} />,
+    dashboard: (
+      <DashboardPage
+        responses={filteredResponses}
+        allResponses={responses}
+        partnerCompanies={partnerCompanies}
+        isLoading={isLoading}
+        error={error}
+        surveyTypeFilter={filters.surveyType}
+      />
+    ),
+    'partner-companies': (
+      <PartnerCompaniesPage
+        partnerCompanies={partnerCompanies}
+        responses={responses}
+        onAddCompany={addPartnerCompany}
+        onRemoveCompany={removePartnerCompany}
+        isAdmin={isAdmin}
+      />
+    ),
+    'survey-forms': (
+      <SurveyFormsPage
+        surveys={surveys}
+        responses={responses}
+        partnerCompanies={partnerCompanies}
+        userEmail={account || ''}
+        onSelectSurvey={(id) => {
+          setSelectedSurveyId(id);
+          setActivePage('view-form');
+        }}
+        onNavigateToCreate={() => setActivePage('create-form')}
+        onFillForm={(id) => {
+          setSelectedSurveyId(id);
+          setActivePage('fill-form');
+        }}
+        isAdmin={isAdmin}
+      />
+    ),
     analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} />,
-    reports: <ReportsPage responses={filteredResponses} />,
+    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
+    'create-form': (
+      <CreateSurveyPage
+        onBack={() => {
+          setEditingSurveyId(null);
+          setActivePage('dashboard');
+        }}
+        surveyToEdit={editingSurveyId ? surveys.find(s => s.id === editingSurveyId) : undefined}
+        onSave={(surveyData) => {
+          if (editingSurveyId) {
+            updateSurvey(editingSurveyId, surveyData);
+            setEditingSurveyId(null);
+            setActivePage('view-form');
+          } else {
+            const newSurvey = createSurvey(surveyData);
+            if (newSurvey) {
+              setSelectedSurveyId(newSurvey.id);
+              setActivePage('view-form');
+            }
+          }
+        }}
+      />
+    ),
+    'view-form': (() => {
+      const targetSurvey = surveys.find((s) => s.id === selectedSurveyId);
+      if (!targetSurvey) {
+        return (
+          <div className="panel p-8 text-center text-slate-500">
+            <ShieldAlert size={36} className="mx-auto mb-2 text-rose-500" />
+            <p className="font-semibold">Survey not found or was deleted.</p>
+            <button onClick={() => setActivePage('dashboard')} className="primary-button mt-4">Return to Dashboard</button>
+          </div>
+        );
+      }
+      return (
+        <SurveyDetailsPage
+          survey={targetSurvey}
+          responses={responses}
+          partnerCompanies={partnerCompanies}
+          userEmail={account || ''}
+          onBack={() => setActivePage('dashboard')}
+          onFillForm={(id) => {
+            setSelectedSurveyId(id);
+            setActivePage('fill-form');
+          }}
+          onDelete={(id) => {
+            deleteSurvey(id);
+            setActivePage('dashboard');
+          }}
+          onEdit={(id) => {
+            setEditingSurveyId(id);
+            setActivePage('create-form');
+          }}
+          isAdmin={isAdmin}
+        />
+      );
+    })(),
+    'fill-form': (
+      <div className="space-y-4">
+        <button
+          onClick={() => setActivePage('view-form')}
+          className="secondary-button"
+          type="button"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Form Management</span>
+        </button>
+        <SurveyFillerPage
+          surveys={surveys}
+          partnerCompanies={partnerCompanies}
+          initialSurveyId={selectedSurveyId}
+          onSubmitted={handleSurveySubmit}
+          onCancel={() => setActivePage('view-form')}
+        />
+      </div>
+    ),
   }[activePage];
+
+  // Forms dropdown in the sidebar
+  const surveyFormsDropdown = (
+    <div className="space-y-2 px-1" id="admin-forms-dropdown">
+      <button
+        onClick={() => {
+          setActivePage('survey-forms');
+          setIsFormsMenuOpen(!isFormsMenuOpen);
+        }}
+        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+          activePage === 'survey-forms'
+            ? 'text-[#0063a9] dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20'
+            : 'text-slate-400 hover:text-[#0063a9] dark:hover:text-blue-400'
+        }`}
+        type="button"
+      >
+        <span className="flex items-center gap-1.5">
+          <HelpCircle size={14} className="text-[#0063a9] dark:text-blue-400" />
+          <span>Survey Forms</span>
+        </span>
+        {isFormsMenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </button>
+
+      {isFormsMenuOpen && (
+        <div className="mt-1 pl-2.5 space-y-1.5 border-l border-slate-100 dark:border-slate-800">
+          {isAdmin && (
+            <button
+              onClick={() => setActivePage('create-form')}
+              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer`}
+              type="button"
+              id="btn-sidebar-create"
+            >
+              <FilePlus size={14} />
+              <span>＋ Create New Form</span>
+            </button>
+          )}
+
+          {surveys.map((survey) => {
+            const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
+            return (
+              <button
+                key={survey.id}
+                onClick={() => {
+                  setSelectedSurveyId(survey.id);
+                  setActivePage('view-form');
+                }}
+                className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
+                  isViewing
+                    ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
+                }`}
+                type="button"
+                title={survey.title}
+              >
+                <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
+                <span className="truncate">{survey.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className={darkMode ? 'dark' : ''}>
       <Shell
-        pages={pages}
-        activePage={activePage}
+        pages={visiblePages}
+        activePage={activePage as any}
         onPageChange={(page) => {
-          setActivePage(page);
+          setActivePage(page as any);
           if (page === 'notifications') markNotificationsRead();
         }}
         title={activeTitle}
+        surveyFormsDropdown={surveyFormsDropdown}
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
-            <div className="pr-3">
-              <NotificationBell
-                notifications={notifications}
-                unreadCount={unreadCount}
-                onOpen={markNotificationsRead}
-                onViewAll={() => setActivePage('notifications')}
-              />
-            </div>
-            <div className="px-3">
+            {isAdmin && (
+              <div className="pr-3">
+                <NotificationBell
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  onOpen={markNotificationsRead}
+                  onViewAll={() => setActivePage('notifications')}
+                />
+              </div>
+            )}
+            <div className={isAdmin ? 'px-3' : 'pr-3'}>
               <button
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition cursor-pointer ${
                   darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
@@ -82,7 +384,13 @@ export default function App() {
               </button>
             </div>
             <div className="pl-3">
-              <AccountMenu email={account} onLogout={() => setAccount(null)} />
+              <AccountMenu
+                email={account}
+                designation={profile?.designation}
+                department={profile?.department}
+                role={profile?.role}
+                onLogout={() => setAccount(null)}
+              />
             </div>
           </div>
         }
@@ -90,7 +398,9 @@ export default function App() {
         <div className="space-y-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1">{pageContent}</div>
-            {activePage !== 'notifications' && (
+            
+            {/* Show Filter Panel only on Admin-view pages that need filters */}
+            {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && (
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
@@ -98,14 +408,27 @@ export default function App() {
                   companies={companies}
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
+                  isDashboard={activePage === 'dashboard'}
                 />
               </aside>
             )}
           </div>
-          {activePage !== 'notifications' && (
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-              <Search size={16} />
-              <span>Data source: mock SharePoint list records. Replace `sharepointService.ts` to connect live Microsoft 365 data.</span>
+          
+          {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <Search size={16} className="text-[#0063a9] dark:text-blue-400 shrink-0" />
+                <span>
+                  Data Engine: Local Microsoft Forms creation model. Submissions immediately refresh visual analytics in real-time.
+                </span>
+              </div>
+              <button
+                onClick={resetAllData}
+                className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:underline transition shrink-0 cursor-pointer"
+                title="Re-seed standard reports and database values"
+              >
+                Reset System Database
+              </button>
             </div>
           )}
         </div>
