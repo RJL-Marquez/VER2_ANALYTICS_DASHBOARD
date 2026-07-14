@@ -12,7 +12,9 @@ import {
   Briefcase, 
   ClipboardList, 
   Award, 
-  X 
+  X,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
 
@@ -32,6 +34,7 @@ export function PartnerCompaniesPage({
   isAdmin,
 }: PartnerCompaniesPageProps) {
   const [activeTab, setActiveTab] = useState<SurveyType | 'All'>('All');
+  const [viewMode, setViewMode] = useState<'general' | 'simplified'>('general');
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   
   // Registration Form State
@@ -201,8 +204,8 @@ export function PartnerCompaniesPage({
           ))}
         </div>
 
-        {/* Register Button */}
-        {isAdmin ? (
+        {/* Register Button (admin-only; registration is an admin-managed capability, no restriction notice needed for others) */}
+        {isAdmin && (
           <button
             onClick={() => {
               setErrorMessage('');
@@ -214,22 +217,41 @@ export function PartnerCompaniesPage({
             <Plus size={16} />
             <span>Register New Partner</span>
           </button>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30 px-3 py-1.5 rounded-lg select-none">
-            ⚠️ Registration Restricted
-          </span>
         )}
       </div>
 
       {/* Expanded Partners list */}
       <div className="panel p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3 bg-slate-50/50 dark:bg-slate-900/30">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Registered Partner Companies ({filteredCompanies.length})
           </span>
-          <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded">
-            Expanded Directory
-          </span>
+          <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950">
+            <button
+              type="button"
+              onClick={() => setViewMode('general')}
+              className={`flex items-center gap-1.5 rounded-md py-1.5 px-3 text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                viewMode === 'general'
+                  ? 'bg-[#0063a9] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutGrid size={12} />
+              <span>General</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('simplified')}
+              className={`flex items-center gap-1.5 rounded-md py-1.5 px-3 text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                viewMode === 'simplified'
+                  ? 'bg-[#0063a9] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <List size={12} />
+              <span>Simplified</span>
+            </button>
+          </div>
         </div>
 
         {filteredCompanies.length === 0 ? (
@@ -237,6 +259,37 @@ export function PartnerCompaniesPage({
             <Building size={40} className="mx-auto mb-3 opacity-40" />
             <p className="text-sm font-semibold">No companies registered under this classification.</p>
             <p className="text-xs mt-1 text-slate-400">Click "Register New Partner" to add one.</p>
+          </div>
+        ) : viewMode === 'simplified' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:bg-slate-950/60">
+                  <th className="px-5 py-2.5">Company Name</th>
+                  <th className="px-5 py-2.5">Category</th>
+                  <th className="px-5 py-2.5">Date Registered</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredCompanies.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                    <td className="px-5 py-2.5 font-semibold text-slate-800 dark:text-slate-100">{c.name}</td>
+                    <td className="px-5 py-2.5">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        c.type === 'Contractor'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20'
+                          : c.type === 'Supplier'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/20'
+                          : 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20'
+                      }`}>
+                        {c.type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-2.5 text-slate-500 dark:text-slate-400">{formatDate(c.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
