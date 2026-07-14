@@ -308,7 +308,6 @@ export default function App() {
               type="button"
               title={survey.title}
             >
-<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 >>>>>>> 24009ff83041c43c24d2aadcc092b5c54e2eefad
