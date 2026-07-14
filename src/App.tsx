@@ -294,27 +294,27 @@ export default function App() {
         {surveys.map((survey) => {
           const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
           return (
-                  <button
-                    key={survey.id}
-                    onClick={() => {
-                      setSelectedSurveyId(survey.id);
-                      setActivePage('view-form');
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
-                      isViewing
-                        ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
-                    }`}
-                    type="button"
-                    title={survey.title}
-                  >
-                    <span
-                      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-                        isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
-                      }`}
-                    />
-                    <span className="truncate">{survey.title}</span>
-                  </button>
+            <button
+              key={survey.id}
+              onClick={() => {
+                setSelectedSurveyId(survey.id);
+                setActivePage('view-form');
+              }}
+              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
+                isViewing
+                  ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
+              }`}
+              type="button"
+              title={survey.title}
+            >
+              <span
+                className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                  isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              />
+              <span className="truncate">{survey.title}</span>
+            </button>
           );
         })}
 
