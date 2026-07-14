@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, ChevronDown, ChevronRight, FilePlus, ClipboardCheck, ArrowLeft, LogOut, HelpCircle, ShieldAlert, Users } from 'lucide-react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -76,11 +76,11 @@ type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' 
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
-  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
   { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
+  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true },
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -112,7 +112,6 @@ export default function App() {
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
-  const [isFormsMenuOpen, setIsFormsMenuOpen] = useState(true);
 
   const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
   const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
@@ -285,68 +284,50 @@ export default function App() {
     ),
   }[activePage];
 
-  // Forms dropdown in the sidebar
-  const surveyFormsDropdown = (
-    <div className="space-y-2 px-1" id="admin-forms-dropdown">
-      <button
-        onClick={() => {
-          setActivePage('survey-forms');
-          setIsFormsMenuOpen(!isFormsMenuOpen);
-        }}
-        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-          activePage === 'survey-forms'
-            ? 'text-[#0063a9] dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20'
-            : 'text-slate-400 hover:text-[#0063a9] dark:hover:text-blue-400'
-        }`}
-        type="button"
-      >
-        <span className="flex items-center gap-1.5">
-          <HelpCircle size={14} className="text-[#0063a9] dark:text-blue-400" />
-          <span>Survey Forms</span>
-        </span>
-        {isFormsMenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-      </button>
+  // Content shown when the "Survey Forms" nav item's dropdown toggle is expanded:
+  // the current forms, followed by "Add New" as the last option.
+  const renderSidebarDropdown = (key: string) => {
+    if (key !== 'survey-forms') return null;
 
-      {isFormsMenuOpen && (
-        <div className="mt-1 pl-2.5 space-y-1.5 border-l border-slate-100 dark:border-slate-800">
-          {isAdmin && (
+    return (
+      <>
+        {surveys.map((survey) => {
+          const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
+          return (
             <button
-              onClick={() => setActivePage('create-form')}
-              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer`}
+              key={survey.id}
+              onClick={() => {
+                setSelectedSurveyId(survey.id);
+                setActivePage('view-form');
+              }}
+              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
+                isViewing
+                  ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
+              }`}
               type="button"
-              id="btn-sidebar-create"
+              title={survey.title}
             >
-              <FilePlus size={14} />
-              <span>＋ Create New Form</span>
+              <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
+              <span className="truncate">{survey.title}</span>
             </button>
-          )}
+          );
+        })}
 
-          {surveys.map((survey) => {
-            const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
-            return (
-              <button
-                key={survey.id}
-                onClick={() => {
-                  setSelectedSurveyId(survey.id);
-                  setActivePage('view-form');
-                }}
-                className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
-                  isViewing
-                    ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
-                }`}
-                type="button"
-                title={survey.title}
-              >
-                <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
-                <span className="truncate">{survey.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+        {isAdmin && (
+          <button
+            onClick={() => setActivePage('create-form')}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer"
+            type="button"
+            id="btn-sidebar-create"
+          >
+            <FilePlus size={14} />
+            <span>＋ Add New</span>
+          </button>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className={darkMode ? 'dark' : ''}>
@@ -358,7 +339,7 @@ export default function App() {
           if (page === 'notifications') markNotificationsRead();
         }}
         title={activeTitle}
-        surveyFormsDropdown={surveyFormsDropdown}
+        renderDropdown={renderSidebarDropdown}
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
             {isAdmin && (
