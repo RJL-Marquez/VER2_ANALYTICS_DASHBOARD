@@ -308,11 +308,27 @@ export default function App() {
               type="button"
               title={survey.title}
             >
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 24009ff83041c43c24d2aadcc092b5c54e2eefad
+>>>>>>> accfa85c238fe95451bc194e27419f9eeca28eaa
               <span
                 className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                   isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
                 }`}
               />
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+=======
+              <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
+>>>>>>> c59a13645268153fb99cc7cccc547f60e84630e3
+>>>>>>> 24009ff83041c43c24d2aadcc092b5c54e2eefad
+>>>>>>> accfa85c238fe95451bc194e27419f9eeca28eaa
               <span className="truncate">{survey.title}</span>
             </button>
           );
