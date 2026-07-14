@@ -98,12 +98,12 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
       <section className="panel relative overflow-hidden border-2 border-blue-100/70 bg-gradient-to-r from-[#0063a9] to-[#00457a] p-6 text-white dark:border-blue-900/40 sm:p-8">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
             <PresentationIcon size={22} />
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-100">Presentation Builder</p>
-            <h3 className="text-xl font-bold">Turn your analytics into a shareable deck</h3>
+            <h3 className="text-xl font-bold text-white">Turn your analytics into a shareable deck</h3>
           </div>
         </div>
         <p className="relative mt-3 max-w-2xl text-sm text-blue-50">

@@ -184,11 +184,11 @@ export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelPr
                           </div>
                         </div>
 
-                        <div>
+                        <div className="flex flex-col items-center w-full">
                           <h4 className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 text-center uppercase tracking-wider">Score trend</h4>
-                          <div className="h-40">
+                          <div className="h-40 w-full max-w-sm">
                             <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={trendData}>
+                              <LineChart data={trendData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
