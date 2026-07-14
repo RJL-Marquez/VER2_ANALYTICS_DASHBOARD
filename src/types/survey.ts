@@ -9,14 +9,6 @@ export interface PartnerCompany {
   createdAt: string;
 }
 
-export interface PartnerCompany {
-  id: string;
-  name: string;
-  type: SurveyType;
-  affiliation?: string;
-  createdAt: string;
-}
-
 export interface SurveyResponse {
   responseId: string;
   surveyType: SurveyType;
@@ -79,24 +71,18 @@ export interface CustomForm {
   surveyType: SurveyType;
   description: string;
   createdAt: string;
-<<<<<<< HEAD
   deadlineDate?: string;
   maxRating?: number;
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   questions: {
     questionId: string;
     questionNumber: number;
     question: string;
     questionCategory: string;
-<<<<<<< HEAD
     inputType?: 'text' | 'rating' | 'typed-rating' | 'select' | 'checkbox' | 'date-range' | 'matrix';
     options?: string[];
     subQuestions?: { id: string; label: string; description?: string; validationRange?: { min: number; max: number; allowNa: boolean } }[];
     validationRange?: { min: number; max: number; allowNa: boolean };
     section?: string;
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   }[];
 }
 

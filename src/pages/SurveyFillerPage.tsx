@@ -1,10 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck, MessageSquare } from 'lucide-react';
 import { CustomForm, Rating, PartnerCompany } from '../types/survey';
-<<<<<<< HEAD
 import { isValidDDMMYYYY } from '../utils/time';
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 interface SurveyFillerPageProps {
   surveys: CustomForm[];
@@ -15,16 +12,12 @@ interface SurveyFillerPageProps {
     company: string,
     department: string,
     respondentType: string,
-<<<<<<< HEAD
     address: string | undefined,
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     answers: { questionId: string; questionNumber: number; question: string; questionCategory: string; rating: Rating; comment: string }[]
   ) => void;
   onCancel?: () => void;
 }
 
-<<<<<<< HEAD
 const DEPARTMENTS = [
   'Accounts Payable - Trade',
   'Business Solutions Manager',
@@ -40,10 +33,6 @@ const RESPONDENT_TYPES = [
   'Director',
   'Executive'
 ];
-=======
-const DEPARTMENTS = ['Procurement', 'Operations', 'Facilities', 'Finance', 'Project Delivery', 'Compliance'];
-const RESPONDENT_TYPES = ['Project Manager', 'Account Lead', 'Site Supervisor', 'Coordinator', 'Commercial Contact'];
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
 export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurveyId, onSubmitted, onCancel }: SurveyFillerPageProps) {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>(initialSurveyId || (surveys[0]?.id ?? ''));
@@ -51,7 +40,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
   // Respondent metadata
   const [company, setCompany] = useState('');
-<<<<<<< HEAD
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
   const [respondentType, setRespondentType] = useState(RESPONDENT_TYPES[0]);
   const [address, setAddress] = useState('');
@@ -62,15 +50,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
   const [comments, setComments] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-=======
-  const [department, setDepartment] = useState('Procurement');
-  const [respondentType, setRespondentType] = useState('Project Manager');
-
-  // Answers state
-  const [ratings, setRatings] = useState<Record<string, Rating>>({});
-  const [comments, setComments] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
   const activeSurvey = surveys.find((s) => s.id === selectedSurveyId);
 
@@ -104,7 +83,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     }
 
     // Initialize answer state for this survey's questions
-<<<<<<< HEAD
     const initialRatings: Record<string, any> = {};
     const initialComments: Record<string, string> = {};
     const defaultVal = activeSurvey?.maxRating !== undefined ? activeSurvey.maxRating : 4;
@@ -122,25 +100,15 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       } else {
         initialRatings[q.questionId] = defaultVal; // default to maximum scale value
       }
-=======
-    const initialRatings: Record<string, Rating> = {};
-    const initialComments: Record<string, string> = {};
-    activeSurvey?.questions.forEach((q) => {
-      initialRatings[q.questionId] = 4; // default to 4 (excellent) or let them click
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       initialComments[q.questionId] = '';
     });
     setRatings(initialRatings);
     setComments(initialComments);
-<<<<<<< HEAD
     setValidationErrors({});
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
     setStep(2);
   };
 
-<<<<<<< HEAD
   const handleRatingChange = (qId: string, value: any) => {
     setRatings((prev) => ({ ...prev, [qId]: value }));
   };
@@ -194,12 +162,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     }
   };
 
-=======
-  const handleRatingChange = (qId: string, value: Rating) => {
-    setRatings((prev) => ({ ...prev, [qId]: value }));
-  };
-
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   const handleCommentChange = (qId: string, value: string) => {
     setComments((prev) => ({ ...prev, [qId]: value }));
   };
@@ -208,7 +170,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     e.preventDefault();
     if (!activeSurvey) return;
 
-<<<<<<< HEAD
     // Validate form inputs
     const errors: Record<string, string> = {};
     activeSurvey.questions.forEach((q) => {
@@ -335,26 +296,13 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
         comment: finalComment,
       }];
     });
-=======
-    const formattedAnswers = activeSurvey.questions.map((q) => ({
-      questionId: q.questionId,
-      questionNumber: q.questionNumber,
-      question: q.question,
-      questionCategory: q.questionCategory,
-      rating: ratings[q.questionId] ?? 4,
-      comment: comments[q.questionId]?.trim() || '',
-    }));
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
     onSubmitted(
       selectedSurveyId,
       company.trim(),
       department,
       respondentType,
-<<<<<<< HEAD
       address.trim(),
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       formattedAnswers
     );
 
@@ -363,7 +311,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
   const handleReset = () => {
     setCompany('');
-<<<<<<< HEAD
     setDepartment(DEPARTMENTS[0]);
     setRespondentType(RESPONDENT_TYPES[0]);
     setAddress('');
@@ -372,12 +319,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     setComments({});
     setValidationErrors({});
     setError('');
-=======
-    setDepartment('Procurement');
-    setRespondentType('Project Manager');
-    setRatings({});
-    setComments({});
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     setStep(1);
   };
 
@@ -429,7 +370,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
           )}
 
           <form onSubmit={handleStartForm} className="space-y-5 border-t border-slate-100 pt-6 dark:border-slate-800">
-<<<<<<< HEAD
             <div className="bg-[#0063a9]/10 text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300 font-bold px-4 py-2.5 rounded-lg text-sm uppercase tracking-wider border border-[#0063a9]/10 shadow-xs mb-6">
               Section 1: Details
             </div>
@@ -466,27 +406,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                   ))}
                 </select>
               </div>
-=======
-            <div>
-              <label htmlFor="survey-select" className="field-label">Select Survey Form *</label>
-              <select
-                id="survey-select"
-                className="field"
-                value={selectedSurveyId}
-                onChange={(e) => setSelectedSurveyId(e.target.value)}
-              >
-                {surveys.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title} ({s.surveyType})
-                  </option>
-                ))}
-              </select>
-              {activeSurvey && (
-                <p className="text-xs text-slate-400 mt-1 italic">
-                  {activeSurvey.description}
-                </p>
-              )}
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
             </div>
 
             <div>
@@ -519,7 +438,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
               )}
             </div>
 
-<<<<<<< HEAD
             <div>
               <label htmlFor="filler-address" className="field-label">Address</label>
               <input
@@ -547,41 +465,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                 </select>
               </div>
             )}
-=======
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="filler-dept" className="field-label">Associated Department</label>
-                <select
-                  id="filler-dept"
-                  className="field"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                >
-                  {DEPARTMENTS.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="filler-role" className="field-label">Respondent Job Role</label>
-                <select
-                  id="filler-role"
-                  className="field"
-                  value={respondentType}
-                  onChange={(e) => setRespondentType(e.target.value)}
-                >
-                  {RESPONDENT_TYPES.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
             <div className="flex items-center justify-between border-t border-slate-100 pt-5 dark:border-slate-800">
               {onCancel ? (
@@ -629,7 +512,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
             </div>
           </div>
 
-<<<<<<< HEAD
           {error && (
             <div className="rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-sm text-rose dark:bg-rose-950/30 dark:border-rose-900 flex items-center gap-2">
               <Info size={16} />
@@ -936,87 +818,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                 );
               });
             })()}
-=======
-          {/* Form questions list */}
-          <div className="space-y-5">
-            {activeSurvey.questions.map((q, idx) => {
-              const currentRating = ratings[q.questionId] ?? 4;
-              return (
-                <div
-                  key={q.questionId}
-                  className="panel p-5 space-y-4 shadow-sm hover:shadow-md transition duration-200 border-l-4 border-l-[#0063a9] dark:border-l-blue-400"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-start justify-between gap-4">
-                      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-relaxed">
-                        <span className="text-slate-400 font-bold mr-1.5">{idx + 1}.</span>
-                        {q.question} <span className="text-rose-500">*</span>
-                      </h4>
-                      <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        {q.questionCategory}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Ratings Row */}
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">Select Performance Rating:</span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {([0, 1, 2, 3, 4] as const).map((r) => {
-                        const isSelected = currentRating === r;
-                        let btnStyle = 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900';
-                        if (isSelected) {
-                          if (r <= 1) btnStyle = 'bg-rose-50 border-rose-500 text-rose-600 ring-2 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-900/30';
-                          else if (r === 2) btnStyle = 'bg-amber-50 border-amber-500 text-amber-600 ring-2 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900/30';
-                          else btnStyle = 'bg-emerald-50 border-emerald-500 text-emerald-600 ring-2 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900/30';
-                        }
-
-                        return (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => handleRatingChange(q.questionId, r)}
-                            className={`flex-1 min-w-12 h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${btnStyle}`}
-                          >
-                            <span className="text-base leading-none">{r}</span>
-                            <span className="text-[8px] font-semibold mt-0.5 tracking-tight uppercase opacity-70">
-                              {r === 0 ? 'Poor' : r === 2 ? 'Fair' : r === 4 ? 'Excel' : ''}
-                            </span>
-                          </button>
-                        );
-                      })}
-
-                      {/* N/A Option */}
-                      <button
-                        type="button"
-                        onClick={() => handleRatingChange(q.questionId, 'N/A')}
-                        className={`min-w-16 h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${
-                          currentRating === 'N/A'
-                            ? 'bg-slate-100 border-slate-400 text-slate-700 ring-2 ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300'
-                            : 'border-slate-200 text-slate-400 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <span className="text-sm leading-none">N/A</span>
-                        <span className="text-[8px] font-semibold mt-0.5 uppercase tracking-tight opacity-70">Not App</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Comment Input */}
-                  <div className="flex items-center gap-2.5 rounded-lg border border-slate-100 bg-slate-50/50 pl-3 pr-3 transition-colors focus-within:bg-white focus-within:border-slate-200 dark:border-slate-800 dark:bg-slate-900/40 dark:focus-within:bg-slate-900">
-                    <MessageSquare size={14} className="text-slate-400 shrink-0" />
-                    <input
-                      type="text"
-                      className="w-full bg-transparent py-2 text-xs text-slate-700 placeholder:text-slate-400 dark:text-slate-200 outline-none"
-                      placeholder="Optional details or specific examples..."
-                      value={comments[q.questionId] || ''}
-                      onChange={(e) => handleCommentChange(q.questionId, e.target.value)}
-                    />
-                  </div>
-                </div>
-              );
-            })}
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
           </div>
 
           {/* Form Footer */}

@@ -19,7 +19,6 @@ import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
 
-<<<<<<< HEAD
 const DEMO_ACCOUNTS = [
   {
     email: 'admin@mgenesis.com',
@@ -74,10 +73,6 @@ function getUserProfile(email: string | null) {
 
 type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
 
-=======
-type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
-
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
@@ -105,10 +100,7 @@ export default function App() {
     unreadCount,
     markNotificationsRead,
     createSurvey,
-<<<<<<< HEAD
     updateSurvey,
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     deleteSurvey,
     submitResponse,
     resetAllData
@@ -116,10 +108,7 @@ export default function App() {
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
-<<<<<<< HEAD
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
@@ -130,18 +119,13 @@ export default function App() {
 
   const activeTitle = useMemo(() => {
     if (activePage === 'partner-companies') return 'Administrative Partner Registry';
-<<<<<<< HEAD
     if (activePage === 'create-form') return editingSurveyId ? 'Edit Survey Form' : 'Create Survey Form';
-=======
-    if (activePage === 'create-form') return 'Create Survey Form';
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
     if (activePage === 'view-form') {
       const selected = surveys.find((s) => s.id === selectedSurveyId);
       return selected ? `Survey: ${selected.title}` : 'Survey Details';
     }
     if (activePage === 'fill-form') return 'Fill Out Stakeholder Survey';
     return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
-<<<<<<< HEAD
   }, [activePage, selectedSurveyId, surveys, editingSurveyId]);
 
   const profile = useMemo(() => getUserProfile(account), [account]);
@@ -161,27 +145,18 @@ export default function App() {
       setActivePage('survey-forms');
     }
   };
-=======
-  }, [activePage, selectedSurveyId, surveys]);
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
   // Auth Guard
   if (!account) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-<<<<<<< HEAD
-=======
-  const isAdmin = account === 'admin@mgenesis.com';
-
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   // Handler for custom survey submission
   const handleSurveySubmit = (
     surveyId: string,
     company: string,
     department: string,
     respondentType: string,
-<<<<<<< HEAD
     address: string | undefined,
     answers: any[]
   ) => {
@@ -189,79 +164,6 @@ export default function App() {
   };
 
   // ----------------------------------------------------
-=======
-    answers: any[]
-  ) => {
-    submitResponse(surveyId, company, department, respondentType, answers);
-  };
-
-  // ----------------------------------------------------
-  // PUBLIC RESPONDENT EXPERIENCE
-  // ----------------------------------------------------
-  if (!isAdmin) {
-    return (
-      <div className={darkMode ? 'dark' : ''}>
-        <div className="min-h-screen bg-cloud text-ink dark:bg-slate-950 dark:text-slate-100 flex flex-col">
-          {/* Public Header */}
-          <header className="sticky top-0 z-20 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full px-4 sm:px-8 shadow-sm">
-            <div className="flex items-center gap-4">
-              <img
-                src="/microgenesis_logo.png"
-                alt="Microgenesis Logo"
-                className="h-10 object-contain brightness-0 invert"
-                referrerPolicy="no-referrer"
-              />
-              <span className="hidden sm:inline h-6 w-px bg-blue-400/35" />
-              <div className="hidden sm:block">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-blue-200 block leading-none">Microsoft Forms</span>
-                <h1 className="text-base font-bold leading-tight mt-0.5 text-white">Stakeholder Submission Ingress</h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Dark mode button */}
-              <button
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition cursor-pointer ${
-                  darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white hover:bg-white/5'
-                }`}
-                type="button"
-                onClick={() => setDarkMode((value) => !value)}
-                title="Toggle dark mode"
-              >
-                {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-
-              <button
-                onClick={() => setAccount(null)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-white/20 transition cursor-pointer"
-                type="button"
-                id="btn-public-signout"
-              >
-                <LogOut size={13} />
-                <span>Exit Form</span>
-              </button>
-            </div>
-          </header>
-
-          <main className="flex-1 px-4 py-8 max-w-4xl w-full mx-auto">
-            <SurveyFillerPage
-              surveys={surveys}
-              partnerCompanies={partnerCompanies}
-              initialSurveyId={selectedSurveyId}
-              onSubmitted={handleSurveySubmit}
-              onCancel={() => {
-                setSelectedSurveyId(null);
-                setAccount(null);
-              }}
-            />
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
   // ADMIN EXPERIENCE (ALL ANALYTICS SECURED HERE)
   // ----------------------------------------------------
   const pageContent = {
@@ -281,21 +183,15 @@ export default function App() {
         responses={responses}
         onAddCompany={addPartnerCompany}
         onRemoveCompany={removePartnerCompany}
-<<<<<<< HEAD
         isAdmin={isAdmin}
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       />
     ),
     'survey-forms': (
       <SurveyFormsPage
         surveys={surveys}
         responses={responses}
-<<<<<<< HEAD
         partnerCompanies={partnerCompanies}
         userEmail={account || ''}
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         onSelectSurvey={(id) => {
           setSelectedSurveyId(id);
           setActivePage('view-form');
@@ -305,10 +201,7 @@ export default function App() {
           setSelectedSurveyId(id);
           setActivePage('fill-form');
         }}
-<<<<<<< HEAD
         isAdmin={isAdmin}
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
       />
     ),
     analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
@@ -317,7 +210,6 @@ export default function App() {
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
       <CreateSurveyPage
-<<<<<<< HEAD
         onBack={() => {
           setEditingSurveyId(null);
           setActivePage('dashboard');
@@ -334,14 +226,6 @@ export default function App() {
               setSelectedSurveyId(newSurvey.id);
               setActivePage('view-form');
             }
-=======
-        onBack={() => setActivePage('dashboard')}
-        onSave={(surveyData) => {
-          const newSurvey = createSurvey(surveyData);
-          if (newSurvey) {
-            setSelectedSurveyId(newSurvey.id);
-            setActivePage('view-form');
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
           }
         }}
       />
@@ -361,11 +245,8 @@ export default function App() {
         <SurveyDetailsPage
           survey={targetSurvey}
           responses={responses}
-<<<<<<< HEAD
           partnerCompanies={partnerCompanies}
           userEmail={account || ''}
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
           onBack={() => setActivePage('dashboard')}
           onFillForm={(id) => {
             setSelectedSurveyId(id);
@@ -375,14 +256,11 @@ export default function App() {
             deleteSurvey(id);
             setActivePage('dashboard');
           }}
-<<<<<<< HEAD
           onEdit={(id) => {
             setEditingSurveyId(id);
             setActivePage('create-form');
           }}
           isAdmin={isAdmin}
-=======
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         />
       );
     })(),
@@ -431,7 +309,6 @@ export default function App() {
 
       {isFormsMenuOpen && (
         <div className="mt-1 pl-2.5 space-y-1.5 border-l border-slate-100 dark:border-slate-800">
-<<<<<<< HEAD
           {isAdmin && (
             <button
               onClick={() => setActivePage('create-form')}
@@ -443,17 +320,6 @@ export default function App() {
               <span>＋ Create New Form</span>
             </button>
           )}
-=======
-          <button
-            onClick={() => setActivePage('create-form')}
-            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer`}
-            type="button"
-            id="btn-sidebar-create"
-          >
-            <FilePlus size={14} />
-            <span>＋ Create New Form</span>
-          </button>
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
 
           {surveys.map((survey) => {
             const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
@@ -485,11 +351,7 @@ export default function App() {
   return (
     <div className={darkMode ? 'dark' : ''}>
       <Shell
-<<<<<<< HEAD
         pages={visiblePages}
-=======
-        pages={adminPages}
->>>>>>> dd3d86aebfcefa969b5ece6322fec478a426523b
         activePage={activePage as any}
         onPageChange={(page) => {
           setActivePage(page as any);
