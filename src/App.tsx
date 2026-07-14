@@ -316,7 +316,6 @@ export default function App() {
                   isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
                 }`}
               />
-<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 =======
