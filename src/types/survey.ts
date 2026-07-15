@@ -1,5 +1,5 @@
 export type SurveyType = 'Contractor' | 'Supplier' | 'Subcontractor';
-export type Rating = 0 | 1 | 2 | 3 | 4 | 'N/A';
+export type Rating = number | 'N/A';
 
 export interface PartnerCompany {
   id: string;
@@ -16,18 +16,19 @@ export interface SurveyResponse {
   submissionDate: string;
   company: string;
   department?: string;
+  address?: string;
   questionId: string;
   questionNumber: number;
   question: string;
   questionCategory: string;
   rating: Rating;
   comment: string;
+  respondentEmail?: string;
+  archived?: boolean;
 }
 
 export interface FilterState {
   surveyType: SurveyType[];
-  dateFrom: string;
-  dateTo: string;
   questionId: string;
   rating: 'All' | Rating;
   company: string;
@@ -49,6 +50,7 @@ export interface KpiSummary {
   naPercentage: number;
   highestRatedQuestion: string;
   lowestRatedQuestion: string;
+  maxRating?: number;
 }
 
 export interface ResponseNotification {
@@ -58,6 +60,9 @@ export interface ResponseNotification {
   respondentType: string;
   submissionDate: string;
   questionCount: number;
+  respondentEmail?: string;
+  department?: string;
+  designation?: string;
 }
 
 export interface CustomForm {
@@ -66,11 +71,19 @@ export interface CustomForm {
   surveyType: SurveyType;
   description: string;
   createdAt: string;
+  deadlineDate?: string;
+  status?: 'Running' | 'Paused' | 'Completed' | 'Archived';
+  maxRating?: number;
   questions: {
     questionId: string;
     questionNumber: number;
     question: string;
     questionCategory: string;
+    inputType?: 'text' | 'rating' | 'typed-rating' | 'select' | 'checkbox' | 'date-range' | 'matrix';
+    options?: string[];
+    subQuestions?: { id: string; label: string; description?: string; validationRange?: { min: number; max: number; allowNa: boolean } }[];
+    validationRange?: { min: number; max: number; allowNa: boolean };
+    section?: string;
   }[];
 }
 

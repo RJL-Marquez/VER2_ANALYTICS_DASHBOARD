@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Plus, Trash, ArrowLeft, Save, AlertCircle, FileText, Sparkles } from 'lucide-react';
+import { Plus, Trash, ArrowLeft, Save, AlertCircle, FileText, Sparkles, CalendarClock } from 'lucide-react';
 import { SurveyType, CustomForm } from '../types/survey';
+import { isValidDDMMYYYY } from '../utils/time';
 
 interface CreateSurveyPageProps {
   onBack: () => void;
   onSave: (survey: Omit<CustomForm, 'id' | 'createdAt'>) => void;
+  surveyToEdit?: CustomForm;
 }
 
 const CATEGORIES = [
@@ -21,15 +23,31 @@ const CATEGORIES = [
 interface QuestionInput {
   question: string;
   questionCategory: string;
+  section?: string;
+  inputType?: 'rating' | 'text' | 'select' | 'typed-rating';
+  options?: string[];
+  validationRange?: { min: number; max: number };
 }
 
-export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
-  const [title, setTitle] = useState('');
-  const [surveyType, setSurveyType] = useState<SurveyType>('Contractor');
-  const [description, setDescription] = useState('');
-  const [questions, setQuestions] = useState<QuestionInput[]>([
-    { question: '', questionCategory: 'Delivery' },
-  ]);
+export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyPageProps) {
+  const [title, setTitle] = useState(surveyToEdit ? surveyToEdit.title : '');
+  const [surveyType, setSurveyType] = useState<SurveyType>(surveyToEdit ? surveyToEdit.surveyType : 'Contractor');
+  const [description, setDescription] = useState(surveyToEdit ? surveyToEdit.description : '');
+  const [maxRating, setMaxRating] = useState(surveyToEdit ? (surveyToEdit.maxRating ?? 100) : 100);
+  const [deadlineDate, setDeadlineDate] = useState(surveyToEdit ? (surveyToEdit.deadlineDate ?? '') : '');
+  const [deadlineError, setDeadlineError] = useState('');
+  const [questions, setQuestions] = useState<QuestionInput[]>(
+    surveyToEdit
+      ? (surveyToEdit.questions.map((q) => ({
+          question: q.question,
+          questionCategory: q.questionCategory,
+          section: q.section,
+          inputType: q.inputType as any,
+          options: q.options,
+          validationRange: q.validationRange as any,
+        })) as any[])
+      : [{ question: '', questionCategory: 'Delivery' }]
+  );
   const [error, setError] = useState('');
 
   const handleAddQuestion = () => {
@@ -96,23 +114,38 @@ export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
       return;
     }
 
+    if (deadlineDate.trim() && !isValidDDMMYYYY(deadlineDate)) {
+      setDeadlineError('Enter a valid deadline date in dd/mm/yyyy format (e.g. 05/03/2026).');
+      setError('Please fix the deadline date before saving.');
+      return;
+    }
+    setDeadlineError('');
+
     if (questions.some((q) => !q.question.trim())) {
       setError('All questions must contain text. Please fill or remove empty questions.');
       return;
     }
 
     const formattedQuestions = questions.map((q, idx) => ({
-      questionId: `Q-CUST-${Date.now()}-${idx + 1}`,
+      questionId: surveyToEdit && surveyToEdit.questions[idx]
+        ? surveyToEdit.questions[idx].questionId
+        : `Q-CUST-${Date.now()}-${idx + 1}`,
       questionNumber: idx + 1,
       question: q.question.trim(),
       questionCategory: q.questionCategory,
+      section: q.section?.trim() || undefined,
+      inputType: q.inputType || 'rating',
+      options: q.options && q.options.length > 0 ? q.options : undefined,
+      validationRange: q.validationRange || undefined,
     }));
 
     onSave({
       title: title.trim(),
       surveyType,
       description: description.trim() || `Custom survey for ${surveyType} stakeholders.`,
-      questions: formattedQuestions,
+      deadlineDate: deadlineDate.trim() || undefined,
+      maxRating,
+      questions: formattedQuestions as any,
     });
   };
 
@@ -183,6 +216,66 @@ export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
               </select>
             </div>
 
+            <div>
+              <label htmlFor="survey-deadline" className="field-label flex items-center gap-1.5">
+                <CalendarClock size={13} className="text-slate-400" />
+                <span>Deadline Date</span>
+              </label>
+              <input
+                id="survey-deadline"
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="dd/mm/yyyy"
+                className={`field ${deadlineError ? 'border-rose-400 focus:ring-rose-200' : ''}`}
+                value={deadlineDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDeadlineDate(value);
+                  if (!value.trim()) {
+                    setDeadlineError('');
+                  } else if (!isValidDDMMYYYY(value)) {
+                    setDeadlineError('Enter a valid date in dd/mm/yyyy format.');
+                  } else {
+                    setDeadlineError('');
+                  }
+                }}
+              />
+              {deadlineError ? (
+                <p className="text-xs text-rose-500 font-semibold mt-1 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  {deadlineError}
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                  The date respondents must complete this form by (dd/mm/yyyy).
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="max-rating" className="field-label flex items-center justify-between">
+                <span>Rating Scale Max (N) *</span>
+                <span className="font-bold text-[#0063a9] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded text-xs">
+                  0 to {maxRating}
+                </span>
+              </label>
+              <div className="flex items-center gap-2.5 mt-1.5">
+                <input
+                  id="max-rating"
+                  type="range"
+                  min="2"
+                  max="10"
+                  className="w-full accent-[#0063a9] cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none"
+                  value={maxRating}
+                  onChange={(e) => setMaxRating(Number(e.target.value))}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                Respondents will answer from: N/A, 0, up to {maxRating}.
+              </p>
+            </div>
+
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
@@ -220,45 +313,151 @@ export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
             {questions.map((q, idx) => (
               <div
                 key={idx}
-                className="group relative flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 md:flex-row md:items-center"
+                className="group relative flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40"
               >
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                  {idx + 1}
-                </div>
-
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    className="field mt-0"
-                    placeholder="Enter question text (e.g. Does the service provider maintain standard quality over time?)"
-                    value={q.question}
-                    onChange={(e) => handleQuestionChange(idx, e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="w-full md:w-48 shrink-0">
-                  <select
-                    className="field mt-0"
-                    value={q.questionCategory}
-                    onChange={(e) => handleCategoryChange(idx, e.target.value)}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {idx + 1}
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Question Config</span>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveQuestion(idx)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition duration-200 cursor-pointer"
+                    title="Remove question"
                   >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                    <Trash size={16} />
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleRemoveQuestion(idx)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 md:opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer self-end md:self-auto"
-                  title="Remove question"
-                >
-                  <Trash size={16} />
-                </button>
+                <div className="flex-1 space-y-3">
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Question Text *</label>
+                      <input
+                        type="text"
+                        className="field mt-1"
+                        placeholder="e.g. Does the courier deliver goods on the agreed date?"
+                        value={q.question}
+                        onChange={(e) => handleQuestionChange(idx, e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="w-full md:w-48 shrink-0">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Category</label>
+                      <select
+                        className="field mt-1"
+                        value={q.questionCategory}
+                        onChange={(e) => handleCategoryChange(idx, e.target.value)}
+                      >
+                        {CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 grid-cols-1 md:grid-cols-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Section Header (Optional)</label>
+                      <input
+                        type="text"
+                        className="field mt-1 py-1 px-2.5 text-xs"
+                        placeholder="e.g. SECTION 2: Reliability/Delivery (30 points)"
+                        value={q.section || ''}
+                        onChange={(e) => {
+                          const next = [...questions];
+                          next[idx].section = e.target.value;
+                          setQuestions(next);
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Input Type / Response Format</label>
+                      <select
+                        className="field mt-1 py-1 px-2.5 text-xs"
+                        value={q.inputType || 'rating'}
+                        onChange={(e) => {
+                          const next = [...questions];
+                          const type = e.target.value as any;
+                          next[idx].inputType = type;
+                          if (type === 'select' && !next[idx].options) {
+                            next[idx].options = ['Option 1', 'Option 2'];
+                          }
+                          if (type === 'typed-rating' && !next[idx].validationRange) {
+                            next[idx].validationRange = { min: 0, max: 15 };
+                          }
+                          setQuestions(next);
+                        }}
+                      >
+                        <option value="rating">Performance Rating Scale (0 to N)</option>
+                        <option value="select">Dropdown Menu Selector</option>
+                        <option value="typed-rating">Typed Rating with Range Bounds (e.g. 0-15)</option>
+                        <option value="text">Text Field Answer</option>
+                      </select>
+                    </div>
+
+                    {q.inputType === 'select' && (
+                      <div>
+                        <label className="text-[10px] font-bold text-amber-600 uppercase dark:text-amber-400">Dropdown Options (Comma Separated)</label>
+                        <input
+                          type="text"
+                          className="field mt-1 py-1 px-2.5 text-xs border-amber-200 focus:ring-amber-100 dark:border-amber-900/40"
+                          placeholder="Option 1, Option 2, Option 3"
+                          value={q.options ? q.options.join(', ') : ''}
+                          onChange={(e) => {
+                            const next = [...questions];
+                            next[idx].options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            setQuestions(next);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {q.inputType === 'typed-rating' && (
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-[#0063a9] uppercase dark:text-blue-400">Min Score</label>
+                          <input
+                            type="number"
+                            className="field mt-1 py-1 px-2.5 text-xs"
+                            value={q.validationRange?.min ?? 0}
+                            onChange={(e) => {
+                              const next = [...questions];
+                              next[idx].validationRange = {
+                                min: parseInt(e.target.value, 10) || 0,
+                                max: next[idx].validationRange?.max ?? 15,
+                              };
+                              setQuestions(next);
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-[#0063a9] uppercase dark:text-blue-400">Max Score</label>
+                          <input
+                            type="number"
+                            className="field mt-1 py-1 px-2.5 text-xs"
+                            value={q.validationRange?.max ?? 15}
+                            onChange={(e) => {
+                              const next = [...questions];
+                              next[idx].validationRange = {
+                                min: next[idx].validationRange?.min ?? 0,
+                                max: parseInt(e.target.value, 10) || 15,
+                              };
+                              setQuestions(next);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -278,7 +477,7 @@ export function CreateSurveyPage({ onBack, onSave }: CreateSurveyPageProps) {
             id="btn-save-survey"
           >
             <Save size={16} />
-            <span>Create and Publish Form</span>
+            <span>{surveyToEdit ? 'Save Changes' : 'Create and Publish Form'}</span>
           </button>
         </div>
       </form>

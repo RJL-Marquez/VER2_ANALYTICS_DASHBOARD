@@ -31,3 +31,36 @@ export function formatLogTime(isoDate: string): string {
   if (Number.isNaN(parsed.getTime())) return '—';
   return parsed.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
+
+/**
+ * Strictly validates a date string in dd/mm/yyyy format.
+ * Rejects anything that isn't exactly two digits, a slash, two digits, a slash,
+ * four digits (so letters, extra characters, or partial input all fail), and
+ * also rejects dates that don't exist on the calendar (e.g. 31/02/2026, 32/01/2026,
+ * 00/00/0000), including correctly accounting for leap years.
+ */
+export function isValidDDMMYYYY(value: string): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  if (!match) return false;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const year = parseInt(match[3], 10);
+
+  if (month < 1 || month > 12) return false;
+  if (year < 1000 || year > 9999) return false;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day < 1 || day > daysInMonth) return false;
+
+  return true;
+}
+
+/** Returns an error message if the dd/mm/yyyy string is invalid, otherwise ''. */
+export function getDDMMYYYYError(value: string): string {
+  if (!value || !value.trim()) return 'This date is required.';
+  if (!isValidDDMMYYYY(value)) return 'Enter a valid date in dd/mm/yyyy format.';
+  return '';
+}

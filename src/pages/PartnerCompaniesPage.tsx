@@ -12,15 +12,22 @@ import {
   Briefcase, 
   ClipboardList, 
   Award, 
-  X 
+  X,
+  List,
+  LayoutGrid,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
+import { getMaxRatingForResponses } from '../utils/analytics';
+import { computeCompanyComposite } from '../utils/scoring';
 
 interface PartnerCompaniesPageProps {
   partnerCompanies: PartnerCompany[];
   responses: SurveyResponse[];
   onAddCompany: (name: string, type: SurveyType, affiliation?: string) => void;
   onRemoveCompany: (id: string) => void;
+  isAdmin?: boolean;
 }
 
 export function PartnerCompaniesPage({
@@ -28,9 +35,15 @@ export function PartnerCompaniesPage({
   responses,
   onAddCompany,
   onRemoveCompany,
+  isAdmin,
 }: PartnerCompaniesPageProps) {
   const [activeTab, setActiveTab] = useState<SurveyType | 'All'>('All');
+  const [viewMode, setViewMode] = useState<'general' | 'simplified'>('general');
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
+  const maxRating = useMemo(() => {
+    return getMaxRatingForResponses(responses);
+  }, [responses]);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -45,6 +58,9 @@ export function PartnerCompaniesPage({
   const [companyToDelete, setCompanyToDelete] = useState<PartnerCompany | null>(null);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
+
+  type SortKey = 'name' | 'type' | 'createdAt';
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
 
   const adminPasscode = 'mgenesis2026';
 
@@ -61,6 +77,14 @@ export function PartnerCompaniesPage({
     } catch {
       return dateString;
     }
+  };
+
+  const handleSort = (key: SortKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
   // Calculate statistics for each company based on responses
@@ -81,20 +105,18 @@ export function PartnerCompaniesPage({
     return stats;
   }, [responses]);
 
-  const getCompanyScoreDetails = (companyName: string) => {
-    const stat = companyStats[companyName];
-    if (!stat || stat.countRating === 0) {
-      return { rating: 'N/A', pct: 0, count: 0, label: 'Unrated' };
+  const getCompanyScoreDetails = (companyName: string, companyType: SurveyType) => {
+    const composite = computeCompanyComposite(companyName, companyType, responses);
+    if (!composite) {
+      return { rating: 'N/A', pct: 0, count: 0, label: 'Unrated', hex: '#94a3b8' };
     }
-    const avg = stat.sumRating / stat.countRating;
-    const pct = Math.round((avg / 4) * 100);
-    let label = 'Satisfactory';
-    if (pct >= 85) label = 'Excellent';
-    else if (pct >= 75) label = 'Good';
-    else if (pct < 50) label = 'Critical';
-    else if (pct < 65) label = 'Needs Imp.';
-
-    return { rating: avg.toFixed(2), pct, count: stat.totalResponses, label };
+    return {
+      rating: `${composite.compositeScore.toFixed(1)}%`,
+      pct: Math.round(composite.compositeScore),
+      count: composite.evaluationCount, // number of evaluations/audits completed
+      label: composite.band.label,
+      hex: composite.band.hex,
+    };
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -144,9 +166,24 @@ export function PartnerCompaniesPage({
   };
 
   const filteredCompanies = useMemo(() => {
-    if (activeTab === 'All') return partnerCompanies;
-    return partnerCompanies.filter((c) => c.type === activeTab);
-  }, [partnerCompanies, activeTab]);
+    let result = partnerCompanies;
+    if (activeTab !== 'All') {
+      result = partnerCompanies.filter((c) => c.type === activeTab);
+    }
+    
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return result;
+  }, [partnerCompanies, activeTab, sortConfig]);
 
   return (
     <div className="space-y-6" id="partner-companies-page">
@@ -183,45 +220,70 @@ export function PartnerCompaniesPage({
       {/* Top Options Bar (Tabs + Add Button) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Tabs */}
-        <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950 sm:max-w-md w-full sm:w-auto">
+        <div className="flex flex-nowrap overflow-x-auto rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950 sm:max-w-md w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
           {(['All', 'Contractor', 'Supplier', 'Subcontractor'] as const).map((tab) => (
             <button
               key={tab}
-              className={`flex-1 rounded-md py-2 px-4 text-xs font-bold transition-all duration-150 cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap rounded-md py-2 px-4 text-xs font-bold transition-all duration-150 cursor-pointer ${
                 activeTab === tab
                   ? 'bg-[#0063a9] text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'All' ? 'All Partners' : `${tab}s`}
+              {tab === 'All' ? 'All' : `${tab}s`}
             </button>
           ))}
         </div>
 
-        {/* Register Button */}
-        <button
-          onClick={() => {
-            setErrorMessage('');
-            setIsRegisterOpen(true);
-          }}
-          className="bg-[#0063a9] hover:bg-[#00528c] text-white flex items-center justify-center gap-1.5 py-2 px-5 text-xs font-bold rounded-lg shadow-xs transition duration-150 cursor-pointer"
-          type="button"
-        >
-          <Plus size={16} />
-          <span>Register New Partner</span>
-        </button>
+        {/* Register Button (admin-only; registration is an admin-managed capability, no restriction notice needed for others) */}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setErrorMessage('');
+              setIsRegisterOpen(true);
+            }}
+            className="bg-[#0063a9] hover:bg-[#00528c] text-white flex items-center justify-center gap-1.5 py-2 px-5 text-xs font-bold rounded-lg shadow-xs transition duration-150 cursor-pointer"
+            type="button"
+          >
+            <Plus size={16} />
+            <span>Register New Partner</span>
+          </button>
+        )}
       </div>
 
       {/* Expanded Partners list */}
       <div className="panel p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3 bg-slate-50/50 dark:bg-slate-900/30">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Registered Partner Companies ({filteredCompanies.length})
           </span>
-          <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded">
-            Expanded Directory
-          </span>
+          <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950">
+            <button
+              type="button"
+              onClick={() => setViewMode('general')}
+              className={`flex items-center gap-1.5 rounded-md py-1.5 px-3 text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                viewMode === 'general'
+                  ? 'bg-[#0063a9] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutGrid size={12} />
+              <span>General</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('simplified')}
+              className={`flex items-center gap-1.5 rounded-md py-1.5 px-3 text-[11px] font-bold transition-all duration-150 cursor-pointer ${
+                viewMode === 'simplified'
+                  ? 'bg-[#0063a9] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <List size={12} />
+              <span>Simplified</span>
+            </button>
+          </div>
         </div>
 
         {filteredCompanies.length === 0 ? (
@@ -230,31 +292,71 @@ export function PartnerCompaniesPage({
             <p className="text-sm font-semibold">No companies registered under this classification.</p>
             <p className="text-xs mt-1 text-slate-400">Click "Register New Partner" to add one.</p>
           </div>
+        ) : viewMode === 'simplified' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:bg-slate-950/60">
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Company Name
+                      {sortConfig?.key === 'name' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Category
+                      {sortConfig?.key === 'type' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Date Registered
+                      {sortConfig?.key === 'createdAt' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredCompanies.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10">
+                    <td className="px-5 py-2.5 font-semibold text-slate-800 dark:text-slate-100">{c.name}</td>
+                    <td className="px-5 py-2.5">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        c.type === 'Contractor'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20'
+                          : c.type === 'Supplier'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/20'
+                          : 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20'
+                      }`}>
+                        {c.type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-2.5 text-slate-500 dark:text-slate-400">{formatDate(c.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredCompanies.map((c) => {
-              const score = getCompanyScoreDetails(c.name);
-              
-              // Satisfaction Standing Badges
-              let standingColor = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
-              let progressColor = 'bg-slate-400';
-              
-              if (score.label === 'Excellent') {
-                standingColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/30';
-                progressColor = 'bg-emerald-500';
-              } else if (score.label === 'Good') {
-                standingColor = 'bg-lime-50 text-lime-700 border-lime-200 dark:bg-lime-950/30 dark:text-lime-400 dark:border-lime-900/30';
-                progressColor = 'bg-lime-500';
-              } else if (score.label === 'Satisfactory') {
-                standingColor = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30';
-                progressColor = 'bg-[#0063a9]';
-              } else if (score.label === 'Needs Imp.') {
-                standingColor = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30';
-                progressColor = 'bg-amber-500';
-              } else if (score.label === 'Critical') {
-                standingColor = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/30';
-                progressColor = 'bg-rose-500';
-              }
+              const score = getCompanyScoreDetails(c.name, c.type);
 
               return (
                 <div key={c.id} className="p-5 sm:p-6 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition">
@@ -296,14 +398,16 @@ export function PartnerCompaniesPage({
                     </div>
 
                     {/* Delete action button */}
-                    <button
-                      onClick={() => startDelete(c)}
-                      className="text-slate-300 hover:text-rose-600 dark:text-slate-700 dark:hover:text-rose-400 transition p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg shrink-0 cursor-pointer self-start sm:self-center"
-                      title="Remove Partner Company"
-                      type="button"
-                    >
-                      <Trash size={16} />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => startDelete(c)}
+                        className="text-slate-300 hover:text-rose-600 dark:text-slate-700 dark:hover:text-rose-400 transition p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg shrink-0 cursor-pointer self-start sm:self-center"
+                        title="Remove Partner Company"
+                        type="button"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Multi-column specs details grid */}
@@ -355,11 +459,14 @@ export function PartnerCompaniesPage({
                               {score.rating}
                             </span>
                             {score.rating !== 'N/A' && (
-                              <span className="text-[10px] text-slate-400">/ 4.00</span>
+                              <span className="text-[10px] text-slate-400">/ {maxRating.toFixed(2)}</span>
                             )}
                           </div>
                           
-                          <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${standingColor}`}>
+                          <span
+                            className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border"
+                            style={{ backgroundColor: `${score.hex}1a`, color: score.hex, borderColor: `${score.hex}33` }}
+                          >
                             {score.label}
                           </span>
                         </div>
@@ -369,8 +476,8 @@ export function PartnerCompaniesPage({
                           <div className="space-y-1">
                             <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                               <div 
-                                className={`h-full ${progressColor}`} 
-                                style={{ width: `${score.pct}%` }}
+                                className="h-full" 
+                                style={{ width: `${score.pct}%`, backgroundColor: score.hex }}
                               />
                             </div>
                             <div className="flex justify-between text-[10px] text-slate-400">

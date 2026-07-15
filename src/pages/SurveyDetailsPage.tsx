@@ -1,24 +1,52 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, ExternalLink, Trash, Calendar, Users, ListFilter, ClipboardCheck, MessageSquare, AlertTriangle, Eye } from 'lucide-react';
-import { CustomForm, SurveyResponse } from '../types/survey';
+import { ArrowLeft, ExternalLink, Trash, Calendar, CalendarClock, Users, ClipboardCheck, AlertTriangle, Eye, Pencil, Building2, Check } from 'lucide-react';
+import { CustomForm, SurveyResponse, PartnerCompany } from '../types/survey';
+import { CompletionStatusBar } from '../components/CompletionStatusBar';
+import { formatNumber, scoredResponses, submissionScores } from '../utils/analytics';
+import { isScoredQuestion } from '../data/questionWeights';
 
 interface SurveyDetailsPageProps {
   survey: CustomForm;
   responses: SurveyResponse[];
+  partnerCompanies?: PartnerCompany[];
+  userEmail?: string;
   onBack: () => void;
   onFillForm: (surveyId: string) => void;
   onDelete: (surveyId: string) => void;
+  onEdit?: (surveyId: string) => void;
+  isAdmin?: boolean;
 }
 
-export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDelete }: SurveyDetailsPageProps) {
+export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], userEmail = '', onBack, onFillForm, onDelete, onEdit, isAdmin }: SurveyDetailsPageProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
-  // Filter responses specific to this survey
+  const { pendingCompanies, completedCount, totalCompanies } = useMemo(() => {
+    const normalizedUserEmail = userEmail.trim().toLowerCase();
+    const evaluatedNames = new Set<string>();
+    responses.forEach((resp: any) => {
+      if (resp.respondentEmail && resp.respondentEmail.trim().toLowerCase() === normalizedUserEmail) {
+        evaluatedNames.add(resp.company.trim().toLowerCase());
+      }
+    });
+
+    const companiesForType = partnerCompanies.filter((c) => c.type === survey.surveyType);
+    const pending = companiesForType.filter((c) => !evaluatedNames.has(c.name.trim().toLowerCase()));
+
+    return {
+      pendingCompanies: pending,
+      completedCount: companiesForType.length - pending.length,
+      totalCompanies: companiesForType.length,
+    };
+  }, [partnerCompanies, responses, userEmail, survey.surveyType]);
+
   const surveyResponses = useMemo(() => {
-    // A response belongs to this survey if it matches the survey's type and its question IDs
     const surveyQuestionIds = new Set(survey.questions.map((q) => q.questionId));
-    return responses.filter((r) => r.surveyType === survey.surveyType && surveyQuestionIds.has(r.questionId));
+    return responses.filter((r) => {
+      if (r.surveyType !== survey.surveyType) return false;
+      if (surveyQuestionIds.has(r.questionId)) return true;
+      return [...surveyQuestionIds].some((questionId) => r.questionId.startsWith(`${questionId}-`));
+    });
   }, [responses, survey]);
 
   // Group responses by submission (responseId)
@@ -51,19 +79,13 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
 
   // Calculate stats
   const stats = useMemo(() => {
-    const validRatings = surveyResponses.filter((r) => r.rating !== 'N/A');
-    if (validRatings.length === 0) {
-      return { total: 0, avg: 0, percentage: 0 };
-    }
-
-    const sum = validRatings.reduce((acc, r) => acc + (r.rating as number), 0);
-    const avg = sum / validRatings.length;
-    const percentage = (avg / 4) * 100; // Rating is 0-4
+    const scores = submissionScores(surveyResponses);
+    const avg = scores.length ? scores.reduce((sum, item) => sum + item.score, 0) / scores.length : 0;
 
     return {
       total: submissions.length,
-      avg: parseFloat(avg.toFixed(2)),
-      percentage: Math.round(percentage),
+      avg: Number(avg.toFixed(2)),
+      percentage: Math.round(avg),
     };
   }, [surveyResponses, submissions]);
 
@@ -80,32 +102,44 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
         <button
           onClick={onBack}
-          className="secondary-button self-start"
+          className="secondary-button self-start px-6 py-3 text-base h-12 flex items-center justify-center gap-2"
           type="button"
           id="btn-back"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={20} />
           <span>Back to Surveys</span>
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {isAdmin && onEdit && (
+            <button
+              onClick={() => onEdit(survey.id)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 px-6 py-3 text-base font-medium h-12 hover:bg-amber-100 transition cursor-pointer dark:bg-amber-950/20 dark:border-amber-900"
+              type="button"
+              id="btn-edit-survey"
+            >
+              <Pencil size={20} />
+              <span>Edit Survey Form</span>
+            </button>
+          )}
+          
           <button
             onClick={() => onFillForm(survey.id)}
-            className="primary-button bg-[#0063a9] hover:bg-[#00528c]"
+            className="primary-button bg-[#0063a9] hover:bg-[#00528c] px-6 py-3 text-base h-12 flex items-center justify-center gap-2"
             type="button"
             id="btn-fill-form-now"
           >
-            <ClipboardCheck size={16} />
-            <span>Launch Form Filling</span>
+            <ClipboardCheck size={20} />
+            <span>Answer Survey</span>
           </button>
           
-          {isCustom && (
+          {isCustom && isAdmin && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 text-rose px-3 py-2 text-sm font-medium hover:bg-rose-100 transition cursor-pointer dark:bg-rose-950/20 dark:border-rose-900"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-50 border border-rose-200 text-rose px-6 py-3 text-base font-medium h-12 hover:bg-rose-100 transition cursor-pointer dark:bg-rose-950/20 dark:border-rose-900"
               type="button"
               id="btn-delete-survey"
             >
-              <Trash size={16} />
+              <Trash size={20} />
               <span>Delete Survey</span>
             </button>
           )}
@@ -123,10 +157,14 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{survey.description}</p>
             </div>
 
-            <div className="grid gap-4 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-3 text-xs text-slate-500 dark:text-slate-400">
+            <div className="grid gap-4 border-t border-slate-100 pt-4 dark:border-slate-800 sm:grid-cols-4 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-slate-400" />
                 <span>Created: {new Date(survey.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarClock size={14} className="text-slate-400" />
+                <span>Deadline: {survey.deadlineDate || 'No deadline set'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users size={14} className="text-slate-400" />
@@ -139,25 +177,58 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
             </div>
           </div>
 
-          {/* Questions list */}
-          <div className="panel space-y-4">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Form Questions List</h4>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {survey.questions.map((q) => (
-                <div key={q.questionId} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                    {q.questionNumber}
+          {/* Questions list (admin only) / Company completion tracker (everyone else) */}
+          {isAdmin ? (
+            <div className="panel space-y-4">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Form Questions List</h4>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {survey.questions.map((q) => (
+                  <div key={q.questionId} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {q.questionNumber}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{q.question}</p>
+                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
+                        {q.questionCategory}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{q.question}</p>
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
-                      {q.questionCategory}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="panel space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Building2 size={14} className="text-slate-400" />
+                  <span>Companies You Still Need to Evaluate</span>
+                </h4>
+                <CompletionStatusBar completed={completedCount} total={totalCompanies} className="w-40" />
+              </div>
+
+              {totalCompanies === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">No {survey.surveyType.toLowerCase()} companies are registered yet.</p>
+              ) : pendingCompanies.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50/50 border border-emerald-100/50 dark:text-emerald-400 dark:bg-emerald-950/10 dark:border-emerald-900/20 rounded-lg p-4">
+                  <Check size={16} className="shrink-0" />
+                  <span>You've evaluated every {survey.surveyType.toLowerCase()} company. Great job!</span>
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {pendingCompanies.map((company) => (
+                    <div
+                      key={company.id}
+                      className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-100 bg-slate-50/30 dark:border-slate-900 dark:bg-slate-950 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-600 shrink-0" />
+                      <span className="truncate" title={company.name}>{company.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right column - Performance / Stats */}
@@ -173,7 +244,7 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
 
               <div className="rounded-lg bg-slate-50 p-4 text-center dark:bg-slate-900/50">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average Rating</p>
-                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{stats.avg} <span className="text-xs text-slate-400">/ 4</span></p>
+                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{formatNumber(stats.avg, 2)} <span className="text-xs text-slate-400">/ 100</span></p>
               </div>
             </div>
 
@@ -224,7 +295,7 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
           <div className="py-8 text-center text-slate-400 dark:text-slate-600">
             <ClipboardCheck size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm font-medium">No responses have been submitted to this form yet.</p>
-            <p className="text-xs mt-1">Use the "Launch Form Filling" button to submit your first feedback entry.</p>
+            <p className="text-xs mt-1">Use the "Answer Survey" button to submit your first feedback entry.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -242,8 +313,9 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {submissions.map((sub) => {
                   const validAnswers = sub.answers.filter((a) => a.rating !== 'N/A');
-                  const sum = validAnswers.reduce((acc, a) => acc + (a.rating as number), 0);
-                  const score = validAnswers.length > 0 ? (sum / validAnswers.length).toFixed(1) : 'N/A';
+                  const scoredAnswerCount = scoredResponses(sub.answers).length;
+                  const submissionScore = submissionScores(sub.answers)[0]?.score;
+                  const score = scoredAnswerCount > 0 && submissionScore !== undefined ? formatNumber(submissionScore, 2) : 'N/A';
 
                   return (
                     <tr key={sub.responseId} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition">
@@ -253,7 +325,7 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
                       <td className="px-4 py-3">{new Date(sub.submissionDate).toLocaleString()}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
-                          {score} / 4
+                          {score} / 100
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -339,6 +411,12 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
                 </span>
               </div>
               <div>
+                <span className="font-semibold block text-slate-400">Address:</span>
+                <span className="text-slate-700 dark:text-slate-300 font-medium text-sm mt-0.5 block">
+                  {activeSubmissionDetail.answers[0]?.address || 'N/A'}
+                </span>
+              </div>
+              <div>
                 <span className="font-semibold block text-slate-400">Submission Date & Time:</span>
                 <span className="text-slate-700 dark:text-slate-300 font-medium text-sm mt-0.5 block">
                   {new Date(activeSubmissionDetail.submissionDate).toLocaleString()}
@@ -355,15 +433,18 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
             <div className="mt-5 space-y-4">
               <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-2">Detailed Questions Feedback</h4>
               
-              {activeSubmissionDetail.answers.map((ans, idx) => (
+              {activeSubmissionDetail.answers.map((ans, idx) => {
+                const isScored = isScoredQuestion(ans.surveyType, ans.questionId);
+                return (
                 <div key={ans.questionId} className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/50 dark:border-slate-800/80 dark:bg-slate-900/20 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                       <span className="text-slate-400 font-bold mr-1">{idx + 1}.</span>
                       {ans.question}
                     </p>
+                      {isScored ? (
                     <span className={`inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md font-bold text-xs ${
-                      ans.rating === 'N/A' 
+                      ans.rating === 'N/A'
                         ? 'bg-slate-100 text-slate-500 dark:bg-slate-800'
                         : ans.rating >= 3 
                         ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' 
@@ -371,18 +452,17 @@ export function SurveyDetailsPage({ survey, responses, onBack, onFillForm, onDel
                         ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
                         : 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400'
                     }`}>
-                      {ans.rating === 'N/A' ? 'N/A' : `Score: ${ans.rating}`}
+                      {`ANSWER: ${ans.rating}`}
                     </span>
+                    ) : (
+                    <span className="inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 font-bold text-xs">
+                      ANSWER: {ans.comment || 'N/A'}
+                    </span>
+                    )}
                   </div>
-
-                  {ans.comment && (
-                    <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                      <MessageSquare size={13} className="text-slate-400 mt-0.5" />
-                      <p className="italic">"{ans.comment}"</p>
-                    </div>
-                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             <div className="flex items-center justify-end border-t border-slate-100 pt-4 mt-6 dark:border-slate-800">

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, ChevronDown, ChevronRight, FilePlus, ClipboardCheck, ArrowLeft, LogOut, HelpCircle, ShieldAlert, Users } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation, Archive } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -12,23 +12,79 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SurveyExplorerPage } from './pages/SurveyExplorerPage';
 import { CreateSurveyPage } from './pages/CreateSurveyPage';
 import { SurveyDetailsPage } from './pages/SurveyDetailsPage';
-import { SurveyFillerPage } from './pages/SurveyFillerPage';
+import { SurveyFillerPage, SurveyFillerHandle } from './pages/SurveyFillerPage';
 import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
 import { SurveyFormsPage } from './pages/SurveyFormsPage';
+import { PresentPage } from './pages/PresentPage';
+import { ArchivePage } from './pages/ArchivePage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
 
-type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
+const DEMO_ACCOUNTS = [
+  {
+    email: 'admin@mgenesis.com',
+    role: 'Admin',
+    designation: 'Executive',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'rankfile@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Accounts Payable - Trade'
+  },
+  {
+    email: 'supervisory@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Logistics'
+  },
+  {
+    email: 'managerial@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Procurement Group'
+  },
+  {
+    email: 'director@mgenesis.com',
+    role: 'Employee',
+    designation: 'Director',
+    department: 'TASS'
+  },
+  {
+    email: 'executive@mgenesis.com',
+    role: 'Employee',
+    designation: 'Executive',
+    department: 'Business Solutions Manager'
+  }
+];
+
+function getUserProfile(email: string | null) {
+  if (!email) return null;
+  const normalized = email.trim().toLowerCase();
+  const matched = DEMO_ACCOUNTS.find((acc) => acc.email === normalized);
+  if (matched) return matched;
+  return {
+    email: normalized,
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Logistics'
+  };
+}
+
+type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form' | 'archive';
 
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
-  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
+  { key: 'present' as const, label: 'Present', icon: Presentation },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
   { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
+  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true },
+  { key: 'archive' as const, label: 'Archive Center', icon: Archive },
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -36,6 +92,10 @@ const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']
 export default function App() {
   const {
     responses,
+    archivedResponses,
+    archiveResponsesForSurveys,
+    restoreResponseGroup,
+    restoreResponsesForSurvey,
     surveys,
     questions,
     companies,
@@ -48,38 +108,73 @@ export default function App() {
     unreadCount,
     markNotificationsRead,
     createSurvey,
+    updateSurvey,
+    updateSurveysBulk,
     deleteSurvey,
     submitResponse,
-    resetAllData
+    resetAllData,
+    isFullDatasetActive,
+    clearResponses,
+    addEvaluations,
   } = useSurveyData();
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
+  const surveyFillerRef = useRef<SurveyFillerHandle>(null);
+
+  // Any navigation away from the survey-filling page (sidebar Home logo, a
+  // top-level nav item, or picking a different survey from the sidebar
+  // dropdown) should go through this, so an in-progress evaluation can warn
+  // the respondent and offer to save a draft instead of silently discarding
+  // their answers.
+  const navigateFrom = (targetPage: PageKey, run: () => void) => {
+    if (activePage === 'fill-form' && targetPage !== 'fill-form' && surveyFillerRef.current) {
+      surveyFillerRef.current.attemptExit(run);
+    } else {
+      run();
+    }
+  };
+  const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
-  const [isFormsMenuOpen, setIsFormsMenuOpen] = useState(true);
 
   const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
   const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
 
   const activeTitle = useMemo(() => {
     if (activePage === 'partner-companies') return 'Administrative Partner Registry';
-    if (activePage === 'create-form') return 'Create Survey Form';
+    if (activePage === 'create-form') return editingSurveyId ? 'Edit Survey Form' : 'Create Survey Form';
     if (activePage === 'view-form') {
       const selected = surveys.find((s) => s.id === selectedSurveyId);
       return selected ? `Survey: ${selected.title}` : 'Survey Details';
     }
     if (activePage === 'fill-form') return 'Fill Out Stakeholder Survey';
     return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
-  }, [activePage, selectedSurveyId, surveys]);
+  }, [activePage, selectedSurveyId, surveys, editingSurveyId]);
+
+  const profile = useMemo(() => getUserProfile(account), [account]);
+  const isAdmin = profile?.role === 'Admin';
+
+  const visiblePages = useMemo(() => {
+    if (isAdmin) return adminPages;
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive');
+  }, [isAdmin]);
+
+  const handleLogin = (email: string) => {
+    setAccount(email);
+    const prof = getUserProfile(email);
+    if (prof && prof.role === 'Admin') {
+      setActivePage('dashboard');
+    } else {
+      setActivePage('survey-forms');
+    }
+  };
 
   // Auth Guard
   if (!account) {
-    return <LoginPage onLogin={(email) => setAccount(email)} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
-
-  const isAdmin = account === 'admin@mgenesis.com';
 
   // Handler for custom survey submission
   const handleSurveySubmit = (
@@ -87,75 +182,11 @@ export default function App() {
     company: string,
     department: string,
     respondentType: string,
+    address: string | undefined,
     answers: any[]
   ) => {
-    submitResponse(surveyId, company, department, respondentType, answers);
+    submitResponse(surveyId, company, department, respondentType, address, answers, account || undefined);
   };
-
-  // ----------------------------------------------------
-  // PUBLIC RESPONDENT EXPERIENCE
-  // ----------------------------------------------------
-  if (!isAdmin) {
-    return (
-      <div className={darkMode ? 'dark' : ''}>
-        <div className="min-h-screen bg-cloud text-ink dark:bg-slate-950 dark:text-slate-100 flex flex-col">
-          {/* Public Header */}
-          <header className="sticky top-0 z-20 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full px-4 sm:px-8 shadow-sm">
-            <div className="flex items-center gap-4">
-              <img
-                src="/microgenesis_logo.png"
-                alt="Microgenesis Logo"
-                className="h-10 object-contain brightness-0 invert"
-                referrerPolicy="no-referrer"
-              />
-              <span className="hidden sm:inline h-6 w-px bg-blue-400/35" />
-              <div className="hidden sm:block">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-blue-200 block leading-none">Microsoft Forms</span>
-                <h1 className="text-base font-bold leading-tight mt-0.5 text-white">Stakeholder Submission Ingress</h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Dark mode button */}
-              <button
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition cursor-pointer ${
-                  darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white hover:bg-white/5'
-                }`}
-                type="button"
-                onClick={() => setDarkMode((value) => !value)}
-                title="Toggle dark mode"
-              >
-                {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-
-              <button
-                onClick={() => setAccount(null)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-white/20 transition cursor-pointer"
-                type="button"
-                id="btn-public-signout"
-              >
-                <LogOut size={13} />
-                <span>Exit Form</span>
-              </button>
-            </div>
-          </header>
-
-          <main className="flex-1 px-4 py-8 max-w-4xl w-full mx-auto">
-            <SurveyFillerPage
-              surveys={surveys}
-              partnerCompanies={partnerCompanies}
-              initialSurveyId={selectedSurveyId}
-              onSubmitted={handleSurveySubmit}
-              onCancel={() => {
-                setSelectedSurveyId(null);
-                setAccount(null);
-              }}
-            />
-          </main>
-        </div>
-      </div>
-    );
-  }
 
   // ----------------------------------------------------
   // ADMIN EXPERIENCE (ALL ANALYTICS SECURED HERE)
@@ -169,6 +200,7 @@ export default function App() {
         isLoading={isLoading}
         error={error}
         surveyTypeFilter={filters.surveyType}
+        surveys={surveys}
       />
     ),
     'partner-companies': (
@@ -177,12 +209,18 @@ export default function App() {
         responses={responses}
         onAddCompany={addPartnerCompany}
         onRemoveCompany={removePartnerCompany}
+        isAdmin={isAdmin}
       />
     ),
     'survey-forms': (
       <SurveyFormsPage
         surveys={surveys}
         responses={responses}
+        partnerCompanies={partnerCompanies}
+        userEmail={account || ''}
+        onUpdateSurvey={updateSurvey}
+        onUpdateSurveysBulk={updateSurveysBulk}
+        onArchiveResponses={archiveResponsesForSurveys}
         onSelectSurvey={(id) => {
           setSelectedSurveyId(id);
           setActivePage('view-form');
@@ -192,20 +230,46 @@ export default function App() {
           setSelectedSurveyId(id);
           setActivePage('fill-form');
         }}
+        isAdmin={isAdmin}
       />
     ),
-    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
-    explorer: <SurveyExplorerPage responses={filteredResponses} />,
-    reports: <ReportsPage responses={filteredResponses} />,
+    analytics: (
+      <AnalyticsPage
+        responses={filteredResponses}
+        allResponses={responses}
+        partnerCompanies={partnerCompanies}
+        activeSurveyTypes={activeSurveyTypes}
+        filters={filters}
+        setFilters={setFilters}
+      />
+    ),
+    present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
+    explorer: <SurveyExplorerPage responses={filteredResponses} surveys={surveys} />,
+    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
       <CreateSurveyPage
-        onBack={() => setActivePage('dashboard')}
+        onBack={() => {
+          setEditingSurveyId(null);
+          setActivePage('dashboard');
+        }}
+        surveyToEdit={editingSurveyId ? surveys.find(s => s.id === editingSurveyId) : undefined}
         onSave={(surveyData) => {
-          const newSurvey = createSurvey(surveyData);
-          if (newSurvey) {
-            setSelectedSurveyId(newSurvey.id);
+          if (editingSurveyId) {
+            const currentSurvey = surveys.find(s => s.id === editingSurveyId);
+            updateSurvey({
+              ...surveyData,
+              id: editingSurveyId,
+              createdAt: currentSurvey?.createdAt || new Date().toISOString(),
+            });
+            setEditingSurveyId(null);
             setActivePage('view-form');
+          } else {
+            const newSurvey = createSurvey(surveyData);
+            if (newSurvey) {
+              setSelectedSurveyId(newSurvey.id);
+              setActivePage('view-form');
+            }
           }
         }}
       />
@@ -225,6 +289,8 @@ export default function App() {
         <SurveyDetailsPage
           survey={targetSurvey}
           responses={responses}
+          partnerCompanies={partnerCompanies}
+          userEmail={account || ''}
           onBack={() => setActivePage('dashboard')}
           onFillForm={(id) => {
             setSelectedSurveyId(id);
@@ -234,113 +300,116 @@ export default function App() {
             deleteSurvey(id);
             setActivePage('dashboard');
           }}
+          onEdit={(id) => {
+            setEditingSurveyId(id);
+            setActivePage('create-form');
+          }}
+          isAdmin={isAdmin}
         />
       );
     })(),
     'fill-form': (
-      <div className="space-y-4">
-        <button
-          onClick={() => setActivePage('view-form')}
-          className="secondary-button"
-          type="button"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Form Management</span>
-        </button>
-        <SurveyFillerPage
-          surveys={surveys}
-          partnerCompanies={partnerCompanies}
-          initialSurveyId={selectedSurveyId}
-          onSubmitted={handleSurveySubmit}
-          onCancel={() => setActivePage('view-form')}
-        />
-      </div>
+      <SurveyFillerPage
+        ref={surveyFillerRef}
+        surveys={surveys}
+        partnerCompanies={partnerCompanies}
+        initialSurveyId={selectedSurveyId}
+        userEmail={account || ''}
+        responses={responses}
+        onSubmitted={handleSurveySubmit}
+        onCancel={() => setActivePage('view-form')}
+      />
+    ),
+    archive: (
+      <ArchivePage
+        surveys={surveys}
+        archivedResponses={archivedResponses}
+        onUpdateSurvey={updateSurvey}
+        onRestoreResponseGroup={restoreResponseGroup}
+        onRestoreResponsesForSurvey={restoreResponsesForSurvey}
+        isAdmin={isAdmin}
+      />
     ),
   }[activePage];
 
-  // Forms dropdown in the sidebar
-  const surveyFormsDropdown = (
-    <div className="space-y-2 px-1" id="admin-forms-dropdown">
-      <button
-        onClick={() => {
-          setActivePage('survey-forms');
-          setIsFormsMenuOpen(!isFormsMenuOpen);
-        }}
-        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-          activePage === 'survey-forms'
-            ? 'text-[#0063a9] dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20'
-            : 'text-slate-400 hover:text-[#0063a9] dark:hover:text-blue-400'
-        }`}
-        type="button"
-      >
-        <span className="flex items-center gap-1.5">
-          <HelpCircle size={14} className="text-[#0063a9] dark:text-blue-400" />
-          <span>Survey Forms</span>
-        </span>
-        {isFormsMenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-      </button>
+  // Content shown when the "Survey Forms" nav item's dropdown toggle is expanded:
+  // the current forms, followed by "Add New" as the last option.
+  const renderSidebarDropdown = (key: string) => {
+    if (key !== 'survey-forms') return null;
 
-      {isFormsMenuOpen && (
-        <div className="mt-1 pl-2.5 space-y-1.5 border-l border-slate-100 dark:border-slate-800">
+    return (
+      <>
+        {surveys.map((survey) => {
+          const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
+          return (
+            <button
+              key={survey.id}
+              onClick={() => {
+                navigateFrom('view-form', () => {
+                  setSelectedSurveyId(survey.id);
+                  setActivePage('view-form');
+                });
+              }}
+              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
+                isViewing
+                  ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
+              }`}
+              type="button"
+              title={survey.title}
+            >
+              <span
+                className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                  isViewing ? 'bg-[#0063a9] dark:bg-blue-400' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              />
+              <span className="truncate">{survey.title}</span>
+            </button>
+          );
+        })}
+
+        {isAdmin && (
           <button
-            onClick={() => setActivePage('create-form')}
-            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer`}
+            onClick={() => navigateFrom('create-form', () => setActivePage('create-form'))}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer"
             type="button"
             id="btn-sidebar-create"
           >
             <FilePlus size={14} />
-            <span>＋ Create New Form</span>
+            <span>＋ Add New</span>
           </button>
-
-          {surveys.map((survey) => {
-            const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
-            return (
-              <button
-                key={survey.id}
-                onClick={() => {
-                  setSelectedSurveyId(survey.id);
-                  setActivePage('view-form');
-                }}
-                className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
-                  isViewing
-                    ? 'bg-blue-50 text-[#0063a9] font-bold dark:bg-blue-950/40 dark:text-blue-300'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/50 dark:hover:text-white'
-                }`}
-                type="button"
-                title={survey.title}
-              >
-                <ClipboardCheck size={14} className={isViewing ? 'text-[#0063a9] dark:text-blue-400' : 'text-slate-400'} />
-                <span className="truncate">{survey.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </>
+    );
+  };
 
   return (
     <div className={darkMode ? 'dark' : ''}>
       <Shell
-        pages={adminPages}
+        pages={visiblePages}
         activePage={activePage as any}
         onPageChange={(page) => {
-          setActivePage(page as any);
-          if (page === 'notifications') markNotificationsRead();
+          const targetPage = page as PageKey;
+          navigateFrom(targetPage, () => {
+            setActivePage(targetPage);
+            if (targetPage === 'notifications') markNotificationsRead();
+          });
         }}
         title={activeTitle}
-        surveyFormsDropdown={surveyFormsDropdown}
+        renderDropdown={renderSidebarDropdown}
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
-            <div className="pr-3">
-              <NotificationBell
-                notifications={notifications}
-                unreadCount={unreadCount}
-                onOpen={markNotificationsRead}
-                onViewAll={() => setActivePage('notifications')}
-              />
-            </div>
-            <div className="px-3">
+            {isAdmin && (
+              <div className="pr-3">
+                <NotificationBell
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  onOpen={markNotificationsRead}
+                  onViewAll={() => setActivePage('notifications')}
+                />
+              </div>
+            )}
+            <div className={isAdmin ? 'px-3' : 'pr-3'}>
               <button
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition cursor-pointer ${
                   darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
@@ -353,7 +422,13 @@ export default function App() {
               </button>
             </div>
             <div className="pl-3">
-              <AccountMenu email={account} onLogout={() => setAccount(null)} />
+              <AccountMenu
+                email={account}
+                designation={profile?.designation}
+                department={profile?.department}
+                role={profile?.role}
+                onLogout={() => setAccount(null)}
+              />
             </div>
           </div>
         }
@@ -363,7 +438,7 @@ export default function App() {
             <div className="min-w-0 flex-1">{pageContent}</div>
             
             {/* Show Filter Panel only on Admin-view pages that need filters */}
-            {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && (
+            {activePage !== 'notifications' && activePage !== 'dashboard' && activePage !== 'analytics' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && activePage !== 'explorer' && (
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
@@ -371,13 +446,16 @@ export default function App() {
                   companies={companies}
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
-                  isDashboard={activePage === 'dashboard'}
+                  isDashboard={false}
+                  isFullDatasetActive={isFullDatasetActive}
+                  clearResponses={clearResponses}
+                  addEvaluations={addEvaluations}
                 />
               </aside>
             )}
           </div>
           
-          {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && (
+          {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && activePage !== 'present' && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
               <div className="flex items-center gap-2">
                 <Search size={16} className="text-[#0063a9] dark:text-blue-400 shrink-0" />
