@@ -9,13 +9,11 @@ import { SurveyType } from '../types/survey';
  * - Supplier (Form 2 Rev. B): 5 sections of 20 points each, 100 points total.
  * - Subcontractor (Form 3 Rev. A): every question is scored 0/1/2/N-A on the
  *   same discrete scale, so "maxPoints" is 2 for all of them. There's no
- *   official 100-point total for this form; instead MBS ranks subcontractors
- *   on the *average* of their 0-2 scores (Top Performer 1.5-2.0, Good
- *   Performer 1.0-1.4, Marginal 0.5-0.9, Poor <=0.4). We still compute a
- *   0-100 composite for these companies (average / 2 * 100) purely so every
- *   survey type can share one leaderboard axis and one set of chart
- *   components - the band lookup below converts back to the official
- *   language at display time.
+ *   official 100-point total for this form; we compute a 0-100 composite
+ *   (average / 2 * 100) purely so every survey type can share one
+ *   leaderboard axis, one set of chart components, and - as of the current
+ *   scoring policy - one unified 8-tier band system (see UNIFIED_BANDS
+ *   below), instead of type-specific thresholds.
  */
 export interface QuestionWeight {
   questionId: string;
@@ -83,31 +81,25 @@ export interface ScoreBand {
   hex: string;
 }
 
-// Thresholds are expressed as "% of max score" so every survey type can be
-// banded on the same 0-100 composite while still reproducing the official
-// wording from each paper form.
+// Composite scores are already normalized to a shared 0-100 scale for every
+// survey type (see normalizeScoreTo100 in analytics.ts), so all three forms
+// - Courier, Supplier, Subcontractor - are ranked against the exact same
+// 8-tier scorecard instead of type-specific thresholds.
+const UNIFIED_BANDS: ScoreBand[] = [
+  { label: 'Top Performer', min: 92, hex: '#0d6b3f' },            // Darker Green
+  { label: 'Highly Satisfactory', min: 85, hex: '#1baf7a' },      // Regular Green
+  { label: 'Satisfactory', min: 80, hex: '#7bc96f' },             // Lighter Green
+  { label: 'Good', min: 75, hex: '#eab308' },                     // Yellow
+  { label: 'Fair', min: 50, hex: '#f97316' },                     // Orange
+  { label: 'Slightly Unsatisfactory', min: 40, hex: '#f4978e' },  // Lighter Red
+  { label: 'Unsatisfactory', min: 30, hex: '#e34948' },           // Red
+  { label: 'Critical', min: 0, hex: '#7f1d1d' },                  // Darker Red
+];
+
 export const ratingBands: Record<SurveyType, ScoreBand[]> = {
-  Contractor: [
-    { label: 'Excellent', min: 95, hex: '#008300' },
-    { label: 'Satisfactory', min: 89, hex: '#1baf7a' },
-    { label: 'Good', min: 80, hex: '#eda100' },
-    { label: 'Unsatisfactory', min: 0, hex: '#e34948' },
-  ],
-  Supplier: [
-    { label: 'Excellent', min: 95, hex: '#008300' },
-    { label: 'Good', min: 89, hex: '#1baf7a' },
-    { label: 'Satisfactory', min: 80, hex: '#eda100' },
-    { label: 'Unsatisfactory', min: 0, hex: '#e34948' },
-  ],
-  // Official bands are on the 0-2 average (Top 1.5-2.0 / Good 1.0-1.4 /
-  // Marginal 0.5-0.9 / Poor <=0.4). Converted to % of 2.0 so it fits the
-  // shared 0-100 composite: 75% / 50% / 25% / 0%.
-  Subcontractor: [
-    { label: 'Top Performer', min: 75, hex: '#008300' },
-    { label: 'Good Performer', min: 50, hex: '#1baf7a' },
-    { label: 'Marginal Performer', min: 25, hex: '#eda100' },
-    { label: 'Poor Performer', min: 0, hex: '#e34948' },
-  ],
+  Contractor: UNIFIED_BANDS,
+  Supplier: UNIFIED_BANDS,
+  Subcontractor: UNIFIED_BANDS,
 };
 
 export function getBand(surveyType: SurveyType, percentScore: number): ScoreBand {

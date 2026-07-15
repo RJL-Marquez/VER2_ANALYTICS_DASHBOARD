@@ -108,13 +108,14 @@ export function PartnerCompaniesPage({
   const getCompanyScoreDetails = (companyName: string, companyType: SurveyType) => {
     const composite = computeCompanyComposite(companyName, companyType, responses);
     if (!composite) {
-      return { rating: 'N/A', pct: 0, count: 0, label: 'Unrated' };
+      return { rating: 'N/A', pct: 0, count: 0, label: 'Unrated', hex: '#94a3b8' };
     }
     return {
       rating: `${composite.compositeScore.toFixed(1)}%`,
       pct: Math.round(composite.compositeScore),
       count: composite.evaluationCount, // number of evaluations/audits completed
       label: composite.band.label,
+      hex: composite.band.hex,
     };
   };
 
@@ -356,27 +357,6 @@ export function PartnerCompaniesPage({
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredCompanies.map((c) => {
               const score = getCompanyScoreDetails(c.name, c.type);
-              
-              // Satisfaction Standing Badges
-              let standingColor = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
-              let progressColor = 'bg-slate-400';
-              
-              if (score.label === 'Excellent' || score.label === 'Top Performer') {
-                standingColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/30';
-                progressColor = 'bg-emerald-500';
-              } else if (score.label === 'Good' || score.label === 'Good Performer') {
-                standingColor = 'bg-lime-50 text-lime-700 border-lime-200 dark:bg-lime-950/30 dark:text-lime-400 dark:border-lime-900/30';
-                progressColor = 'bg-lime-500';
-              } else if (score.label === 'Satisfactory' || score.label === 'Marginal Performer') {
-                standingColor = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30';
-                progressColor = 'bg-[#0063a9]';
-              } else if (score.label === 'Needs Imp.') {
-                standingColor = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30';
-                progressColor = 'bg-amber-500';
-              } else if (score.label === 'Critical' || score.label === 'Unsatisfactory' || score.label === 'Poor Performer') {
-                standingColor = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/30';
-                progressColor = 'bg-rose-500';
-              }
 
               return (
                 <div key={c.id} className="p-5 sm:p-6 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition">
@@ -483,7 +463,10 @@ export function PartnerCompaniesPage({
                             )}
                           </div>
                           
-                          <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${standingColor}`}>
+                          <span
+                            className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border"
+                            style={{ backgroundColor: `${score.hex}1a`, color: score.hex, borderColor: `${score.hex}33` }}
+                          >
                             {score.label}
                           </span>
                         </div>
@@ -493,8 +476,8 @@ export function PartnerCompaniesPage({
                           <div className="space-y-1">
                             <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                               <div 
-                                className={`h-full ${progressColor}`} 
-                                style={{ width: `${score.pct}%` }}
+                                className="h-full" 
+                                style={{ width: `${score.pct}%`, backgroundColor: score.hex }}
                               />
                             </div>
                             <div className="flex justify-between text-[10px] text-slate-400">

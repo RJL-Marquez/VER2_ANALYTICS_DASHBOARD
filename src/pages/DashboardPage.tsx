@@ -83,36 +83,58 @@ const categoryColors: Record<string, {
 };
 
 function getSatisfactionColor(p: number) {
-  if (p < 50) {
+  if (p < 30) {
+    return {
+      text: 'text-red-800 dark:text-red-300',
+      bg: 'bg-red-100 dark:bg-red-950/30',
+      border: 'border-red-300 dark:border-red-900/50',
+      stroke: 'stroke-red-800 dark:stroke-red-300',
+      fill: 'fill-red-800 dark:fill-red-300',
+      label: 'Critical',
+      badgeBg: 'bg-red-200 text-red-900 dark:bg-red-950/60 dark:text-red-200',
+      description: 'Satisfaction levels are critical. Immediate attention to partner performance and remediation is highly recommended.'
+    };
+  } else if (p < 40) {
     return {
       text: 'text-red-600 dark:text-red-400',
       bg: 'bg-red-50 dark:bg-red-950/20',
       border: 'border-red-200 dark:border-red-900/40',
-      stroke: 'stroke-red-500 dark:stroke-red-400',
-      fill: 'fill-red-500 dark:fill-red-400',
-      label: 'Critical Status',
+      stroke: 'stroke-red-600 dark:stroke-red-400',
+      fill: 'fill-red-600 dark:fill-red-400',
+      label: 'Unsatisfactory',
       badgeBg: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
-      description: 'Satisfaction levels are critical. Immediate attention to partner performance and remediation is highly recommended.'
+      description: 'Performance is falling short of standards. Corrective action and closer monitoring are recommended.'
     };
-  } else if (p < 65) {
+  } else if (p < 50) {
+    return {
+      text: 'text-rose-400 dark:text-rose-300',
+      bg: 'bg-rose-50 dark:bg-rose-950/20',
+      border: 'border-rose-200 dark:border-rose-900/40',
+      stroke: 'stroke-rose-400 dark:stroke-rose-300',
+      fill: 'fill-rose-400 dark:fill-rose-300',
+      label: 'Slightly Unsatisfactory',
+      badgeBg: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200',
+      description: 'Below expectations in some areas. Targeted feedback should help bring performance back on track.'
+    };
+  } else if (p < 75) {
     return {
       text: 'text-orange-500 dark:text-orange-400',
       bg: 'bg-orange-50 dark:bg-orange-950/20',
       border: 'border-orange-200 dark:border-orange-900/40',
       stroke: 'stroke-orange-500 dark:stroke-orange-400',
       fill: 'fill-orange-500 dark:fill-orange-400',
-      label: 'Needs Improvement',
+      label: 'Fair',
       badgeBg: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
       description: 'Average performance with noticeable gaps. Several operational or communication areas require corrective feedback.'
     };
-  } else if (p < 75) {
+  } else if (p < 80) {
     return {
       text: 'text-yellow-500 dark:text-yellow-400',
       bg: 'bg-yellow-50 dark:bg-yellow-950/20',
       border: 'border-yellow-200 dark:border-yellow-900/40',
       stroke: 'stroke-yellow-500 dark:stroke-yellow-400',
       fill: 'fill-yellow-500 dark:fill-yellow-400',
-      label: 'Satisfactory Performance',
+      label: 'Good',
       badgeBg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200',
       description: 'Acceptable standards met. Consistent results overall, with opportunity to optimize delivery timelines and invoices.'
     };
@@ -123,19 +145,30 @@ function getSatisfactionColor(p: number) {
       border: 'border-lime-200 dark:border-lime-900/40',
       stroke: 'stroke-lime-500 dark:stroke-lime-400',
       fill: 'fill-lime-500 dark:fill-lime-400',
-      label: 'Good Quality Service',
+      label: 'Satisfactory',
       badgeBg: 'bg-lime-100 text-lime-800 dark:bg-lime-900/50 dark:text-lime-200',
       description: 'Solid performance. Partners are highly responsive, maintaining high quality outputs with minimal transaction discrepancies.'
     };
+  } else if (p < 92) {
+    return {
+      text: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+      border: 'border-emerald-200 dark:border-emerald-900/40',
+      stroke: 'stroke-emerald-600 dark:stroke-emerald-400',
+      fill: 'fill-emerald-600 dark:fill-emerald-400',
+      label: 'Highly Satisfactory',
+      badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200',
+      description: 'Strong, dependable partnership performance with minimal issues across the board.'
+    };
   } else {
     return {
-      text: 'text-green-600 dark:text-green-400',
+      text: 'text-green-700 dark:text-green-400',
       bg: 'bg-green-50 dark:bg-green-950/20',
       border: 'border-green-200 dark:border-green-900/40',
-      stroke: 'stroke-green-600 dark:stroke-green-400',
-      fill: 'fill-green-600 dark:fill-green-400',
-      label: 'Excellent Standing',
-      badgeBg: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+      stroke: 'stroke-green-700 dark:stroke-green-400',
+      fill: 'fill-green-700 dark:fill-green-400',
+      label: 'Top Performer',
+      badgeBg: 'bg-green-100 text-green-900 dark:bg-green-900/50 dark:text-green-200',
       description: 'Outstanding partnership. Prominent operational quality, competitive pricing terms, and proactive stakeholder engagement.'
     };
   }
