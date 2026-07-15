@@ -1,5 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
+<<<<<<< HEAD
 import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation, Archive } from 'lucide-react';
+=======
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation } from 'lucide-react';
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -16,7 +20,10 @@ import { SurveyFillerPage, SurveyFillerHandle } from './pages/SurveyFillerPage';
 import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
 import { SurveyFormsPage } from './pages/SurveyFormsPage';
 import { PresentPage } from './pages/PresentPage';
+<<<<<<< HEAD
 import { ArchivePage } from './pages/ArchivePage';
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
@@ -73,7 +80,11 @@ function getUserProfile(email: string | null) {
   };
 }
 
+<<<<<<< HEAD
 type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form' | 'archive';
+=======
+type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
@@ -84,7 +95,10 @@ const adminPages = [
   { key: 'reports' as const, label: 'Reports', icon: FileText },
   { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
   { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true },
+<<<<<<< HEAD
   { key: 'archive' as const, label: 'Archive Center', icon: Archive },
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -109,7 +123,10 @@ export default function App() {
     markNotificationsRead,
     createSurvey,
     updateSurvey,
+<<<<<<< HEAD
     updateSurveysBulk,
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
     deleteSurvey,
     submitResponse,
     resetAllData,
@@ -158,7 +175,11 @@ export default function App() {
 
   const visiblePages = useMemo(() => {
     if (isAdmin) return adminPages;
+<<<<<<< HEAD
     return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive');
+=======
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present');
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   }, [isAdmin]);
 
   const handleLogin = (email: string) => {
@@ -219,8 +240,11 @@ export default function App() {
         partnerCompanies={partnerCompanies}
         userEmail={account || ''}
         onUpdateSurvey={updateSurvey}
+<<<<<<< HEAD
         onUpdateSurveysBulk={updateSurveysBulk}
         onArchiveResponses={archiveResponsesForSurveys}
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
         onSelectSurvey={(id) => {
           setSelectedSurveyId(id);
           setActivePage('view-form');
@@ -233,6 +257,7 @@ export default function App() {
         isAdmin={isAdmin}
       />
     ),
+<<<<<<< HEAD
     analytics: (
       <AnalyticsPage
         responses={filteredResponses}
@@ -243,6 +268,9 @@ export default function App() {
         setFilters={setFilters}
       />
     ),
+=======
+    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} filters={filters} setFilters={setFilters} />,
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
     present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} surveys={surveys} />,
     reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
@@ -256,12 +284,16 @@ export default function App() {
         surveyToEdit={editingSurveyId ? surveys.find(s => s.id === editingSurveyId) : undefined}
         onSave={(surveyData) => {
           if (editingSurveyId) {
+<<<<<<< HEAD
             const currentSurvey = surveys.find(s => s.id === editingSurveyId);
             updateSurvey({
               ...surveyData,
               id: editingSurveyId,
               createdAt: currentSurvey?.createdAt || new Date().toISOString(),
             });
+=======
+            updateSurvey(editingSurveyId, surveyData);
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
             setEditingSurveyId(null);
             setActivePage('view-form');
           } else {
@@ -319,6 +351,7 @@ export default function App() {
         onSubmitted={handleSurveySubmit}
         onCancel={() => setActivePage('view-form')}
       />
+<<<<<<< HEAD
     ),
     archive: (
       <ArchivePage
@@ -329,6 +362,8 @@ export default function App() {
         onRestoreResponsesForSurvey={restoreResponsesForSurvey}
         isAdmin={isAdmin}
       />
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
     ),
   }[activePage];
 
@@ -438,7 +473,11 @@ export default function App() {
             <div className="min-w-0 flex-1">{pageContent}</div>
             
             {/* Show Filter Panel only on Admin-view pages that need filters */}
+<<<<<<< HEAD
             {activePage !== 'notifications' && activePage !== 'dashboard' && activePage !== 'analytics' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && activePage !== 'explorer' && (
+=======
+            {activePage !== 'notifications' && activePage !== 'analytics' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && activePage !== 'explorer' && (
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
@@ -446,7 +485,11 @@ export default function App() {
                   companies={companies}
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
+<<<<<<< HEAD
                   isDashboard={false}
+=======
+                  isDashboard={activePage === 'dashboard'}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
                   isFullDatasetActive={isFullDatasetActive}
                   clearResponses={clearResponses}
                   addEvaluations={addEvaluations}

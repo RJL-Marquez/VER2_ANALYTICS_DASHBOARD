@@ -25,6 +25,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { PartnerCompany, SurveyResponse, SurveyType, Survey } from '../types/survey';
 import {
+<<<<<<< HEAD
   submissionCount,
   averageRating,
   submissionScores,
@@ -49,6 +50,24 @@ export interface DashboardWidget {
   title: string;
   gridSpan: 1 | 2 | 3; // 1 = 1 column, 2 = 2 columns, 3 = full width
 }
+=======
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { ChartCard } from '../components/ChartCard';
+import { StatCard } from '../components/StatCard';
+import { StateMessage } from '../components/StateMessage';
+import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
+import { formatNumber, getKpiSummary, monthlyTrend, questionPerformance, getMaxRatingForResponses, submissionScores } from '../utils/analytics';
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
 interface DashboardPageProps {
   responses: SurveyResponse[];
@@ -120,11 +139,105 @@ const categoryColors: Record<string, string> = {
   Subcontractor: 'bg-orange-500'
 };
 
+<<<<<<< HEAD
 const badgeColors: Record<string, string> = {
   Contractor: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800',
   Supplier: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800',
   Subcontractor: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200 border border-orange-200 dark:border-orange-800'
 };
+=======
+function getSatisfactionColor(p: number) {
+  if (p < 30) {
+    return {
+      text: 'text-red-800 dark:text-red-300',
+      bg: 'bg-red-100 dark:bg-red-950/30',
+      border: 'border-red-300 dark:border-red-900/50',
+      stroke: 'stroke-red-800 dark:stroke-red-300',
+      fill: 'fill-red-800 dark:fill-red-300',
+      label: 'Critical',
+      badgeBg: 'bg-red-200 text-red-900 dark:bg-red-950/60 dark:text-red-200',
+      description: 'Satisfaction levels are critical. Immediate attention to partner performance and remediation is highly recommended.'
+    };
+  } else if (p < 40) {
+    return {
+      text: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-50 dark:bg-red-950/20',
+      border: 'border-red-200 dark:border-red-900/40',
+      stroke: 'stroke-red-600 dark:stroke-red-400',
+      fill: 'fill-red-600 dark:fill-red-400',
+      label: 'Unsatisfactory',
+      badgeBg: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
+      description: 'Performance is falling short of standards. Corrective action and closer monitoring are recommended.'
+    };
+  } else if (p < 50) {
+    return {
+      text: 'text-rose-400 dark:text-rose-300',
+      bg: 'bg-rose-50 dark:bg-rose-950/20',
+      border: 'border-rose-200 dark:border-rose-900/40',
+      stroke: 'stroke-rose-400 dark:stroke-rose-300',
+      fill: 'fill-rose-400 dark:fill-rose-300',
+      label: 'Slightly Unsatisfactory',
+      badgeBg: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200',
+      description: 'Below expectations in some areas. Targeted feedback should help bring performance back on track.'
+    };
+  } else if (p < 75) {
+    return {
+      text: 'text-orange-500 dark:text-orange-400',
+      bg: 'bg-orange-50 dark:bg-orange-950/20',
+      border: 'border-orange-200 dark:border-orange-900/40',
+      stroke: 'stroke-orange-500 dark:stroke-orange-400',
+      fill: 'fill-orange-500 dark:fill-orange-400',
+      label: 'Fair',
+      badgeBg: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
+      description: 'Average performance with noticeable gaps. Several operational or communication areas require corrective feedback.'
+    };
+  } else if (p < 80) {
+    return {
+      text: 'text-yellow-500 dark:text-yellow-400',
+      bg: 'bg-yellow-50 dark:bg-yellow-950/20',
+      border: 'border-yellow-200 dark:border-yellow-900/40',
+      stroke: 'stroke-yellow-500 dark:stroke-yellow-400',
+      fill: 'fill-yellow-500 dark:fill-yellow-400',
+      label: 'Good',
+      badgeBg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200',
+      description: 'Acceptable standards met. Consistent results overall, with opportunity to optimize delivery timelines and invoices.'
+    };
+  } else if (p < 85) {
+    return {
+      text: 'text-lime-600 dark:text-lime-400',
+      bg: 'bg-lime-50 dark:bg-lime-950/20',
+      border: 'border-lime-200 dark:border-lime-900/40',
+      stroke: 'stroke-lime-500 dark:stroke-lime-400',
+      fill: 'fill-lime-500 dark:fill-lime-400',
+      label: 'Satisfactory',
+      badgeBg: 'bg-lime-100 text-lime-800 dark:bg-lime-900/50 dark:text-lime-200',
+      description: 'Solid performance. Partners are highly responsive, maintaining high quality outputs with minimal transaction discrepancies.'
+    };
+  } else if (p < 92) {
+    return {
+      text: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+      border: 'border-emerald-200 dark:border-emerald-900/40',
+      stroke: 'stroke-emerald-600 dark:stroke-emerald-400',
+      fill: 'fill-emerald-600 dark:fill-emerald-400',
+      label: 'Highly Satisfactory',
+      badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200',
+      description: 'Strong, dependable partnership performance with minimal issues across the board.'
+    };
+  } else {
+    return {
+      text: 'text-green-700 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-950/20',
+      border: 'border-green-200 dark:border-green-900/40',
+      stroke: 'stroke-green-700 dark:stroke-green-400',
+      fill: 'fill-green-700 dark:fill-green-400',
+      label: 'Top Performer',
+      badgeBg: 'bg-green-100 text-green-900 dark:bg-green-900/50 dark:text-green-200',
+      description: 'Outstanding partnership. Prominent operational quality, competitive pricing terms, and proactive stakeholder engagement.'
+    };
+  }
+}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
 export function DashboardPage({ 
   responses = [], 
@@ -155,6 +268,7 @@ export function DashboardPage({
     }
   }, []);
 
+<<<<<<< HEAD
   // Save custom layout
   const saveLayout = (newWidgets: DashboardWidget[]) => {
     setWidgets(newWidgets);
@@ -217,6 +331,17 @@ export function DashboardPage({
   // ----------------------------------------------------
   
   // 1. Partner Company Averages (to find the Top Performing Partner)
+=======
+  const summary = getKpiSummary(responses);
+  const trend = monthlyTrend(responses);
+  const questions = questionPerformance(responses);
+
+  const portfolioMaxRating = useMemo(() => {
+    return getMaxRatingForResponses(allResponses);
+  }, [allResponses]);
+
+  // Calculate satisfaction averages per company from normalized respondent totals.
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   const companyAverages = useMemo(() => {
     if (!allResponses.length || !partnerCompanies.length) return [];
     
@@ -245,15 +370,20 @@ export function DashboardPage({
         const average = c.count > 0 ? c.sum / c.count : 0;
         return {
           name: c.name,
+<<<<<<< HEAD
           average: (average / 20), // out of 5
           scorePercentage: average, // out of 100
+=======
+          average,
+          scorePercentage: average,
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
           count: c.count,
           type: c.type,
         };
       })
       .filter((c) => c.count > 0)
       .sort((a, b) => b.average - a.average);
-  }, [allResponses, partnerCompanies]);
+  }, [allResponses, partnerCompanies, portfolioMaxRating]);
 
   const topPartner = useMemo(() => {
     return companyAverages[0] || null;
@@ -276,6 +406,7 @@ export function DashboardPage({
     averages.Supplier = averageRating(supplierResponses);
     averages.Subcontractor = averageRating(subcontractorResponses);
 
+<<<<<<< HEAD
     return {
       Contractor: averages.Contractor > 0 ? (averages.Contractor / 20) : 0,
       Supplier: averages.Supplier > 0 ? (averages.Supplier / 20) : 0,
@@ -292,6 +423,15 @@ export function DashboardPage({
       bottom: list[list.length - 1] ? { text: list[list.length - 1].question, average: (list[list.length - 1].average / 20) } : null
     };
   }, [allResponses]);
+=======
+  const highestCompany = useMemo(() => {
+    return categoryCompanyAverages[0] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, count: 0, type: 'N/A' };
+  }, [categoryCompanyAverages]);
+
+  const lowestCompany = useMemo(() => {
+    return categoryCompanyAverages[categoryCompanyAverages.length - 1] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, count: 0, type: 'N/A' };
+  }, [categoryCompanyAverages]);
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
   // 4. Submissions Feed
   const recentSubmissions = useMemo(() => {
@@ -306,6 +446,23 @@ export function DashboardPage({
     if (catalogTab === 'All') return ALL_WIDGET_CATALOG;
     return ALL_WIDGET_CATALOG.filter(w => w.category === catalogTab);
   }, [catalogTab]);
+
+  // NOTE: these checks must come AFTER every hook above (useState/useMemo/useEffect) so the
+  // same number and order of hooks run on every render. Returning early before a hook call
+  // caused a "rendered fewer/more hooks than previous render" crash (white screen) whenever
+  // the response count changed between 0 and >0, e.g. clicking "Add Evaluation" or the Bulk
+  // Seed checkbox while the dashboard had no data yet.
+  if (isLoading) {
+    return <StateMessage title="Loading analytics" message="Reading centralized survey list records." />;
+  }
+
+  if (error) {
+    return <StateMessage title="Unable to load dashboard" message={error} />;
+  }
+
+  if (!responses.length) {
+    return <StateMessage title="No responses match the current filters" message="Reset filters or broaden the date range to restore analytics." />;
+  }
 
   return (
     <div className="space-y-6">
@@ -328,6 +485,7 @@ export function DashboardPage({
           </p>
         </div>
 
+<<<<<<< HEAD
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={handleResetLayout}
@@ -357,6 +515,82 @@ export function DashboardPage({
         <div className="flex flex-col items-center justify-center min-h-[360px] text-center p-8 bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-250 dark:border-slate-850">
           <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/20 rounded-full flex items-center justify-center mb-4 text-blue-500">
             <Sparkles size={32} />
+=======
+        {/* Right Side: Overall Satisfaction Texts on its Side */}
+        <div className="flex-1 text-center md:text-left space-y-4">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+            <span className="text-xs font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+              {activeCategory === 'All' ? 'Top Performing Partner' : `Top Performing ${activeCategory}`}
+            </span>
+            <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeColor.badgeBg}`}>
+              {displayedCompany.type} Champion
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              {displayedCompany.name}
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
+              {displayedCompany.name === 'No Registered Partners' || displayedCompany.name.startsWith('No Registered')
+                ? 'No evaluations are registered. Employees can submit evaluations using the published survey forms.'
+                : `${displayedCompany.name} is recognized as the top-performing ${displayedCompany.type.toLowerCase()} partner, earning the highest combined satisfaction score of ${formatNumber(displayedCompany.average, 2)} out of ${portfolioMaxRating.toFixed(0)} across all survey categories from Microgenesis employees.`
+              }
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span>Combined average:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(displayedCompany.average, 2)} / {portfolioMaxRating.toFixed(0)}</span>
+            </div>
+            <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>Evaluations:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{displayedCompany.count} submissions</span>
+            </div>
+            <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>Standing category:</span>
+              <span className={`font-semibold ${activeColor.text}`}>{standingDetails.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Champions Section (Interactive toggle, ONLY shown on "All" view) */}
+      {activeCategory === 'All' && (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {/* Contractor Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Contractor' ? 'Overall' : 'Contractor')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-blue-500 bg-blue-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Contractor' ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Top Contractor</span>
+                <Award className="text-blue-500 shrink-0" size={16} />
+              </div>
+              {topContractor ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topContractor.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topContractor.count} submitted evaluations</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topContractor && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                  {topContractor.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topContractor.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Your Workspace is Empty</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-sm">
@@ -382,6 +616,7 @@ export function DashboardPage({
                     ? 'col-span-1 md:col-span-2' 
                     : 'col-span-1';
 
+<<<<<<< HEAD
               return (
                 <motion.div
                   key={widget.id}
@@ -694,6 +929,184 @@ export function DashboardPage({
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Workspace Catalog</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a widget card to place onto your tailored metrics feed.</p>
+=======
+          {/* Supplier Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Supplier' ? 'Overall' : 'Supplier')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-emerald-500 bg-emerald-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Supplier' ? 'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Top Supplier</span>
+                <Award className="text-emerald-500 shrink-0" size={16} />
+              </div>
+              {topSupplier ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSupplier.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSupplier.count} submitted evaluations</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topSupplier && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  {topSupplier.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topSupplier.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Subcontractor Champion Card */}
+          <div
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Subcontractor' ? 'Overall' : 'Subcontractor')}
+            className={`panel p-4 flex flex-col justify-between border-t-4 border-orange-500 bg-orange-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
+              selectedChampionType === 'Subcontractor' ? 'ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Top Subcontractor</span>
+                <Award className="text-orange-500 shrink-0" size={16} />
+              </div>
+              {topSubcontractor ? (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSubcontractor.name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSubcontractor.count} submitted evaluations</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
+              )}
+            </div>
+            {topSubcontractor && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
+                <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
+                <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
+                  {topSubcontractor.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topSubcontractor.scorePercentage)}%)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Primary Stats Row - Total Responses and Portfolio Average Rating */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <StatCard
+          label="Total Responses"
+          value={String(summary.totalResponses)}
+          detail="Submitted evaluations extracted directly from Microsoft Forms platforms."
+          icon={ClipboardList}
+        />
+        <StatCard
+          label="Portfolio Average Rating"
+          value={`${formatNumber(summary.averageRating, 2)} / ${portfolioMaxRating.toFixed(0)}`}
+          detail="Total average performance score across all partner evaluations combined, excluding N/A."
+          icon={Star}
+        />
+      </div>
+
+      {/* Secondary Stats Row - Performance Highlights & N/A Percentage */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+        <article className="panel md:col-span-2 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/60">
+              <span className="text-xs font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Performance Highlights</span>
+              <span className="rounded bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 text-[10px] font-bold text-azure">Extremes</span>
+            </div>
+            
+            <div className="space-y-5">
+              {/* Highest Rated Partner Row */}
+              <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/40">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                    <TrendingUp size={14} className="shrink-0" />
+                    <span>{highestLabel}</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate mt-1" title={highestCompany.name}>
+                    {highestCompany.name}
+                  </h4>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Rating: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{highestCompany.average.toFixed(2)}</span> / {portfolioMaxRating.toFixed(0)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Based on {highestCompany.count} evaluations
+                  </p>
+                </div>
+                {/* Right side circular progress */}
+                <div className="relative flex items-center justify-center w-24 h-24 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-slate-100 dark:stroke-slate-800/40 fill-none"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-emerald-500 dark:stroke-emerald-400 fill-none"
+                      strokeWidth="6"
+                      strokeDasharray="238.76"
+                      strokeDashoffset={238.76 - (238.76 * (highestCompany.scorePercentage / 100))}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {Math.round(highestCompany.scorePercentage)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Lowest Rated Partner Row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-500 dark:text-rose-400 whitespace-nowrap">
+                    <Users size={14} className="shrink-0" />
+                    <span>{lowestLabel}</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate mt-1" title={lowestCompany.name}>
+                    {lowestCompany.name}
+                  </h4>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Rating: <span className="text-rose-500 dark:text-rose-400 font-bold">{lowestCompany.average.toFixed(2)}</span> / {portfolioMaxRating.toFixed(0)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Based on {lowestCompany.count} evaluations
+                  </p>
+                </div>
+                {/* Right side circular progress */}
+                <div className="relative flex items-center justify-center w-24 h-24 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-slate-100 dark:stroke-slate-800/40 fill-none"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="38"
+                      className="stroke-rose-500 dark:stroke-rose-400 fill-none"
+                      strokeWidth="6"
+                      strokeDasharray="238.76"
+                      strokeDashoffset={238.76 - (238.76 * (lowestCompany.scorePercentage / 100))}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-sm font-bold text-rose-500 dark:text-rose-400">
+                    {Math.round(lowestCompany.scorePercentage)}%
+                  </div>
+                </div>
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
               </div>
               <button 
                 onClick={() => setIsAddOpen(false)}
@@ -704,6 +1117,7 @@ export function DashboardPage({
               </button>
             </div>
 
+<<<<<<< HEAD
             {/* Catalog Categories */}
             <div className="flex flex-wrap gap-2 mb-5">
               {(['All', 'Analytics', 'Surveys', 'Submissions'] as const).map(tab => (
@@ -727,6 +1141,41 @@ export function DashboardPage({
               {filteredCatalog.map(item => {
                 // Check if already in dashboard
                 const exists = widgets.some(w => w.type === item.type);
+=======
+      <div className="grid gap-5 grid-cols-1">
+        <ChartCard title="Monthly Trend" subtitle="Average score and response volume over time">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" />
+              <YAxis yAxisId="left" domain={[0, 100]} />
+              <YAxis yAxisId="right" orientation="right" allowDecimals={false} />
+              <Tooltip />
+              <Line yAxisId="left" type="monotone" dataKey="average" stroke="#2563eb" strokeWidth={3} dot={false} />
+              <Line yAxisId="right" type="monotone" dataKey="responses" stroke="#10b981" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      <ChartCard
+        title="Question Performance"
+        subtitle="All questions, ranked by average rating (highest to lowest)"
+        contentClassName="max-h-[32rem] overflow-y-auto pr-1"
+      >
+        <ol className="divide-y divide-slate-100 dark:divide-slate-800">
+          {questions.map((item, index) => {
+            const pct = Math.max(0, Math.min(100, item.average));
+            const norm = item.average / 100;
+            const tone =
+              norm >= 0.75
+                ? { text: 'text-emerald-700 dark:text-emerald-400', bar: 'bg-emerald-500' }
+                : norm >= 0.50
+                  ? { text: 'text-yellow-700 dark:text-yellow-400', bar: 'bg-yellow-500' }
+                  : norm >= 0.25
+                    ? { text: 'text-orange-700 dark:text-orange-400', bar: 'bg-orange-500' }
+                    : { text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500' };
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
                 return (
                   <div 

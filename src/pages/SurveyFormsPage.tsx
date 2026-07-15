@@ -13,8 +13,11 @@ interface SurveyFormsPageProps {
   onNavigateToCreate: () => void;
   onFillForm: (id: string) => void;
   onUpdateSurvey?: (survey: CustomForm) => void;
+<<<<<<< HEAD
   onUpdateSurveysBulk?: (updatedSurveysList: CustomForm[]) => void;
   onArchiveResponses?: (surveyIds: string[]) => void;
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   isAdmin?: boolean;
 }
 
@@ -32,6 +35,7 @@ const surveyTypeBadges: Record<SurveyType, string> = {
   Subcontractor: 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20',
 };
 
+<<<<<<< HEAD
 function ddmmToYyyymmdd(ddmm: string): string {
   if (!ddmm) return '';
   const parts = ddmm.split('/');
@@ -56,6 +60,8 @@ function yyyymmddToDdmm(yyyymmdd: string): string {
   return yyyymmdd;
 }
 
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 export function SurveyFormsPage({
   surveys,
   responses,
@@ -65,13 +71,17 @@ export function SurveyFormsPage({
   onNavigateToCreate,
   onFillForm,
   onUpdateSurvey,
+<<<<<<< HEAD
   onUpdateSurveysBulk,
   onArchiveResponses,
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   isAdmin
 }: SurveyFormsPageProps) {
   const [surveyType, setSurveyType] = useState<'All' | SurveyType>('All');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+<<<<<<< HEAD
 
   // State for bulk modification
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -89,6 +99,9 @@ export function SurveyFormsPage({
   const [resetPasscode, setResetPasscode] = useState('');
   const [archiveError, setArchiveError] = useState('');
   const [resetError, setResetError] = useState('');
+=======
+  const [editingSurvey, setEditingSurvey] = useState<CustomForm | null>(null);
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 
   // Identify unique set of evaluated companies for this user
   const userEvaluations = useMemo(() => {
@@ -170,6 +183,7 @@ export function SurveyFormsPage({
     });
   }, [surveys, surveyType, search]);
 
+<<<<<<< HEAD
   const handleToggleSelect = (id: string) => {
     setSelectedSurveyIds((prev) => {
       const next = new Set(prev);
@@ -291,6 +305,8 @@ export function SurveyFormsPage({
     }
   };
 
+=======
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   return (
     <div className="space-y-5">
       {isAdmin && (
@@ -462,9 +478,23 @@ export function SurveyFormsPage({
                     </div>
                   </th>
                   <th className="px-4 py-3.5">Category Type</th>
+<<<<<<< HEAD
                   <th className="px-4 py-3.5">Status</th>
                   <th className="px-4 py-3.5">Completion</th>
                   <th className="px-4 py-3.5">Deadline Date</th>
+=======
+                  {isAdmin ? (
+                    <>
+                      <th className="px-4 py-3.5">Status</th>
+                      <th className="px-4 py-3.5">Deadline Date</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-4 py-3.5">Deadline Date</th>
+                      <th className="px-4 py-3.5">Status</th>
+                    </>
+                  )}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -473,7 +503,11 @@ export function SurveyFormsPage({
                   const deadlineLabel = formatDeadline(survey.deadlineDate);
                   const totalForType = companyTotalsByType[survey.surveyType] || 0;
                   const completedForType = companyCompletedByType[survey.surveyType] || 0;
+<<<<<<< HEAD
  
+=======
+
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
                   return (
                     <tr key={survey.id} className="align-middle hover:bg-slate-50/40 dark:hover:bg-slate-900/10">
                       <td className="px-4 py-3.5">
@@ -510,6 +544,7 @@ export function SurveyFormsPage({
                           {survey.surveyType}
                         </span>
                       </td>
+<<<<<<< HEAD
                       <td className="px-4 py-3.5">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${
                           survey.status === 'Running' || !survey.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400' :
@@ -531,6 +566,33 @@ export function SurveyFormsPage({
                           {deadlineLabel}
                         </span>
                       </td>
+=======
+                      {isAdmin ? (
+                        <>
+                          <td className="px-4 py-3.5">
+                            <CompletionStatusBar completed={completedForType} total={totalForType} />
+                          </td>
+                          <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarClock size={13} className="text-slate-400" />
+                              {deadlineLabel}
+                            </span>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-1.5">
+                              <CalendarClock size={13} className="text-slate-400" />
+                              {deadlineLabel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <CompletionStatusBar completed={completedForType} total={totalForType} />
+                          </td>
+                        </>
+                      )}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
                       <td className="px-4 py-3.5 text-right">
                         {isAdmin ? (
                           <div className="flex items-center justify-end gap-2.5">
@@ -544,6 +606,7 @@ export function SurveyFormsPage({
                               <span>Manage</span>
                             </button>
                             <button
+<<<<<<< HEAD
                               onClick={() => {
                                 setSelectedSurveyIds(new Set([survey.id]));
                                 setNewStatus(survey.status === 'Paused' ? 'Paused' : survey.status === 'Completed' ? 'Completed' : 'Running');
@@ -552,6 +615,9 @@ export function SurveyFormsPage({
                                 setOverrideDeadline(true);
                                 setIsModifyOpen(true);
                               }}
+=======
+                              onClick={() => setEditingSurvey(survey)}
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
                               className="inline-flex items-center justify-center gap-2 w-36 rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 px-4 py-2 text-sm font-bold transition cursor-pointer"
                               type="button"
                               title="Modify Survey"
@@ -737,6 +803,7 @@ export function SurveyFormsPage({
           </div>
         </div>
       )}
+<<<<<<< HEAD
 
 
       {/* Bulk Modify Footer Selection Bar & Modal Popup */}
@@ -1096,6 +1163,63 @@ export function SurveyFormsPage({
             </div>
           )}
         </>
+=======
+      {/* Modify Survey Modal */}
+      {editingSurvey && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+            <h3 className="text-lg font-bold mb-4">Modify Survey Properties</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                <select 
+                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
+                  value={editingSurvey.status || 'Running'}
+                  onChange={(e) => setEditingSurvey({ ...editingSurvey, status: e.target.value as any })}
+                >
+                  <option value="Running">Running</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Deadline Date</label>
+                <input 
+                  type="date"
+                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
+                  value={editingSurvey.deadlineDate || ''}
+                  onChange={(e) => setEditingSurvey({ ...editingSurvey, deadlineDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setEditingSurvey(null)}
+                className="secondary-button"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onUpdateSurvey) {
+                    onUpdateSurvey(editingSurvey);
+                  }
+                  setEditingSurvey(null);
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] px-4 py-2 text-sm font-semibold transition cursor-pointer"
+                type="button"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+>>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
       )}
     </div>
   );
