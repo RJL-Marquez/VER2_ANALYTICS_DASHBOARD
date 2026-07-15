@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { sharePointService } from '../services/sharepointService';
 import { QuestionDefinition, ResponseNotification, SurveyResponse, SurveyType, CustomForm, Rating, PartnerCompany } from '../types/survey';
 import { surveyQuestions } from '../data/questions';
-import { generateMockResponses } from '../data/mockResponses';
+import { generateMockResponses, generateAllMockResponses, generateSingleMockResponse } from '../data/mockResponses';
 
 const NOTIFICATION_HISTORY_LIMIT = 200;
 const INITIAL_NOTIFICATION_SEED = 15;
@@ -77,6 +77,9 @@ export function useSurveyData() {
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<ResponseNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isFullDatasetActive, setIsFullDatasetActive] = useState(() => {
+    return localStorage.getItem('survey_analytics_full_dataset_active') === 'true';
+  });
   const isMountedRef = useRef(true);
 
   // Initialize and load surveys & responses
@@ -89,7 +92,7 @@ export function useSurveyData() {
 
         // 1. Handle Surveys (Forms)
         let loadedSurveys: CustomForm[] = [];
-        const savedSurveys = localStorage.getItem('survey_analytics_surveys_v4');
+        const savedSurveys = localStorage.getItem('survey_analytics_surveys_v5');
         if (savedSurveys) {
           loadedSurveys = JSON.parse(savedSurveys);
         } else {
@@ -849,12 +852,12 @@ export function useSurveyData() {
               questions: subcontractorQuestions,
             },
           ];
-          localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(loadedSurveys));
+          localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(loadedSurveys));
         }
 
         // 2. Handle Partner Companies
         let loadedCompanies: PartnerCompany[] = [];
-        const savedCompanies = localStorage.getItem('survey_analytics_partner_companies_v4');
+        const savedCompanies = localStorage.getItem('survey_analytics_partner_companies_v5');
         if (savedCompanies) {
           loadedCompanies = JSON.parse(savedCompanies);
         } else {
@@ -904,17 +907,26 @@ export function useSurveyData() {
             { id: 'pc-40', name: 'Sencolink Technologies Inc', type: 'Supplier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
             { id: 'pc-41', name: 'PAX8 Philippines Inc', type: 'Supplier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
           ];
-          localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(loadedCompanies));
+          localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(loadedCompanies));
         }
 
         // 3. Handle Responses
+        if (localStorage.getItem('survey_analytics_v5_cleared_by_agent_final') !== 'true') {
+          localStorage.removeItem('survey_analytics_responses');
+          localStorage.removeItem('survey_analytics_responses_v4');
+          localStorage.removeItem('survey_analytics_responses_v5');
+          localStorage.removeItem('survey_analytics_full_dataset_active');
+          localStorage.setItem('survey_analytics_v5_cleared_by_agent_final', 'true');
+        }
+
         let loadedResponses: SurveyResponse[] = [];
-        const savedResponses = localStorage.getItem('survey_analytics_responses_v4');
+        const savedResponses = localStorage.getItem('survey_analytics_responses_v5');
         if (savedResponses) {
           loadedResponses = JSON.parse(savedResponses);
         } else {
-          loadedResponses = generateMockResponses();
-          localStorage.setItem('survey_analytics_responses_v4', JSON.stringify(loadedResponses));
+          loadedResponses = [];
+          localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
+          localStorage.setItem('survey_analytics_full_dataset_active', 'false');
         }
 
         if (isMountedRef.current) {
@@ -955,7 +967,7 @@ export function useSurveyData() {
 
     const updatedSurveys = [surveyWithId, ...surveys];
     setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(updatedSurveys));
+    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
     return surveyWithId;
   };
 
@@ -963,7 +975,7 @@ export function useSurveyData() {
   const updateSurvey = (updatedForm: CustomForm) => {
     const updatedSurveys = surveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
     setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(updatedSurveys));
+    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
     return updatedForm;
   };
 
@@ -971,7 +983,7 @@ export function useSurveyData() {
   const deleteSurvey = (surveyId: string) => {
     const updatedSurveys = surveys.filter((s) => s.id !== surveyId);
     setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v4', JSON.stringify(updatedSurveys));
+    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
 
     // Also optionally clean up custom responses submitted specifically to this survey?
     // Let's filter out responses that match the deleted survey's questions and aren't default ones.
@@ -1014,7 +1026,7 @@ export function useSurveyData() {
 
     const updatedResponses = [...responses, ...newResponses];
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v4', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
 
     // Add notification
     const notification = toNotification(newResponses);
@@ -1037,7 +1049,7 @@ export function useSurveyData() {
     };
     const updated = [...partnerCompanies, newCompany];
     setPartnerCompanies(updated);
-    localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(updated));
+    localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(updated));
     return newCompany;
   };
 
@@ -1045,17 +1057,76 @@ export function useSurveyData() {
   const removePartnerCompany = (id: string) => {
     const updated = partnerCompanies.filter((c) => c.id !== id);
     setPartnerCompanies(updated);
-    localStorage.setItem('survey_analytics_partner_companies_v4', JSON.stringify(updated));
+    localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(updated));
   };
 
   // Reset to initial mock data state
   const resetAllData = () => {
     localStorage.removeItem('survey_analytics_surveys');
     localStorage.removeItem('survey_analytics_surveys_v4');
+    localStorage.removeItem('survey_analytics_surveys_v5');
     localStorage.removeItem('survey_analytics_responses');
     localStorage.removeItem('survey_analytics_responses_v4');
+    localStorage.removeItem('survey_analytics_responses_v5');
     localStorage.removeItem('survey_analytics_partner_companies_v4');
+    localStorage.removeItem('survey_analytics_partner_companies_v5');
+    localStorage.removeItem('survey_analytics_full_dataset_active');
     window.location.reload();
+  };
+
+  const clearResponses = () => {
+    setResponses([]);
+    setNotifications([]);
+    setUnreadCount(0);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
+    setIsFullDatasetActive(false);
+    localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+  };
+
+  const addSingleMockResponse = () => {
+    const nonAdminUsers = [
+      { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
+      { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
+      { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
+      { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
+      { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
+    ];
+
+    const newRows = generateSingleMockResponse(surveys, partnerCompanies, nonAdminUsers);
+    if (newRows.length > 0) {
+      const updated = [...responses, ...newRows];
+      setResponses(updated);
+      localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updated));
+
+      const notification = toNotification(newRows);
+      if (notification) {
+        setNotifications((current) => [notification, ...current].slice(0, NOTIFICATION_HISTORY_LIMIT));
+        setUnreadCount((count) => count + 1);
+      }
+    }
+  };
+
+  const toggleFullDataset = (enable: boolean) => {
+    if (enable) {
+      const nonAdminUsers = [
+        { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
+        { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
+        { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
+        { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
+        { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
+      ];
+      const fullRows = generateAllMockResponses(surveys, partnerCompanies, nonAdminUsers);
+      setResponses(fullRows);
+      localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(fullRows));
+
+      const groupedNotifs = groupResponsesToNotifications(fullRows);
+      setNotifications(groupedNotifs.slice(0, NOTIFICATION_HISTORY_LIMIT));
+      setUnreadCount(0);
+      setIsFullDatasetActive(true);
+      localStorage.setItem('survey_analytics_full_dataset_active', 'true');
+    } else {
+      clearResponses();
+    }
   };
 
   const markNotificationsRead = () => setUnreadCount(0);
@@ -1111,6 +1182,10 @@ export function useSurveyData() {
     deleteSurvey,
     submitResponse,
     resetAllData,
+    isFullDatasetActive,
+    clearResponses,
+    addSingleMockResponse,
+    toggleFullDataset,
   };
 }
 

@@ -28,8 +28,6 @@ export interface SurveyResponse {
 
 export interface FilterState {
   surveyType: SurveyType[];
-  dateFrom: string;
-  dateTo: string;
   questionId: string;
   rating: 'All' | Rating;
   company: string;
@@ -51,6 +49,7 @@ export interface KpiSummary {
   naPercentage: number;
   highestRatedQuestion: string;
   lowestRatedQuestion: string;
+  maxRating?: number;
 }
 
 export interface ResponseNotification {
@@ -72,6 +71,7 @@ export interface CustomForm {
   description: string;
   createdAt: string;
   deadlineDate?: string;
+  status?: 'Running' | 'Paused' | 'Completed' | 'Archived';
   maxRating?: number;
   questions: {
     questionId: string;

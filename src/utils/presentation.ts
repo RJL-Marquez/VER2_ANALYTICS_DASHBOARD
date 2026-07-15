@@ -10,6 +10,7 @@ import {
   questionPerformance,
   ratingDistribution,
   responseVolume,
+  getMaxRatingForResponses,
 } from './analytics';
 
 /* ------------------------------------------------------------------ */
@@ -96,8 +97,7 @@ export type PresentationCategoryId =
   | 'leaderboard'
   | 'trends'
   | 'questions'
-  | 'spotlight'
-  | 'distribution';
+  | 'spotlight';
 
 export interface PresentationCategoryDef {
   id: PresentationCategoryId;
@@ -108,8 +108,8 @@ export interface PresentationCategoryDef {
 export const PRESENTATION_CATEGORIES: PresentationCategoryDef[] = [
   {
     id: 'comparison',
-    label: 'Survey Type Comparison',
-    description: 'Average rating and response volume across Contractors, Suppliers, and Subcontractors',
+    label: 'Company Performance Rankings',
+    description: 'Interactive rankings of the best performing and underperforming companies across survey types',
   },
   {
     id: 'sections',
@@ -136,11 +136,6 @@ export const PRESENTATION_CATEGORIES: PresentationCategoryDef[] = [
     label: 'Company Spotlight',
     description: 'A closer look at the top performer plus anyone falling behind their peers',
   },
-  {
-    id: 'distribution',
-    label: 'Rating Distribution',
-    description: 'How ratings are spread across the scale, including N/A share',
-  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -163,7 +158,7 @@ export interface TopPerformer {
 export type Slide =
   | { kind: 'title'; title: string; subtitle: string; meta: string[] }
   | { kind: 'agenda'; items: { label: string; description: string }[] }
-  | { kind: 'overview'; kpis: KpiStat[]; topPerformers: TopPerformer[]; highlight: string; standout: { name: string; score: string; type: string } }
+  | { kind: 'overview'; kpis: KpiStat[]; topPerformers: TopPerformer[]; highlight: string; standout: { name: string; score: string; type: string }; surveyTypes?: SurveyType[] }
   | { kind: 'comparison'; data: { surveyType: SurveyType; average: number; responses: number }[] }
   | {
       kind: 'sections';
@@ -174,7 +169,7 @@ export type Slide =
       groups: { surveyType: SurveyType; rows: { rank: number; company: string; score: number; band: string; hex: string }[] }[];
     }
   | { kind: 'trends'; data: { month: string; average: number; responses: number }[] }
-  | { kind: 'questions'; top: { question: string; average: number }[]; bottom: { question: string; average: number }[] }
+  | { kind: 'questions'; top: { question: string; average: number }[]; bottom: { question: string; average: number }[]; maxRating?: number }
   | {
       kind: 'spotlight';
       company: string;
@@ -185,7 +180,6 @@ export type Slide =
       hex: string;
       atRisk?: { company: string; surveyType: SurveyType; score: number };
     }
-  | { kind: 'distribution'; ratings: { rating: string; count: number }[]; naPercentage: number }
   | { kind: 'closing'; takeaways: string[] };
 
 const ALL_SURVEY_TYPES: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -222,10 +216,12 @@ function generateTakeaways(
 ): string[] {
   const takeaways: string[] = [];
   const summary = getKpiSummary(responses);
+  const maxVal = summary.maxRating ?? 4;
+  const maxValStr = maxVal.toFixed(2);
 
   if (topPerformers.top) {
     takeaways.push(
-      `${topPerformers.top.name} leads the field with a ${formatNumber(topPerformers.top.average, 2)} / 4.00 average rating.`,
+      `${topPerformers.top.name} leads the field with a ${formatNumber(topPerformers.top.average, 2)} / ${maxValStr} average rating.`,
     );
   }
 
@@ -233,7 +229,7 @@ function generateTakeaways(
   if (sections.length) {
     const strongest = sections[0];
     const weakest = sections[sections.length - 1];
-    takeaways.push(`${strongest.category} is the strongest-performing category at ${formatNumber(strongest.average, 2)} / 4.00.`);
+    takeaways.push(`${strongest.category} is the strongest-performing category at ${formatNumber(strongest.average, 2)} / ${maxValStr}.`);
     if (weakest.category !== strongest.category) {
       takeaways.push(`${weakest.category} scores lowest overall and is the clearest opportunity for improvement.`);
     }
@@ -303,9 +299,12 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
   });
 
   // 3. Overview (always included, highlights top performers)
+  const maxVal = summary.maxRating ?? 4;
+  const maxValStr = maxVal.toFixed(2);
+
   const kpis: KpiStat[] = [
     { label: 'Overall Satisfaction', value: `${formatNumber(summary.overallSatisfactionScore, 0)}%` },
-    { label: 'Average Rating', value: `${formatNumber(summary.averageRating, 2)} / 4.00` },
+    { label: 'Average Rating', value: `${formatNumber(summary.averageRating, 2)} / ${maxValStr}` },
     { label: 'Total Responses', value: String(summary.totalResponses) },
     { label: 'N/A Rate', value: `${formatNumber(summary.naPercentage, 1)}%` },
   ];
@@ -314,7 +313,7 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
     return {
       type: surveyTypeDisplayLabel[type],
       name: performer?.name ?? 'No data',
-      score: performer ? `${formatNumber(performer.average, 2)} / 4.00` : '—',
+      score: performer ? `${formatNumber(performer.average, 2)} / ${maxValStr}` : '—',
       count: performer?.count ?? 0,
     };
   });
@@ -324,8 +323,9 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
     topPerformers: overviewTopPerformers,
     highlight: summary.highestRatedQuestion,
     standout: topPerformers.top
-      ? { name: topPerformers.top.name, score: `${formatNumber(topPerformers.top.average, 2)} / 4.00`, type: topPerformers.top.type }
+      ? { name: topPerformers.top.name, score: `${formatNumber(topPerformers.top.average, 2)} / ${maxValStr}`, type: topPerformers.top.type }
       : { name: 'No data yet', score: '—', type: '—' },
+    surveyTypes,
   });
 
   // 4. Selected category slides
@@ -368,6 +368,7 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
           .slice(-5)
           .reverse()
           .map((q) => ({ question: q.question, average: q.average })),
+        maxRating: summary.maxRating,
       });
     }
 
@@ -400,9 +401,6 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
       }
     }
 
-    if (id === 'distribution') {
-      slides.push({ kind: 'distribution', ratings: ratingDistribution(responses), naPercentage: summary.naPercentage });
-    }
   });
 
   // 5. Closing / takeaways (always included)

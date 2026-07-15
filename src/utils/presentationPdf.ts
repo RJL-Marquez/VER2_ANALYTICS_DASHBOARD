@@ -66,9 +66,26 @@ function bar(doc: jsPDF, x: number, y: number, w: number, h: number, fraction: n
 export function exportSlidesAsPDF(slides: Slide[], deckTitle: string) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
 
+  let pdfMaxRating = 4;
+  const questionsSlide = slides.find((s) => s.kind === 'questions') as any;
+  if (questionsSlide && questionsSlide.maxRating) {
+    pdfMaxRating = questionsSlide.maxRating;
+  } else {
+    const overviewSlide = slides.find((s) => s.kind === 'overview') as any;
+    if (overviewSlide && overviewSlide.kpis) {
+      const avgRatingKpi = overviewSlide.kpis.find((k: any) => k.label === 'Average Rating');
+      if (avgRatingKpi && avgRatingKpi.value) {
+        const match = avgRatingKpi.value.match(/\/ ([\d.]+)/);
+        if (match) {
+          pdfMaxRating = parseFloat(match[1]);
+        }
+      }
+    }
+  }
+
   slides.forEach((slide, index) => {
     if (index > 0) doc.addPage();
-    renderSlide(doc, slide);
+    renderSlide(doc, slide, pdfMaxRating);
   });
 
   const filename = `${deckTitle.replace(/[^a-z0-9]+/gi, '_').toLowerCase() || 'presentation'}_${new Date()
@@ -77,7 +94,7 @@ export function exportSlidesAsPDF(slides: Slide[], deckTitle: string) {
   doc.save(filename);
 }
 
-function renderSlide(doc: jsPDF, slide: Slide) {
+function renderSlide(doc: jsPDF, slide: Slide, pdfMaxRating: number) {
   switch (slide.kind) {
     case 'title': {
       drawCoverBackground(doc);
@@ -155,7 +172,7 @@ function renderSlide(doc: jsPDF, slide: Slide) {
     case 'comparison': {
       drawHeader(doc, 'Category', 'Survey Type Comparison');
       let y = 150;
-      const maxAvg = 4;
+      const maxAvg = pdfMaxRating;
       slide.data.forEach((row) => {
         setText(doc, INK);
         doc.setFontSize(10);
@@ -164,7 +181,7 @@ function renderSlide(doc: jsPDF, slide: Slide) {
         setText(doc, '#64748b');
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text(`${row.average.toFixed(2)} / 4.00  ·  ${row.responses} responses`, MARGIN + 150, y);
+        doc.text(`${row.average.toFixed(2)} / ${pdfMaxRating.toFixed(2)}  ·  ${row.responses} responses`, MARGIN + 150, y);
         bar(doc, MARGIN, y + 8, 500, 10, row.average / maxAvg, BRAND);
         y += 44;
       });

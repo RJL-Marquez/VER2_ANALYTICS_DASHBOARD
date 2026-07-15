@@ -14,9 +14,13 @@ import {
   Award, 
   X,
   List,
-  LayoutGrid
+  LayoutGrid,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
+import { getMaxRatingForResponses } from '../utils/analytics';
+import { computeCompanyComposite } from '../utils/scoring';
 
 interface PartnerCompaniesPageProps {
   partnerCompanies: PartnerCompany[];
@@ -36,6 +40,10 @@ export function PartnerCompaniesPage({
   const [activeTab, setActiveTab] = useState<SurveyType | 'All'>('All');
   const [viewMode, setViewMode] = useState<'general' | 'simplified'>('general');
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
+  const maxRating = useMemo(() => {
+    return getMaxRatingForResponses(responses);
+  }, [responses]);
   
   // Registration Form State
   const [newName, setNewName] = useState('');
@@ -50,6 +58,9 @@ export function PartnerCompaniesPage({
   const [companyToDelete, setCompanyToDelete] = useState<PartnerCompany | null>(null);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
+
+  type SortKey = 'name' | 'type' | 'createdAt';
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>(null);
 
   const adminPasscode = 'mgenesis2026';
 
@@ -66,6 +77,14 @@ export function PartnerCompaniesPage({
     } catch {
       return dateString;
     }
+  };
+
+  const handleSort = (key: SortKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
   };
 
   // Calculate statistics for each company based on responses
@@ -86,20 +105,17 @@ export function PartnerCompaniesPage({
     return stats;
   }, [responses]);
 
-  const getCompanyScoreDetails = (companyName: string) => {
-    const stat = companyStats[companyName];
-    if (!stat || stat.countRating === 0) {
+  const getCompanyScoreDetails = (companyName: string, companyType: SurveyType) => {
+    const composite = computeCompanyComposite(companyName, companyType, responses);
+    if (!composite) {
       return { rating: 'N/A', pct: 0, count: 0, label: 'Unrated' };
     }
-    const avg = stat.sumRating / stat.countRating;
-    const pct = Math.round((avg / 4) * 100);
-    let label = 'Satisfactory';
-    if (pct >= 85) label = 'Excellent';
-    else if (pct >= 75) label = 'Good';
-    else if (pct < 50) label = 'Critical';
-    else if (pct < 65) label = 'Needs Imp.';
-
-    return { rating: avg.toFixed(2), pct, count: stat.totalResponses, label };
+    return {
+      rating: `${composite.compositeScore.toFixed(1)}%`,
+      pct: Math.round(composite.compositeScore),
+      count: composite.evaluationCount, // number of evaluations/audits completed
+      label: composite.band.label,
+    };
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -149,9 +165,24 @@ export function PartnerCompaniesPage({
   };
 
   const filteredCompanies = useMemo(() => {
-    if (activeTab === 'All') return partnerCompanies;
-    return partnerCompanies.filter((c) => c.type === activeTab);
-  }, [partnerCompanies, activeTab]);
+    let result = partnerCompanies;
+    if (activeTab !== 'All') {
+      result = partnerCompanies.filter((c) => c.type === activeTab);
+    }
+    
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return result;
+  }, [partnerCompanies, activeTab, sortConfig]);
 
   return (
     <div className="space-y-6" id="partner-companies-page">
@@ -265,9 +296,39 @@ export function PartnerCompaniesPage({
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:bg-slate-950/60">
-                  <th className="px-5 py-2.5">Company Name</th>
-                  <th className="px-5 py-2.5">Category</th>
-                  <th className="px-5 py-2.5">Date Registered</th>
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Company Name
+                      {sortConfig?.key === 'name' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Category
+                      {sortConfig?.key === 'type' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-5 py-2.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Date Registered
+                      {sortConfig?.key === 'createdAt' && (
+                        sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                      )}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -294,25 +355,25 @@ export function PartnerCompaniesPage({
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredCompanies.map((c) => {
-              const score = getCompanyScoreDetails(c.name);
+              const score = getCompanyScoreDetails(c.name, c.type);
               
               // Satisfaction Standing Badges
               let standingColor = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
               let progressColor = 'bg-slate-400';
               
-              if (score.label === 'Excellent') {
+              if (score.label === 'Excellent' || score.label === 'Top Performer') {
                 standingColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/30';
                 progressColor = 'bg-emerald-500';
-              } else if (score.label === 'Good') {
+              } else if (score.label === 'Good' || score.label === 'Good Performer') {
                 standingColor = 'bg-lime-50 text-lime-700 border-lime-200 dark:bg-lime-950/30 dark:text-lime-400 dark:border-lime-900/30';
                 progressColor = 'bg-lime-500';
-              } else if (score.label === 'Satisfactory') {
+              } else if (score.label === 'Satisfactory' || score.label === 'Marginal Performer') {
                 standingColor = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30';
                 progressColor = 'bg-[#0063a9]';
               } else if (score.label === 'Needs Imp.') {
                 standingColor = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30';
                 progressColor = 'bg-amber-500';
-              } else if (score.label === 'Critical') {
+              } else if (score.label === 'Critical' || score.label === 'Unsatisfactory' || score.label === 'Poor Performer') {
                 standingColor = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/30';
                 progressColor = 'bg-rose-500';
               }
@@ -418,7 +479,7 @@ export function PartnerCompaniesPage({
                               {score.rating}
                             </span>
                             {score.rating !== 'N/A' && (
-                              <span className="text-[10px] text-slate-400">/ 4.00</span>
+                              <span className="text-[10px] text-slate-400">/ {maxRating.toFixed(2)}</span>
                             )}
                           </div>
                           

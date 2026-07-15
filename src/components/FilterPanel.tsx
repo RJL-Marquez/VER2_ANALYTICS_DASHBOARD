@@ -9,6 +9,10 @@ interface FilterPanelProps {
   onChange: (filters: FilterState) => void;
   onReset: () => void;
   isDashboard?: boolean;
+  isFullDatasetActive?: boolean;
+  clearResponses?: () => void;
+  addSingleMockResponse?: () => void;
+  toggleFullDataset?: (enable: boolean) => void;
 }
 
 const ratings: Array<'All' | Rating> = ['All', 0, 1, 2, 3, 4, 'N/A'];
@@ -20,7 +24,18 @@ const surveyTypeColors: Record<SurveyType, string> = {
   Subcontractor: '#f97316',
 };
 
-export function FilterPanel({ filters, questions, companies, onChange, onReset, isDashboard }: FilterPanelProps) {
+export function FilterPanel({
+  filters,
+  questions,
+  companies,
+  onChange,
+  onReset,
+  isDashboard,
+  isFullDatasetActive,
+  clearResponses,
+  addSingleMockResponse,
+  toggleFullDataset,
+}: FilterPanelProps) {
   const update = <Key extends keyof FilterState>(key: Key, value: FilterState[Key]) => onChange({ ...filters, [key]: value });
 
   const toggleSurveyType = (type: SurveyType) => {
@@ -97,16 +112,6 @@ export function FilterPanel({ filters, questions, companies, onChange, onReset, 
             )}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <label className="field-label">
-            From
-            <input className="field" type="date" value={filters.dateFrom} onChange={(event) => update('dateFrom', event.target.value)} />
-          </label>
-          <label className="field-label">
-            To
-            <input className="field" type="date" value={filters.dateTo} onChange={(event) => update('dateTo', event.target.value)} />
-          </label>
-        </div>
         <label className="field-label">
           Question
           <select className="field" value={filters.questionId} onChange={(event) => update('questionId', event.target.value)}>
@@ -142,6 +147,43 @@ export function FilterPanel({ filters, questions, companies, onChange, onReset, 
           <input className="field" placeholder="Company, comment, question..." value={filters.search} onChange={(event) => update('search', event.target.value)} />
         </label>
       </div>
+
+      {/* Test Controls / Database Test Suite */}
+      {clearResponses && addSingleMockResponse && toggleFullDataset && (
+        <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800 space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Database Test Suite</h4>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Simulate evaluations to verify real-time charts and PDF report generators.</p>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <button
+              className="button bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2 px-3 rounded-md transition-colors"
+              onClick={addSingleMockResponse}
+              type="button"
+            >
+              Add Single Evaluation
+            </button>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
+                checked={!!isFullDatasetActive}
+                onChange={(e) => toggleFullDataset(e.target.checked)}
+              />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                Bulk Seed All Non-Admin Accounts
+              </span>
+            </label>
+            <button
+              className="ghost-button border border-red-200 dark:border-red-900 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs py-2 px-3 rounded-md text-center justify-center"
+              onClick={clearResponses}
+              type="button"
+            >
+              Clear All Responses
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

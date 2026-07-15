@@ -110,9 +110,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         />
       </div>
 
-      <div className="flex flex-col items-center justify-center gap-8 max-w-md w-full">
+      <div className="flex flex-col md:flex-row md:items-start justify-center gap-6 md:gap-8 w-full max-w-md md:max-w-4xl">
         {/* Login card */}
-        <div className="relative w-full rounded-2xl border border-white/10 bg-white/95 backdrop-blur-sm shadow-2xl p-6 sm:p-8 dark:bg-slate-900/95">
+        <div className="relative w-full md:w-1/2 flex flex-col rounded-2xl border border-white/10 bg-white/95 backdrop-blur-sm shadow-2xl p-6 sm:p-8 dark:bg-slate-900/95">
           <div className="mb-6">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#0063a9] dark:text-blue-300">Microsoft Forms</p>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">Survey Analytics</h1>
@@ -192,7 +192,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         {/* Quick Select Panel */}
-        <div className="w-full rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 text-white">
+        <div className="relative w-full md:w-1/2 flex flex-col rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 text-white h-fit">
           <div className="flex items-center gap-2 mb-4">
             <Users className="text-[#0063a9]" size={20} />
             <h2 className="text-lg font-bold">Demo Simulation Accounts</h2>

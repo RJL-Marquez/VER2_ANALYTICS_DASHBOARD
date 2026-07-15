@@ -37,7 +37,6 @@ const categoryIcons: Record<PresentationCategoryId, typeof BarChart3> = {
   trends: TrendingUp,
   questions: ListChecks,
   spotlight: Star,
-  distribution: PieChart,
 };
 
 export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
@@ -66,18 +65,15 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
     [responses, surveyTypes],
   );
 
-  const dateFiltered = useMemo(
-    () => filterByDateRange(scopedResponses, { id: dateRangeId, from: customFrom, to: customTo }),
-    [scopedResponses, dateRangeId, customFrom, customTo],
-  );
+  const dateFiltered = scopedResponses;
 
-  const isCustomInvalid = dateRangeId === 'custom' && (!customFrom || !customTo || customFrom > customTo);
-  const canGenerate = selectedCategories.length > 0 && !isCustomInvalid && dateFiltered.length > 0;
+  const isCustomInvalid = false;
+  const canGenerate = selectedCategories.length > 0 && dateFiltered.length > 0;
 
   const handleGenerate = () => {
     if (!canGenerate) return;
     const activeTypes = surveyTypes.length ? surveyTypes : allSurveyTypes;
-    const dateRangeLabel = describeDateRange({ id: dateRangeId, from: customFrom, to: customTo }, dateFiltered);
+    const dateRangeLabel = 'All Time';
     const slides = buildSlides({
       responses: dateFiltered,
       partnerCompanies,
@@ -90,7 +86,7 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
   };
 
   if (deck) {
-    return <SlideDeck slides={deck} title={deckTitle} onExit={() => setDeck(null)} />;
+    return <SlideDeck slides={deck} title={deckTitle} onExit={() => setDeck(null)} responses={dateFiltered} />;
   }
 
   return (
@@ -176,45 +172,6 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
         </div>
       </section>
 
-      <section className="panel">
-        <h3 className="text-base font-semibold">3. Select a date range</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Choose the window of data to pull into your slides.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {DATE_RANGE_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setDateRangeId(option.id)}
-              title={option.description}
-              className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
-                dateRangeId === option.id
-                  ? 'border-[#0063a9] bg-[#0063a9] text-white'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        {dateRangeId === 'custom' && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:max-w-md">
-            <div>
-              <label className="field-label">From</label>
-              <input className="field" type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
-            </div>
-            <div>
-              <label className="field-label">To</label>
-              <input className="field" type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
-            </div>
-            {isCustomInvalid && (
-              <p className="sm:col-span-2 text-xs font-medium text-rose-500">
-                Pick a valid start and end date, with the start on or before the end.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
 
       {/* Generate */}
       <section className="panel flex flex-col items-center justify-between gap-4 sm:flex-row">
@@ -225,10 +182,7 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
               : 'No responses match this selection yet.'}
           </p>
           <p className="text-xs text-slate-400">
-            {selectedCategories.length} topic{selectedCategories.length === 1 ? '' : 's'} selected · {describeDateRange(
-              { id: dateRangeId, from: customFrom, to: customTo },
-              dateFiltered,
-            )}
+            {selectedCategories.length} topic{selectedCategories.length === 1 ? '' : 's'} selected · All Time
           </p>
         </div>
         <button type="button" onClick={handleGenerate} disabled={!canGenerate} className="primary-button disabled:cursor-not-allowed disabled:opacity-40">

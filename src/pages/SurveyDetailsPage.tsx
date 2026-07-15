@@ -77,20 +77,21 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
   // Calculate stats
   const stats = useMemo(() => {
     const validRatings = surveyResponses.filter((r) => r.rating !== 'N/A');
+    const currentMaxRating = survey.maxRating ?? 4;
     if (validRatings.length === 0) {
       return { total: 0, avg: 0, percentage: 0 };
     }
 
     const sum = validRatings.reduce((acc, r) => acc + (r.rating as number), 0);
     const avg = sum / validRatings.length;
-    const percentage = (avg / 4) * 100; // Rating is 0-4
+    const percentage = (avg / currentMaxRating) * 100; // Rating is scaled dynamically
 
     return {
       total: submissions.length,
       avg: parseFloat(avg.toFixed(2)),
       percentage: Math.round(percentage),
     };
-  }, [surveyResponses, submissions]);
+  }, [surveyResponses, submissions, survey.maxRating]);
 
   const activeSubmissionDetail = useMemo(() => {
     if (!selectedSubmissionId) return null;
@@ -105,44 +106,44 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
         <button
           onClick={onBack}
-          className="secondary-button self-start"
+          className="secondary-button self-start px-6 py-3 text-base h-12 flex items-center justify-center gap-2"
           type="button"
           id="btn-back"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={20} />
           <span>Back to Surveys</span>
         </button>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => onFillForm(survey.id)}
-            className="primary-button bg-[#0063a9] hover:bg-[#00528c]"
-            type="button"
-            id="btn-fill-form-now"
-          >
-            <ClipboardCheck size={16} />
-            <span>Launch Form Filling</span>
-          </button>
-
+        <div className="flex flex-wrap items-center gap-3">
           {isAdmin && onEdit && (
             <button
               onClick={() => onEdit(survey.id)}
-              className="inline-flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 px-3 py-2 text-sm font-medium hover:bg-amber-100 transition cursor-pointer dark:bg-amber-950/20 dark:border-amber-900"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 px-6 py-3 text-base font-medium h-12 hover:bg-amber-100 transition cursor-pointer dark:bg-amber-950/20 dark:border-amber-900"
               type="button"
               id="btn-edit-survey"
             >
-              <Pencil size={16} />
+              <Pencil size={20} />
               <span>Edit Survey Form</span>
             </button>
           )}
           
+          <button
+            onClick={() => onFillForm(survey.id)}
+            className="primary-button bg-[#0063a9] hover:bg-[#00528c] px-6 py-3 text-base h-12 flex items-center justify-center gap-2"
+            type="button"
+            id="btn-fill-form-now"
+          >
+            <ClipboardCheck size={20} />
+            <span>Answer Survey</span>
+          </button>
+          
           {isCustom && isAdmin && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 text-rose px-3 py-2 text-sm font-medium hover:bg-rose-100 transition cursor-pointer dark:bg-rose-950/20 dark:border-rose-900"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-50 border border-rose-200 text-rose px-6 py-3 text-base font-medium h-12 hover:bg-rose-100 transition cursor-pointer dark:bg-rose-950/20 dark:border-rose-900"
               type="button"
               id="btn-delete-survey"
             >
-              <Trash size={16} />
+              <Trash size={20} />
               <span>Delete Survey</span>
             </button>
           )}
@@ -247,7 +248,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
 
               <div className="rounded-lg bg-slate-50 p-4 text-center dark:bg-slate-900/50">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average Rating</p>
-                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{stats.avg} <span className="text-xs text-slate-400">/ 4</span></p>
+                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{stats.avg} <span className="text-xs text-slate-400">/ {survey.maxRating ?? 4}</span></p>
               </div>
             </div>
 
@@ -298,7 +299,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
           <div className="py-8 text-center text-slate-400 dark:text-slate-600">
             <ClipboardCheck size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm font-medium">No responses have been submitted to this form yet.</p>
-            <p className="text-xs mt-1">Use the "Launch Form Filling" button to submit your first feedback entry.</p>
+            <p className="text-xs mt-1">Use the "Answer Survey" button to submit your first feedback entry.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -327,7 +328,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                       <td className="px-4 py-3">{new Date(sub.submissionDate).toLocaleString()}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
-                          {score} / 4
+                          {score} / {survey.maxRating ?? 4}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">

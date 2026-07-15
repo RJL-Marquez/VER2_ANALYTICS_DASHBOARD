@@ -1,6 +1,6 @@
 import { SurveyResponse, SurveyType } from '../types/survey';
-import { numericRating } from './analytics';
-import { ScoreBand, getBand, questionWeights } from '../data/questionWeights';
+import { numericRating, submissionScores } from './analytics';
+import { ScoreBand, getBand, questionWeights, getCanonicalQuestionId } from '../data/questionWeights';
 
 export interface SectionScore {
   section: string;
@@ -34,12 +34,28 @@ function weightMap(surveyType: SurveyType) {
   return map;
 }
 
+function getMaxRatingForResponse(questionId: string): number {
+  try {
+    const saved = localStorage.getItem('survey_analytics_surveys_v5');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const baseId = questionId.split('-')[0];
+      const found = parsed.find((s: any) =>
+        s.questions?.some((q: any) => q.questionId === baseId || q.questionId === questionId)
+      );
+      if (found && found.maxRating !== undefined) {
+        return found.maxRating;
+      }
+    }
+  } catch (e) {}
+  return 4; // fallback
+}
+
 /**
  * Rolls every response for one company + survey type into a single
- * weighted composite score, matching that form's actual section point
- * values instead of a flat average. Ratings arrive on a 0-4 scale in this
- * data model; each one is rescaled to the fraction of the question's real
- * max-point value before being summed.
+ * composite score, matching the total score one respondent gave on the
+ * form. Contractor and Supplier are already 100-point forms; Subcontractor
+ * is converted from 32 points to the same 100-point scale.
  */
 export function computeCompanyComposite(
   company: string,
@@ -56,7 +72,8 @@ export function computeCompanyComposite(
   let applicableCount = 0;
 
   companyResponses.forEach((response) => {
-    const weight = weights.get(response.questionId);
+    const canonicalId = getCanonicalQuestionId(response.questionId);
+    const weight = weights.get(canonicalId);
     if (!weight) return; // question isn't part of this form's scored rubric (e.g. free-text fields)
     applicableCount += 1;
 
@@ -66,15 +83,16 @@ export function computeCompanyComposite(
       return;
     }
 
-    const fraction = Math.max(0, Math.min(1, value / 4));
-    const earned = fraction * weight.maxPoints;
+    const earned = value;
+    const maxPoints = weight.maxPoints;
 
     const bucket = sectionMap.get(weight.section) ?? { earned: 0, possible: 0, responses: 0 };
     bucket.earned += earned;
-    bucket.possible += weight.maxPoints;
+    bucket.possible += maxPoints;
     bucket.responses += 1;
     sectionMap.set(weight.section, bucket);
 
+    const fraction = maxPoints > 0 ? earned / maxPoints : 0;
     percentScores.push(fraction * 100);
   });
 
@@ -104,9 +122,10 @@ export function computeCompanyComposite(
     };
   });
 
-  const totalEarned = sections.reduce((sum, s) => sum + s.earned, 0);
-  const totalPossible = sections.reduce((sum, s) => sum + s.possible, 0);
-  const compositeScore = totalPossible ? Number(((totalEarned / totalPossible) * 100).toFixed(1)) : 0;
+  const normalizedSubmissionScores = submissionScores(companyResponses);
+  const compositeScore = normalizedSubmissionScores.length
+    ? Number((normalizedSubmissionScores.reduce((sum, item) => sum + item.score, 0) / normalizedSubmissionScores.length).toFixed(1))
+    : 0;
 
   const mean = percentScores.length ? percentScores.reduce((a, b) => a + b, 0) / percentScores.length : 0;
   const variance = percentScores.length
@@ -120,7 +139,7 @@ export function computeCompanyComposite(
     band: getBand(surveyType, compositeScore),
     sections,
     ratedQuestionCount: percentScores.length,
-    evaluationCount: new Set(companyResponses.map((r) => `${r.submissionDate.slice(0, 10)}|${r.respondentEmail ?? ''}`)).size,
+    evaluationCount: normalizedSubmissionScores.length,
     stdDev: Number(Math.sqrt(variance).toFixed(1)),
     naRate: applicableCount ? Number(((naCount / applicableCount) * 100).toFixed(1)) : 0,
   };
@@ -184,6 +203,6 @@ export function getCompanyTrend(responses: SurveyResponse[], company: string, su
   return months.map((month) => {
     const monthResponses = filtered.filter((r) => r.submissionDate.slice(0, 7) === month);
     const composite = computeCompanyComposite(company, surveyType, monthResponses);
-    return { month, score: composite?.compositeScore ?? 0, responses: monthResponses.length };
+    return { month, score: composite?.compositeScore ?? 0, responses: submissionScores(monthResponses).length };
   });
 }

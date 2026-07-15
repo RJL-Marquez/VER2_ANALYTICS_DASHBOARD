@@ -14,17 +14,19 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { SurveyResponse, SurveyType } from '../types/survey';
+import { FilterState, SurveyResponse, SurveyType } from '../types/survey';
 import { surveyTypeDisplayLabel } from '../data/questionWeights';
 import { getCompanyTrend, getLeaderboard, getOutliers, getSectionPeerAverages } from '../utils/scoring';
 
 interface CompanyPerformancePanelProps {
   responses: SurveyResponse[];
+  filters: FilterState;
+  setFilters: (filters: FilterState) => void;
 }
 
 const surveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
-export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelProps) {
+export function CompanyPerformancePanel({ responses, filters, setFilters }: CompanyPerformancePanelProps) {
   const isMobile = useIsMobile();
   const [surveyType, setSurveyType] = useState<SurveyType>('Contractor');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelPr
   const outlierMap = useMemo(() => new Map(outliers.map((o) => [o.company, o])), [outliers]);
   const peerAverages = useMemo(() => getSectionPeerAverages(responses, surveyType), [responses, surveyType]);
 
-  const activeCompany = selectedCompany ?? leaderboard[leaderboard.length - 1]?.company ?? null;
+  const activeCompany = selectedCompany;
   const activeComposite = leaderboard.find((c) => c.company === activeCompany) ?? null;
 
   const radarData = useMemo(() => {
@@ -58,31 +60,34 @@ export function CompanyPerformancePanel({ responses }: CompanyPerformancePanelPr
 
   return (
     <section className="panel space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <h3 className="text-base font-semibold">Company Performance</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Composite scores weighted to match each form's actual point values, ranked within their own peer group.
           </p>
         </div>
-        <div className="segmented-control">
-          {surveyTypes.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={surveyType === type ? 'segmented-active' : ''}
-              onClick={() => {
-                setSurveyType(type);
-                setSelectedCompany(null);
-              }}
-            >
-              {surveyTypeDisplayLabel[type]}
-            </button>
-          ))}
+        
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800 w-full">
+          <div className="segmented-control flex-1 w-full md:w-auto grid grid-cols-3">
+            {surveyTypes.map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={`py-2 text-center w-full flex-1 ${surveyType === type ? 'segmented-active font-bold text-[#0063a9] dark:text-blue-400 shadow-sm' : ''}`}
+                onClick={() => {
+                  setSurveyType(type);
+                  setSelectedCompany(null);
+                }}
+              >
+                {surveyTypeDisplayLabel[type]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2 mt-4">
         <div>
           <h4 className="mb-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
             Leaderboard ({leaderboard.length} companies)

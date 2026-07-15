@@ -1,12 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck } from 'lucide-react';
+import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck, ArrowLeft } from 'lucide-react';
 import { CustomForm, Rating, PartnerCompany } from '../types/survey';
 import { isValidDDMMYYYY } from '../utils/time';
+import { getQuestionMaxPoints } from '../data/questionWeights';
 
 interface SurveyFillerPageProps {
   surveys: CustomForm[];
   partnerCompanies: PartnerCompany[];
   initialSurveyId?: string | null;
+  userEmail: string;
+  responses: any[];
   onSubmitted: (
     surveyId: string,
     company: string,
@@ -34,9 +37,10 @@ const RESPONDENT_TYPES = [
   'Executive'
 ];
 
-export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurveyId, onSubmitted, onCancel }: SurveyFillerPageProps) {
+export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurveyId, userEmail, responses, onSubmitted, onCancel }: SurveyFillerPageProps) {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>(initialSurveyId || (surveys[0]?.id ?? ''));
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Info, 2: Questions, 3: Success
+  const [showDraftModal, setShowDraftModal] = useState(false);
 
   // Respondent metadata
   const [company, setCompany] = useState('');
@@ -54,10 +58,31 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
   const activeSurvey = surveys.find((s) => s.id === selectedSurveyId);
 
   // Filter registered partner companies that match the selected survey type
+  // and exclude those already evaluated by this specific user
   const matchingCompanies = useMemo(() => {
+    if (!activeSurvey) return [];
+    
+    // Find all company names already evaluated by this user for this survey type
+    const evaluatedCompanies = new Set(
+      responses
+        .filter((r) => r.respondentEmail === userEmail && r.surveyType === activeSurvey.surveyType)
+        .map((r) => r.company)
+    );
+
+    return partnerCompanies.filter(
+      (c) => c.type === activeSurvey.surveyType && !evaluatedCompanies.has(c.name)
+    );
+  }, [partnerCompanies, activeSurvey, responses, userEmail]);
+
+  // All companies of this type registered in system (even if already evaluated)
+  const allCompaniesOfThisType = useMemo(() => {
     if (!activeSurvey) return [];
     return partnerCompanies.filter((c) => c.type === activeSurvey.surveyType);
   }, [partnerCompanies, activeSurvey]);
+
+  const hasEvaluatedAll = useMemo(() => {
+    return allCompaniesOfThisType.length > 0 && matchingCompanies.length === 0;
+  }, [allCompaniesOfThisType, matchingCompanies]);
 
   // Sync company with selected survey type
   useEffect(() => {
@@ -72,7 +97,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     e.preventDefault();
     setError('');
 
-    if (!company.trim()) {
+    if (!company.trim() && !hasEvaluatedAll) {
       setError('Please provide your organization or company name.');
       return;
     }
@@ -82,31 +107,78 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       return;
     }
 
+    // Try to load saved draft for this survey & company if it exists
+    const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company}`;
+    const savedDraft = localStorage.getItem(draftKey);
+    let draftRatings: Record<string, any> = {};
+    let draftComments: Record<string, string> = {};
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        draftRatings = parsed.ratings || {};
+        draftComments = parsed.comments || {};
+      } catch (_) {}
+    }
+
     // Initialize answer state for this survey's questions
     const initialRatings: Record<string, any> = {};
     const initialComments: Record<string, string> = {};
-    const defaultVal = activeSurvey?.maxRating !== undefined ? activeSurvey.maxRating : 4;
     activeSurvey?.questions.forEach((q) => {
-      if (q.question === 'Period Covered') {
-        initialRatings[q.questionId] = periodCovered;
-      } else if (q.inputType === 'checkbox') {
-        initialRatings[q.questionId] = [];
-      } else if (q.inputType === 'matrix') {
-        initialRatings[q.questionId] = {};
-      } else if (q.inputType === 'date-range') {
-        initialRatings[q.questionId] = { from: '', to: '' };
-      } else if (q.inputType === 'text' || q.inputType === 'select' || q.inputType === 'typed-rating') {
-        initialRatings[q.questionId] = '';
+      const qMax = getQuestionMaxPoints(activeSurvey.surveyType, q.questionId);
+      if (draftRatings[q.questionId] !== undefined) {
+        initialRatings[q.questionId] = draftRatings[q.questionId];
       } else {
-        initialRatings[q.questionId] = defaultVal; // default to maximum scale value
+        if (q.question === 'Period Covered') {
+          initialRatings[q.questionId] = periodCovered;
+        } else if (q.inputType === 'checkbox') {
+          initialRatings[q.questionId] = [];
+        } else if (q.inputType === 'matrix') {
+          initialRatings[q.questionId] = {};
+        } else if (q.inputType === 'date-range') {
+          initialRatings[q.questionId] = { from: '', to: '' };
+        } else if (q.inputType === 'text' || q.inputType === 'select' || q.inputType === 'typed-rating') {
+          initialRatings[q.questionId] = '';
+        } else {
+          initialRatings[q.questionId] = qMax; // default to maximum scale value
+        }
       }
-      initialComments[q.questionId] = '';
+
+      if (draftComments[q.questionId] !== undefined) {
+        initialComments[q.questionId] = draftComments[q.questionId];
+      } else {
+        initialComments[q.questionId] = '';
+      }
     });
     setRatings(initialRatings);
     setComments(initialComments);
     setValidationErrors({});
 
     setStep(2);
+  };
+
+  const handleSaveDraft = () => {
+    if (!selectedSurveyId || !company) return;
+    const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company}`;
+    const draftData = {
+      ratings,
+      comments,
+      periodCovered,
+      department,
+      respondentType,
+      address,
+    };
+    localStorage.setItem(draftKey, JSON.stringify(draftData));
+    setShowDraftModal(false);
+    if (onCancel) onCancel();
+  };
+
+  const handleExitWithoutSaving = () => {
+    if (selectedSurveyId && company) {
+      const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company}`;
+      localStorage.removeItem(draftKey);
+    }
+    setShowDraftModal(false);
+    if (onCancel) onCancel();
   };
 
   const handleRatingChange = (qId: string, value: any) => {
@@ -235,8 +307,8 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     setError('');
     setValidationErrors({});
 
-    const defaultVal = activeSurvey.maxRating !== undefined ? activeSurvey.maxRating : 4;
     const formattedAnswers = activeSurvey.questions.flatMap((q) => {
+      const qMax = getQuestionMaxPoints(activeSurvey.surveyType, q.questionId);
       const val = ratings[q.questionId];
       let finalComment = comments[q.questionId]?.trim() || '';
 
@@ -284,7 +356,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
         const drStr = `From: ${fromStr} To: ${toStr}`;
         finalComment = drStr + (finalComment ? ` | Comment detail: ${finalComment}` : '');
       } else {
-        ratingVal = typeof ratings[q.questionId] === 'number' ? ratings[q.questionId] : defaultVal;
+        ratingVal = typeof ratings[q.questionId] === 'number' ? ratings[q.questionId] : qMax;
       }
 
       return [{
@@ -305,6 +377,11 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       address.trim(),
       formattedAnswers
     );
+
+    if (selectedSurveyId && company) {
+      const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company.trim()}`;
+      localStorage.removeItem(draftKey);
+    }
 
     setStep(3);
   };
@@ -334,6 +411,33 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
   return (
     <div className="max-w-3xl mx-auto space-y-6" id="survey-filler-container">
+      {/* Top Navigation Header */}
+      <div className="flex items-center justify-between pb-2">
+        {step === 1 ? (
+          onCancel && (
+            <button
+              onClick={onCancel}
+              className="secondary-button flex items-center gap-2 text-xs py-1.5 px-3"
+              type="button"
+            >
+              <ArrowLeft size={14} />
+              <span>Back to Form Management</span>
+            </button>
+          )
+        ) : step === 2 ? (
+          <button
+            onClick={() => setStep(1)}
+            className="secondary-button flex items-center gap-2 text-xs py-1.5 px-3"
+            type="button"
+          >
+            <ArrowLeft size={14} />
+            <span>Return</span>
+          </button>
+        ) : (
+          <div />
+        )}
+      </div>
+
       {/* Step Progress bar */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold">
@@ -362,6 +466,18 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
             </p>
           </div>
 
+          {hasEvaluatedAll && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-5 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 flex items-start gap-3 shadow-xs">
+              <CheckCircle size={20} className="text-emerald-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">All Registered Companies Evaluated!</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  You have already successfully evaluated all registered partner companies matching the <strong>{activeSurvey?.surveyType}</strong> category. There are no additional partner evaluations required at this time.
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-sm text-rose dark:bg-rose-950/30 dark:border-rose-900 flex items-center gap-2">
               <Info size={16} />
@@ -374,95 +490,103 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
               Section 1: Details
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 mb-5">
-              <div>
-                <label htmlFor="filler-dept" className="field-label">Associated Department</label>
-                <select
-                  id="filler-dept"
-                  className="field"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                >
-                  {DEPARTMENTS.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {!hasEvaluatedAll ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 mb-5">
+                  <div>
+                    <label htmlFor="filler-dept" className="field-label">Associated Department</label>
+                    <select
+                      id="filler-dept"
+                      className="field"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                    >
+                      {DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label htmlFor="filler-role" className="field-label">Designation</label>
-                <select
-                  id="filler-role"
-                  className="field"
-                  value={respondentType}
-                  onChange={(e) => setRespondentType(e.target.value)}
-                >
-                  {RESPONDENT_TYPES.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  <div>
+                    <label htmlFor="filler-role" className="field-label">Designation</label>
+                    <select
+                      id="filler-role"
+                      className="field"
+                      value={respondentType}
+                      onChange={(e) => setRespondentType(e.target.value)}
+                    >
+                      {RESPONDENT_TYPES.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-            <div>
-              <label htmlFor="filler-company" className="field-label">Select Partner Company to Evaluate *</label>
-              {matchingCompanies.length > 0 ? (
-                <select
-                  id="filler-company"
-                  className="field text-xs font-semibold"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  required
-                >
-                  <option value="">-- Choose registered partner --</option>
-                  {matchingCompanies.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name} {c.affiliation ? `(${c.affiliation})` : ''}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id="filler-company"
-                  type="text"
-                  className="field"
-                  placeholder="e.g. Apex Buildworks Co."
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  required
-                />
-              )}
-            </div>
+                <div>
+                  <label htmlFor="filler-company" className="field-label">Select Partner Company to Evaluate *</label>
+                  {matchingCompanies.length > 0 ? (
+                    <select
+                      id="filler-company"
+                      className="field text-xs font-semibold"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Choose registered partner --</option>
+                      {matchingCompanies.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name} {c.affiliation ? `(${c.affiliation})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="filler-company"
+                      type="text"
+                      className="field"
+                      placeholder="e.g. Apex Buildworks Co."
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      required
+                    />
+                  )}
+                </div>
 
-            <div>
-              <label htmlFor="filler-address" className="field-label">Address</label>
-              <input
-                id="filler-address"
-                type="text"
-                className="field"
-                placeholder="Enter Company Address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
+                <div>
+                  <label htmlFor="filler-address" className="field-label">Address</label>
+                  <input
+                    id="filler-address"
+                    type="text"
+                    className="field"
+                    placeholder="Enter Company Address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </div>
 
-            {activeSurvey && (activeSurvey.surveyType === 'Contractor' || activeSurvey.surveyType === 'Supplier') && (
-              <div>
-                <label htmlFor="filler-period" className="field-label">Period Covered</label>
-                <select
-                  id="filler-period"
-                  className="field"
-                  value={periodCovered}
-                  onChange={(e) => setPeriodCovered(e.target.value)}
-                >
-                  <option value="1st Half">1st Half</option>
-                  <option value="2nd Half">2nd Half</option>
-                  <option value="Annual">Annual</option>
-                </select>
+                {activeSurvey && (activeSurvey.surveyType === 'Contractor' || activeSurvey.surveyType === 'Supplier') && (
+                  <div>
+                    <label htmlFor="filler-period" className="field-label">Period Covered</label>
+                    <select
+                      id="filler-period"
+                      className="field"
+                      value={periodCovered}
+                      onChange={(e) => setPeriodCovered(e.target.value)}
+                    >
+                      <option value="1st Half">1st Half</option>
+                      <option value="2nd Half">2nd Half</option>
+                      <option value="Annual">Annual</option>
+                    </select>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-6 text-slate-400 text-xs">
+                Fields are locked since all companies are evaluated.
               </div>
             )}
 
@@ -473,19 +597,21 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                   onClick={onCancel}
                   className="secondary-button"
                 >
-                  Cancel
+                  Back to Form Management
                 </button>
               ) : (
                 <div />
               )}
-              <button
-                type="submit"
-                className="primary-button bg-[#0063a9] hover:bg-[#00528c]"
-                id="btn-filler-next"
-              >
-                <span>Proceed to Form Questions</span>
-                <ArrowRight size={16} />
-              </button>
+              {!hasEvaluatedAll && (
+                <button
+                  type="submit"
+                  className="primary-button bg-[#0063a9] hover:bg-[#00528c]"
+                  id="btn-filler-next"
+                >
+                  <span>Proceed to Form Questions</span>
+                  <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -530,7 +656,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                   currentSection = q.section!;
                 }
 
-                const maxVal = activeSurvey.maxRating !== undefined ? activeSurvey.maxRating : 4;
+                const maxVal = getQuestionMaxPoints(activeSurvey.surveyType, q.questionId);
                 const currentRating = ratings[q.questionId] !== undefined ? ratings[q.questionId] : maxVal;
 
                 return (
@@ -809,21 +935,32 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
           </div>
 
           {/* Form Footer */}
-          <div className="panel p-5 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="secondary-button"
-            >
-              Back to Info
-            </button>
+          <div className="panel p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="secondary-button flex items-center gap-1.5 text-xs py-2 px-3"
+              >
+                <ArrowLeft size={14} />
+                <span>Return</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDraftModal(true)}
+                className="secondary-button text-xs py-2 px-3 hover:text-rose-600 hover:bg-rose-50/50 dark:hover:text-rose-400 dark:hover:bg-rose-950/10"
+              >
+                Back to Form Management
+              </button>
+            </div>
             
             <button
               type="submit"
-              className="primary-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              className="primary-button bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4"
               id="btn-filler-submit"
             >
-              <Send size={15} />
+              <Send size={14} />
               <span>Submit Evaluation</span>
             </button>
           </div>
@@ -876,6 +1013,46 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                 Return to Directory
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Draft Save Confirmation Modal */}
+      {showDraftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 text-amber-500">
+                <Info size={24} className="shrink-0" />
+                <h3 className="text-lg font-bold text-slate-950 dark:text-white">Save Progress Draft?</h3>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                You are returning to Form Management. Would you like to save your completed answers as a draft so you can resume later, or exit without saving?
+              </p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-950/60 px-6 py-4 flex flex-col sm:flex-row gap-2 sm:justify-end border-t border-slate-100 dark:border-slate-800/50">
+              <button
+                type="button"
+                onClick={() => setShowDraftModal(false)}
+                className="secondary-button order-last sm:order-none text-xs py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExitWithoutSaving}
+                className="px-4 py-2 text-xs font-semibold rounded-lg text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 dark:text-rose-400 dark:bg-rose-950/30 dark:hover:bg-rose-950/60 dark:border-rose-900/40"
+              >
+                Exit Without Saving
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="px-4 py-2 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+              >
+                Save Draft & Exit
+              </button>
+            </div>
           </div>
         </div>
       )}

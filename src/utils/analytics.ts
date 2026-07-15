@@ -1,9 +1,14 @@
 import { FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../types/survey';
+import { getQuestionMaxPoints } from '../data/questionWeights';
+
+const SURVEY_TOTAL_POINTS: Record<SurveyType, number> = {
+  Contractor: 100,
+  Supplier: 100,
+  Subcontractor: 32,
+};
 
 export const initialFilters: FilterState = {
   surveyType: [],
-  dateFrom: '',
-  dateTo: '',
   questionId: '',
   rating: 'All',
   company: '',
@@ -67,10 +72,7 @@ export function applyFilters(responses: SurveyResponse[], filters: FilterState) 
   const search = filters.search.trim().toLowerCase();
 
   return responses.filter((response) => {
-    const submitted = response.submissionDate.slice(0, 10);
     const matchesSurvey = filters.surveyType.length === 0 || filters.surveyType.includes(response.surveyType);
-    const matchesFrom = !filters.dateFrom || submitted >= filters.dateFrom;
-    const matchesTo = !filters.dateTo || submitted <= filters.dateTo;
     const matchesQuestion = !filters.questionId || response.questionId === filters.questionId;
     const matchesRating = filters.rating === 'All' || response.rating === filters.rating;
     const matchesCompany = !filters.company || response.company === filters.company;
@@ -80,13 +82,59 @@ export function applyFilters(responses: SurveyResponse[], filters: FilterState) 
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(search));
 
-    return matchesSurvey && matchesFrom && matchesTo && matchesQuestion && matchesRating && matchesCompany && matchesSearch;
+    return matchesSurvey && matchesQuestion && matchesRating && matchesCompany && matchesSearch;
   });
 }
 
 export function averageRating(responses: SurveyResponse[]) {
-  const values = responses.map((response) => numericRating(response.rating)).filter((rating): rating is number => rating !== null);
-  return values.length ? values.reduce((sum, rating) => sum + rating, 0) / values.length : 0;
+  const scores = submissionScores(responses);
+  return scores.length ? scores.reduce((sum, item) => sum + item.score, 0) / scores.length : 0;
+}
+
+export function getSurveyTotalPoints(surveyType: SurveyType): number {
+  return SURVEY_TOTAL_POINTS[surveyType];
+}
+
+export function normalizeScoreTo100(score: number, surveyType: SurveyType): number {
+  const totalPoints = getSurveyTotalPoints(surveyType);
+  return totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+}
+
+function getSubmissionKey(response: SurveyResponse) {
+  return [
+    response.responseId,
+    response.company,
+    response.surveyType,
+    response.respondentEmail ?? response.respondentType,
+    response.submissionDate,
+  ].join('|');
+}
+
+export function submissionScores(responses: SurveyResponse[]) {
+  const groups = new Map<string, { surveyType: SurveyType; company: string; submissionDate: string; score: number; answers: number }>();
+
+  responses.forEach((response) => {
+    const rating = numericRating(response.rating);
+    if (rating === null) return;
+
+    const key = getSubmissionKey(response);
+    const current = groups.get(key) ?? {
+      surveyType: response.surveyType,
+      company: response.company,
+      submissionDate: response.submissionDate,
+      score: 0,
+      answers: 0,
+    };
+
+    current.score += rating;
+    current.answers += 1;
+    groups.set(key, current);
+  });
+
+  return [...groups.values()].map((item) => ({
+    ...item,
+    score: normalizeScoreTo100(item.score, item.surveyType),
+  }));
 }
 
 function averageByQuestion(responses: SurveyResponse[]) {
@@ -95,11 +143,31 @@ function averageByQuestion(responses: SurveyResponse[]) {
     groups.set(response.question, [...(groups.get(response.question) ?? []), response]);
   });
 
-  return [...groups.entries()].map(([question, questionResponses]) => ({
-    question,
-    average: averageRating(questionResponses),
-    responses: questionResponses.length,
-  }));
+  return [...groups.entries()]
+    .map(([question, questionResponses]) => {
+      const validRatings = questionResponses
+        .map((r) => numericRating(r.rating))
+        .filter((rating): rating is number => rating !== null);
+
+      if (validRatings.length === 0) {
+        return null;
+      }
+
+      const average = validRatings.reduce((sum, rating) => sum + rating, 0) / validRatings.length;
+      const surveyType = questionResponses[0]?.surveyType ?? 'Contractor';
+      const maxPoints = getQuestionMaxPoints(surveyType, questionResponses[0]?.questionId ?? '');
+
+      return {
+        question,
+        average: maxPoints > 0 ? (average / maxPoints) * 100 : 0,
+        responses: questionResponses.length,
+      };
+    })
+    .filter((q): q is NonNullable<typeof q> => q !== null);
+}
+
+export function getMaxRatingForResponses(responses: SurveyResponse[]): number {
+  return responses.length === 0 ? 100 : 100;
 }
 
 export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
@@ -108,33 +176,7 @@ export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
   const naCount = responses.filter((response) => response.rating === 'N/A').length;
   const average = averageRating(responses);
 
-  // Calculate normalized satisfaction percentage based on the survey's max rating
-  let totalScoreRatio = 0;
-  let countWithRatio = 0;
-  responses.forEach((resp) => {
-    const r = numericRating(resp.rating);
-    if (r !== null) {
-      let maxOfThis = 4;
-      try {
-        const saved = localStorage.getItem('survey_analytics_surveys');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const found = parsed.find((s: any) => s.questions?.some((q: any) => q.questionId === resp.questionId));
-          if (found && found.maxRating !== undefined) {
-            maxOfThis = found.maxRating;
-          }
-        }
-      } catch (e) {}
-
-      if (r > maxOfThis) {
-        maxOfThis = r;
-      }
-      totalScoreRatio += (r / maxOfThis);
-      countWithRatio++;
-    }
-  });
-
-  const satScore = countWithRatio > 0 ? (totalScoreRatio / countWithRatio) * 100 : 0;
+  const satScore = average;
 
   return {
     overallSatisfactionScore: satScore,
@@ -143,6 +185,7 @@ export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
     naPercentage: responses.length ? (naCount / responses.length) * 100 : 0,
     highestRatedQuestion: sorted[0]?.question ?? 'No responses',
     lowestRatedQuestion: sorted[sorted.length - 1]?.question ?? 'No responses',
+    maxRating: 100,
   };
 }
 
@@ -180,18 +223,18 @@ export function averageBySurveyType(responses: SurveyResponse[], types: SurveyTy
 }
 
 export function monthlyTrend(responses: SurveyResponse[]) {
-  const groups = new Map<string, SurveyResponse[]>();
-  responses.forEach((response) => {
-    const month = response.submissionDate.slice(0, 7);
-    groups.set(month, [...(groups.get(month) ?? []), response]);
+  const groups = new Map<string, ReturnType<typeof submissionScores>>();
+  submissionScores(responses).forEach((submission) => {
+    const month = submission.submissionDate.slice(0, 7);
+    groups.set(month, [...(groups.get(month) ?? []), submission]);
   });
 
   return [...groups.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([month, monthResponses]) => ({
+    .map(([month, monthSubmissions]) => ({
       month,
-      average: Number(formatNumber(averageRating(monthResponses))),
-      responses: monthResponses.length,
+      average: Number(formatNumber(monthSubmissions.reduce((sum, item) => sum + item.score, 0) / monthSubmissions.length)),
+      responses: monthSubmissions.length,
     }));
 }
 
@@ -221,7 +264,7 @@ export function categoryPerformance(responses: SurveyResponse[]) {
   return [...groups.entries()]
     .map(([category, categoryResponses]) => ({
       category,
-      average: Number(formatNumber(averageRating(categoryResponses))),
+      average: Number(formatNumber(averageByQuestion(categoryResponses).reduce((sum, item) => sum + item.average, 0) / Math.max(averageByQuestion(categoryResponses).length, 1))),
       responses: categoryResponses.length,
       naCount: categoryResponses.filter((response) => response.rating === 'N/A').length,
     }))
@@ -239,5 +282,4 @@ export function naFrequency(responses: SurveyResponse[]) {
     count: categoryResponses.filter((response) => response.rating === 'N/A').length,
   }));
 }
-
 

@@ -12,6 +12,7 @@ interface SurveyFormsPageProps {
   onSelectSurvey: (id: string) => void;
   onNavigateToCreate: () => void;
   onFillForm: (id: string) => void;
+  onUpdateSurvey?: (survey: CustomForm) => void;
   isAdmin?: boolean;
 }
 
@@ -37,11 +38,13 @@ export function SurveyFormsPage({
   onSelectSurvey,
   onNavigateToCreate,
   onFillForm,
+  onUpdateSurvey,
   isAdmin
 }: SurveyFormsPageProps) {
   const [surveyType, setSurveyType] = useState<'All' | SurveyType>('All');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSurvey, setEditingSurvey] = useState<CustomForm | null>(null);
 
   // Identify unique set of evaluated companies for this user
   const userEvaluations = useMemo(() => {
@@ -320,33 +323,42 @@ export function SurveyFormsPage({
                           <div className="flex items-center justify-end gap-2.5">
                             <button
                               onClick={() => onSelectSurvey(survey.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer"
+                              className="inline-flex items-center justify-center gap-2 w-36 rounded-lg border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 px-4 py-2 text-sm font-semibold transition cursor-pointer"
                               type="button"
                               title="Manage questions and details"
                             >
-                              <Eye size={13} />
+                              <Eye size={16} />
                               <span>Manage</span>
                             </button>
                             <button
-                              onClick={() => onFillForm(survey.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 text-[#0063a9] hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1.5 text-xs font-bold transition cursor-pointer"
+                              onClick={() => setEditingSurvey(survey)}
+                              className="inline-flex items-center justify-center gap-2 w-36 rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 px-4 py-2 text-sm font-bold transition cursor-pointer"
                               type="button"
-                              title="Open submission ingress form"
+                              title="Modify Survey"
                             >
-                              <FormInput size={13} />
-                              <span>Fill Ingress</span>
+                              <ClipboardList size={16} />
+                              <span>Modify</span>
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-2.5">
                             <button
                               onClick={() => onSelectSurvey(survey.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer"
+                              className="inline-flex items-center justify-center gap-2 w-36 rounded-lg border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 px-4 py-2 text-sm font-semibold transition cursor-pointer"
                               type="button"
                               title="View survey details"
                             >
-                              <Eye size={13} />
+                              <Eye size={16} />
                               <span>View</span>
+                            </button>
+                            <button
+                              onClick={() => onFillForm(survey.id)}
+                              className="inline-flex items-center justify-center gap-2 w-36 rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 px-4 py-2 text-sm font-bold transition cursor-pointer"
+                              type="button"
+                              title="Answer Survey"
+                            >
+                              <FormInput size={16} />
+                              <span>Answer Survey</span>
                             </button>
                           </div>
                         )}
@@ -500,6 +512,62 @@ export function SurveyFormsPage({
                 type="button"
               >
                 Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modify Survey Modal */}
+      {editingSurvey && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+            <h3 className="text-lg font-bold mb-4">Modify Survey Properties</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                <select 
+                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
+                  value={editingSurvey.status || 'Running'}
+                  onChange={(e) => setEditingSurvey({ ...editingSurvey, status: e.target.value as any })}
+                >
+                  <option value="Running">Running</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Deadline Date</label>
+                <input 
+                  type="date"
+                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
+                  value={editingSurvey.deadlineDate || ''}
+                  onChange={(e) => setEditingSurvey({ ...editingSurvey, deadlineDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setEditingSurvey(null)}
+                className="secondary-button"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onUpdateSurvey) {
+                    onUpdateSurvey(editingSurvey);
+                  }
+                  setEditingSurvey(null);
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] px-4 py-2 text-sm font-semibold transition cursor-pointer"
+                type="button"
+              >
+                Save Changes
               </button>
             </div>
           </div>

@@ -120,3 +120,67 @@ export const surveyTypeDisplayLabel: Record<SurveyType, string> = {
   Supplier: 'Supplier',
   Subcontractor: 'Subcontractor',
 };
+
+export const ID_MAPPING: Record<string, string> = {
+  // Contractor (Courier)
+  'Q-CON-04': 'Q01',
+  'Q-CON-05': 'Q02',
+  'Q-CON-07': 'Q08',
+  'Q-CON-08': 'Q09',
+  'Q-CON-09': 'Q10',
+  'Q-CON-11': 'Q17',
+  'Q-CON-12': 'Q18',
+  'Q-CON-14': 'Q19',
+  'Q-CON-15': 'Q20',
+  'Q-CON-16': 'Q21',
+  'Q-CON-18': 'Q44',
+  'Q-CON-19': 'Q45',
+
+  // Supplier
+  'Q-SUP-05': 'Q39',
+  'Q-SUP-06': 'Q40',
+  'Q-SUP-07': 'Q41',
+  'Q-SUP-08': 'Q42',
+  'Q-SUP-09': 'Q43',
+  'Q-SUP-11': 'Q05',
+  'Q-SUP-12': 'Q06',
+  'Q-SUP-13': 'Q07',
+  'Q-SUP-15': 'Q14',
+  'Q-SUP-16': 'Q15',
+  'Q-SUP-17': 'Q16',
+  'Q-SUP-19': 'Q33',
+  'Q-SUP-20': 'Q34',
+  'Q-SUP-21': 'Q35',
+  'Q-SUP-23': 'Q25',
+  'Q-SUP-24': 'Q26',
+  'Q-SUP-25': 'Q27',
+
+  // Subcontractor (matrix sub-questions)
+  'Q-SUB-04-a': 'Q03',
+  'Q-SUB-04-b': 'Q04',
+  'Q-SUB-06-a': 'Q36',
+  'Q-SUB-06-b': 'Q37',
+  'Q-SUB-06-c': 'Q38',
+  'Q-SUB-08-a': 'Q11',
+  'Q-SUB-08-b': 'Q12',
+  'Q-SUB-08-c': 'Q13',
+  'Q-SUB-10-a': 'Q28',
+  'Q-SUB-10-b': 'Q29',
+  'Q-SUB-10-c': 'Q30',
+  'Q-SUB-10-d': 'Q31',
+  'Q-SUB-10-e': 'Q32',
+  'Q-SUB-12-a': 'Q22',
+  'Q-SUB-12-b': 'Q23',
+  'Q-SUB-12-c': 'Q24',
+};
+
+export function getCanonicalQuestionId(questionId: string): string {
+  return ID_MAPPING[questionId] || questionId;
+}
+
+export function getQuestionMaxPoints(surveyType: SurveyType, questionId: string): number {
+  const canonicalId = getCanonicalQuestionId(questionId);
+  const weight = questionWeights[surveyType]?.find((w) => w.questionId === canonicalId);
+  if (weight) return weight.maxPoints;
+  return 4; // default fallback if not found
+}

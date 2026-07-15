@@ -19,8 +19,6 @@ const surveyTypeColors: Record<SurveyType, string> = {
 
 export function NotificationLogsPage({ notifications, unreadCount }: NotificationLogsPageProps) {
   const [surveyType, setSurveyType] = useState<'All' | SurveyType>('All');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
 
   type SortField = 'submissionDate' | 'surveyType' | 'company' | 'respondentEmail' | 'department' | 'designation';
@@ -40,12 +38,6 @@ export function NotificationLogsPage({ notifications, unreadCount }: Notificatio
     return enriched.filter((item) => {
       if (surveyType !== 'All' && item.surveyType !== surveyType) return false;
 
-      if (dateFrom && item.submissionDate < dateFrom) return false;
-      if (dateTo) {
-        const endOfDay = `${dateTo}T23:59:59`;
-        if (item.submissionDate > endOfDay) return false;
-      }
-
       if (search.trim()) {
         const needle = search.trim().toLowerCase();
         const haystack = `${item.company || ''} ${item.respondentEmail || ''} ${item.surveyType || ''} ${item.department || ''} ${item.designation || ''}`.toLowerCase();
@@ -54,7 +46,7 @@ export function NotificationLogsPage({ notifications, unreadCount }: Notificatio
 
       return true;
     });
-  }, [enriched, surveyType, dateFrom, dateTo, search]);
+  }, [enriched, surveyType, search]);
 
   const sortedAndFiltered = useMemo(() => {
     const result = [...filtered];
@@ -132,15 +124,7 @@ export function NotificationLogsPage({ notifications, unreadCount }: Notificatio
           </div>
         </div>
 
-        <div className="mb-5 grid gap-3 sm:grid-cols-3">
-          <label className="field-label">
-            From
-            <input className="field" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-          </label>
-          <label className="field-label">
-            To
-            <input className="field" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-          </label>
+        <div className="mb-5">
           <label className="field-label">
             Search
             <div className="mt-1 flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white pl-3 pr-3 transition focus-within:border-azure focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:ring-blue-950">

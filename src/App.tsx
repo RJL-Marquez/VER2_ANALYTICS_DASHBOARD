@@ -105,7 +105,11 @@ export default function App() {
     updateSurvey,
     deleteSurvey,
     submitResponse,
-    resetAllData
+    resetAllData,
+    isFullDatasetActive,
+    clearResponses,
+    addSingleMockResponse,
+    toggleFullDataset,
   } = useSurveyData();
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
@@ -193,6 +197,7 @@ export default function App() {
         responses={responses}
         partnerCompanies={partnerCompanies}
         userEmail={account || ''}
+        onUpdateSurvey={updateSurvey}
         onSelectSurvey={(id) => {
           setSelectedSurveyId(id);
           setActivePage('view-form');
@@ -205,9 +210,9 @@ export default function App() {
         isAdmin={isAdmin}
       />
     ),
-    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} />,
+    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} filters={filters} setFilters={setFilters} />,
     present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
-    explorer: <SurveyExplorerPage responses={filteredResponses} />,
+    explorer: <SurveyExplorerPage responses={filteredResponses} surveys={surveys} />,
     reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
@@ -267,23 +272,15 @@ export default function App() {
       );
     })(),
     'fill-form': (
-      <div className="space-y-4">
-        <button
-          onClick={() => setActivePage('view-form')}
-          className="secondary-button"
-          type="button"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Form Management</span>
-        </button>
-        <SurveyFillerPage
-          surveys={surveys}
-          partnerCompanies={partnerCompanies}
-          initialSurveyId={selectedSurveyId}
-          onSubmitted={handleSurveySubmit}
-          onCancel={() => setActivePage('view-form')}
-        />
-      </div>
+      <SurveyFillerPage
+        surveys={surveys}
+        partnerCompanies={partnerCompanies}
+        initialSurveyId={selectedSurveyId}
+        userEmail={account || ''}
+        responses={responses}
+        onSubmitted={handleSurveySubmit}
+        onCancel={() => setActivePage('view-form')}
+      />
     ),
   }[activePage];
 
@@ -388,7 +385,7 @@ export default function App() {
             <div className="min-w-0 flex-1">{pageContent}</div>
             
             {/* Show Filter Panel only on Admin-view pages that need filters */}
-            {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && (
+            {activePage !== 'notifications' && activePage !== 'analytics' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && activePage !== 'explorer' && (
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
@@ -397,6 +394,10 @@ export default function App() {
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
                   isDashboard={activePage === 'dashboard'}
+                  isFullDatasetActive={isFullDatasetActive}
+                  clearResponses={clearResponses}
+                  addSingleMockResponse={addSingleMockResponse}
+                  toggleFullDataset={toggleFullDataset}
                 />
               </aside>
             )}

@@ -17,7 +17,7 @@ import { ChartCard } from '../components/ChartCard';
 import { StatCard } from '../components/StatCard';
 import { StateMessage } from '../components/StateMessage';
 import { PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
-import { formatNumber, getKpiSummary, monthlyTrend, questionPerformance, ratingDistribution } from '../utils/analytics';
+import { formatNumber, getKpiSummary, monthlyTrend, questionPerformance, getMaxRatingForResponses, submissionScores } from '../utils/analytics';
 
 interface DashboardPageProps {
   responses: SurveyResponse[];
@@ -170,7 +170,6 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
   }
 
   const summary = getKpiSummary(responses);
-  const distribution = ratingDistribution(responses);
   const trend = monthlyTrend(responses);
   const questions = questionPerformance(responses);
 
@@ -179,7 +178,11 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
   const highestScore = sortedQuestions[0]?.average ?? 4.0;
   const lowestScore = sortedQuestions[sortedQuestions.length - 1]?.average ?? 0.0;
 
-  // Calculate satisfaction averages per company across all surveys combined (unfiltered/constant responses!)
+  const portfolioMaxRating = useMemo(() => {
+    return getMaxRatingForResponses(allResponses);
+  }, [allResponses]);
+
+  // Calculate satisfaction averages per company from normalized respondent totals.
   const companyAverages = useMemo(() => {
     const companyMap: Record<string, { name: string; sum: number; count: number; type: string }> = {};
     
@@ -187,14 +190,13 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
     const typeMap = new Map<string, string>();
     partnerCompanies.forEach((c) => typeMap.set(c.name, c.type));
 
-    allResponses.forEach((r) => {
-      if (r.rating === 'N/A') return;
-      if (!companyMap[r.company]) {
-        const type = typeMap.get(r.company) || r.surveyType;
-        companyMap[r.company] = { name: r.company, sum: 0, count: 0, type };
+    submissionScores(allResponses).forEach((submission) => {
+      if (!companyMap[submission.company]) {
+        const type = typeMap.get(submission.company) || submission.surveyType;
+        companyMap[submission.company] = { name: submission.company, sum: 0, count: 0, type };
       }
-      companyMap[r.company].sum += r.rating as number;
-      companyMap[r.company].count += 1;
+      companyMap[submission.company].sum += submission.score;
+      companyMap[submission.company].count += 1;
     });
 
     // Make sure all registered companies are represented even if they have 0 responses
@@ -207,17 +209,16 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
     return Object.values(companyMap)
       .map((c) => {
         const average = c.count > 0 ? c.sum / c.count : 0;
-        const scorePercentage = (average / 4) * 100;
         return {
           name: c.name,
           average,
-          scorePercentage,
+          scorePercentage: average,
           count: c.count,
           type: c.type,
         };
       })
       .sort((a, b) => b.average - a.average);
-  }, [allResponses, partnerCompanies]);
+  }, [allResponses, partnerCompanies, portfolioMaxRating]);
 
   const topCompany = useMemo(() => {
     return companyAverages[0] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, type: 'N/A', count: 0 };
@@ -248,11 +249,11 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
   }, [companyAverages, activeCategory]);
 
   const highestCompany = useMemo(() => {
-    return categoryCompanyAverages[0] || { name: 'No Registered Partners', average: 0, count: 0, type: 'N/A' };
+    return categoryCompanyAverages[0] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, count: 0, type: 'N/A' };
   }, [categoryCompanyAverages]);
 
   const lowestCompany = useMemo(() => {
-    return categoryCompanyAverages[categoryCompanyAverages.length - 1] || { name: 'No Registered Partners', average: 0, count: 0, type: 'N/A' };
+    return categoryCompanyAverages[categoryCompanyAverages.length - 1] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, count: 0, type: 'N/A' };
   }, [categoryCompanyAverages]);
 
   // Performance highlights texts based on company ratings
@@ -331,7 +332,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
               {displayedCompany.name === 'No Registered Partners' || displayedCompany.name.startsWith('No Registered')
                 ? 'No evaluations are registered. Employees can submit evaluations using the published survey forms.'
-                : `${displayedCompany.name} is recognized as the top-performing ${displayedCompany.type.toLowerCase()} partner, earning the highest combined satisfaction score of ${formatNumber(displayedCompany.average, 2)} out of 4.00 across all survey categories from Microgenesis employees.`
+                : `${displayedCompany.name} is recognized as the top-performing ${displayedCompany.type.toLowerCase()} partner, earning the highest combined satisfaction score of ${formatNumber(displayedCompany.average, 2)} out of ${portfolioMaxRating.toFixed(0)} across all survey categories from Microgenesis employees.`
               }
             </p>
           </div>
@@ -339,12 +340,12 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
           <div className="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
             <div className="flex items-center gap-1.5">
               <span>Combined average:</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(displayedCompany.average, 2)} / 4.00</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{formatNumber(displayedCompany.average, 2)} / {portfolioMaxRating.toFixed(0)}</span>
             </div>
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
               <span>Evaluations:</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{displayedCompany.count} answers</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{displayedCompany.count} submissions</span>
             </div>
             <span className="hidden sm:inline text-slate-200 dark:text-slate-800">|</span>
             <div className="flex items-center gap-1.5">
@@ -383,7 +384,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
                 <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
                 <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                  {topContractor.average.toFixed(2)} / 4.00 ({Math.round(topContractor.scorePercentage)}%)
+                  {topContractor.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topContractor.scorePercentage)}%)
                 </span>
               </div>
             )}
@@ -414,7 +415,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
                 <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
                 <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  {topSupplier.average.toFixed(2)} / 4.00 ({Math.round(topSupplier.scorePercentage)}%)
+                  {topSupplier.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topSupplier.scorePercentage)}%)
                 </span>
               </div>
             )}
@@ -445,7 +446,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/50">
                 <span className="text-xs font-semibold text-slate-500">Employee Rating</span>
                 <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
-                  {topSubcontractor.average.toFixed(2)} / 4.00 ({Math.round(topSubcontractor.scorePercentage)}%)
+                  {topSubcontractor.average.toFixed(2)} / {portfolioMaxRating.toFixed(0)} ({Math.round(topSubcontractor.scorePercentage)}%)
                 </span>
               </div>
             )}
@@ -463,7 +464,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
         />
         <StatCard
           label="Portfolio Average Rating"
-          value={`${formatNumber(summary.averageRating, 2)} / 4.00`}
+          value={`${formatNumber(summary.averageRating, 2)} / ${portfolioMaxRating.toFixed(0)}`}
           detail="Total average performance score across all partner evaluations combined, excluding N/A."
           icon={Star}
         />
@@ -490,7 +491,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
                     {highestCompany.name}
                   </h4>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Rating: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{highestCompany.average.toFixed(2)}</span> / 4.00
+                    Rating: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{highestCompany.average.toFixed(2)}</span> / {portfolioMaxRating.toFixed(0)}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">
                     Based on {highestCompany.count} evaluations
@@ -513,12 +514,12 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
                       className="stroke-emerald-500 dark:stroke-emerald-400 fill-none"
                       strokeWidth="6"
                       strokeDasharray="238.76"
-                      strokeDashoffset={238.76 - (238.76 * (highestCompany.average / 4))}
+                      strokeDashoffset={238.76 - (238.76 * (highestCompany.scorePercentage / 100))}
                       strokeLinecap="round"
                     />
                   </svg>
                   <div className="absolute text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                    {Math.round((highestCompany.average / 4) * 100)}%
+                    {Math.round(highestCompany.scorePercentage)}%
                   </div>
                 </div>
               </div>
@@ -534,7 +535,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
                     {lowestCompany.name}
                   </h4>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Rating: <span className="text-rose-500 dark:text-rose-400 font-bold">{lowestCompany.average.toFixed(2)}</span> / 4.00
+                    Rating: <span className="text-rose-500 dark:text-rose-400 font-bold">{lowestCompany.average.toFixed(2)}</span> / {portfolioMaxRating.toFixed(0)}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">
                     Based on {lowestCompany.count} evaluations
@@ -557,12 +558,12 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
                       className="stroke-rose-500 dark:stroke-rose-400 fill-none"
                       strokeWidth="6"
                       strokeDasharray="238.76"
-                      strokeDashoffset={238.76 - (238.76 * (lowestCompany.average / 4))}
+                      strokeDashoffset={238.76 - (238.76 * (lowestCompany.scorePercentage / 100))}
                       strokeLinecap="round"
                     />
                   </svg>
                   <div className="absolute text-sm font-bold text-rose-500 dark:text-rose-400">
-                    {Math.round((lowestCompany.average / 4) * 100)}%
+                    {Math.round(lowestCompany.scorePercentage)}%
                   </div>
                 </div>
               </div>
@@ -579,28 +580,13 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <ChartCard title="Rating Distribution" subtitle="Counts across the full rating scale">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={distribution}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="rating" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                {distribution.map((entry, index) => (
-                  <Cell key={entry.rating} fill={chartColors[index % chartColors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+      <div className="grid gap-5 grid-cols-1">
         <ChartCard title="Monthly Trend" subtitle="Average score and response volume over time">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trend}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" />
-              <YAxis yAxisId="left" domain={[0, 4]} />
+              <YAxis yAxisId="left" domain={[0, 100]} />
               <YAxis yAxisId="right" orientation="right" allowDecimals={false} />
               <Tooltip />
               <Line yAxisId="left" type="monotone" dataKey="average" stroke="#2563eb" strokeWidth={3} dot={false} />
@@ -617,13 +603,14 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
       >
         <ol className="divide-y divide-slate-100 dark:divide-slate-800">
           {questions.map((item, index) => {
-            const pct = Math.max(0, Math.min(100, (item.average / 4) * 100));
+            const pct = Math.max(0, Math.min(100, item.average));
+            const norm = item.average / 100;
             const tone =
-              item.average >= 3
+              norm >= 0.75
                 ? { text: 'text-emerald-700 dark:text-emerald-400', bar: 'bg-emerald-500' }
-                : item.average >= 2
+                : norm >= 0.50
                   ? { text: 'text-yellow-700 dark:text-yellow-400', bar: 'bg-yellow-500' }
-                  : item.average >= 1
+                  : norm >= 0.25
                     ? { text: 'text-orange-700 dark:text-orange-400', bar: 'bg-orange-500' }
                     : { text: 'text-red-700 dark:text-red-400', bar: 'bg-red-500' };
 
