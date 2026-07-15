@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -100,18 +101,53 @@ function ScoreBadge({ label, hex }: { label: string; hex: string }) {
 function TitleSlide({ slide }: { slide: Extract<Slide, { kind: 'title' }> }) {
   return (
     <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#0063a9] via-[#005793] to-[#00335a] px-10 text-center text-white">
+      {/* Decorative background flourishes */}
       <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
       <div className="pointer-events-none absolute right-10 top-10 h-24 w-24 rounded-full border border-white/20" />
+      <div className="pointer-events-none absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      />
+
+      {/* Header row: brand mark + generated-on stamp */}
+      <div className="absolute left-6 right-6 top-6 flex items-center justify-between sm:left-10 sm:right-10 sm:top-8">
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/microgenesis_logo.png"
+            alt="Microgenesis"
+            className="h-6 w-auto shrink-0 object-contain brightness-0 invert opacity-95 sm:h-7"
+            referrerPolicy="no-referrer"
+          />
+          <span className="hidden text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100/80 sm:inline">
+            Survey Analytics
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-wide text-blue-50 backdrop-blur-sm sm:text-xs">
+          <Calendar size={12} className="text-sky-200" />
+          <span>Generated {slide.generatedDate}</span>
+        </div>
+      </div>
+
       <Sparkles className="mb-5 text-sky-200" size={32} />
       <p className="text-xs font-bold uppercase tracking-[0.35em] text-sky-200">{slide.subtitle}</p>
       <h1 className="mt-4 max-w-3xl text-3xl font-bold leading-tight sm:text-5xl">{slide.title}</h1>
+      <div className="mt-5 h-px w-16 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
       <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
         {slide.meta.map((item) => (
           <span key={item} className="rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide backdrop-blur-sm">
             {item}
           </span>
         ))}
+      </div>
+
+      {/* Footer brand tag */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-100/60 sm:bottom-8">
+        Microgenesis
       </div>
     </div>
   );

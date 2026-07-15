@@ -157,7 +157,7 @@ export interface TopPerformer {
 }
 
 export type Slide =
-  | { kind: 'title'; title: string; subtitle: string; meta: string[] }
+  | { kind: 'title'; title: string; subtitle: string; meta: string[]; generatedDate: string }
   | { kind: 'agenda'; items: { label: string; description: string }[] }
   | { kind: 'overview'; kpis: KpiStat[]; topPerformers: TopPerformer[]; highlight: string; standout: { name: string; score: string; type: string }; surveyTypes?: SurveyType[] }
   | { kind: 'comparison'; data: { surveyType: SurveyType; average: number; responses: number }[] }
@@ -302,6 +302,7 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
     title: presentationTitle,
     subtitle: 'Partner & Stakeholder Analytics',
     meta: [dateRangeLabel, `${summary.totalResponses} responses`, `${surveyTypes.length} survey ${surveyTypes.length === 1 ? 'type' : 'types'}`],
+    generatedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   });
 
   // 2. Contents / Agenda

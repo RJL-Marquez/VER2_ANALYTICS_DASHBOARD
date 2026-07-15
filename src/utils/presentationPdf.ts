@@ -99,6 +99,9 @@ function renderSlide(doc: jsPDF, slide: Slide, pdfMaxRating: number) {
     case 'title': {
       drawCoverBackground(doc);
       doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Generated ${slide.generatedDate}`, PAGE_W - MARGIN, 40, { align: 'right' });
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text(slide.subtitle.toUpperCase(), MARGIN, PAGE_H / 2 - 30);
