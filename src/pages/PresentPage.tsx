@@ -50,7 +50,9 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [deck, setDeck] = useState<ReturnType<typeof buildSlides> | null>(null);
-  const [deckTitle, setDeckTitle] = useState('Stakeholder Satisfaction Presentation');
+  const DEFAULT_TITLE = 'Stakeholder Satisfaction Presentation';
+  const [titleInput, setTitleInput] = useState(DEFAULT_TITLE);
+  const [deckTitle, setDeckTitle] = useState(DEFAULT_TITLE);
 
   const toggleCategory = (id: PresentationCategoryId) => {
     setSelectedCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
@@ -74,14 +76,16 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
     if (!canGenerate) return;
     const activeTypes = surveyTypes.length ? surveyTypes : allSurveyTypes;
     const dateRangeLabel = 'All Time';
+    const finalTitle = titleInput.trim() || DEFAULT_TITLE;
     const slides = buildSlides({
       responses: dateFiltered,
       partnerCompanies,
       categoryIds: selectedCategories,
       dateRangeLabel,
       surveyTypes: activeTypes,
+      presentationTitle: finalTitle,
     });
-    setDeckTitle('Stakeholder Satisfaction Presentation');
+    setDeckTitle(finalTitle);
     setDeck(slides);
   };
 
@@ -170,6 +174,22 @@ export function PresentPage({ responses, partnerCompanies }: PresentPageProps) {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* Step 3: Title */}
+      <section className="panel">
+        <h3 className="text-base font-semibold">3. Give it a title</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Shown on the cover slide and the presentation window — make it your own.
+        </p>
+        <input
+          type="text"
+          value={titleInput}
+          onChange={(e) => setTitleInput(e.target.value)}
+          placeholder={DEFAULT_TITLE}
+          maxLength={120}
+          className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0063a9] focus:outline-none focus:ring-1 focus:ring-[#0063a9] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        />
       </section>
 
 

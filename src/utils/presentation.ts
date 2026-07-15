@@ -11,6 +11,7 @@ import {
   ratingDistribution,
   responseVolume,
   getMaxRatingForResponses,
+  submissionScores,
 } from './analytics';
 
 /* ------------------------------------------------------------------ */
@@ -184,19 +185,34 @@ export type Slide =
 
 const ALL_SURVEY_TYPES: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
-/** Same "who's on top" logic the Dashboard uses, generalized so the deck builder can reuse it standalone. */
+/**
+ * Same "who's on top" logic the Dashboard uses, generalized so the deck
+ * builder can reuse it standalone.
+ *
+ * Important: this must rank companies the same way DashboardPage does —
+ * by each submission's normalized 0-100 composite score (via
+ * `submissionScores`, which accounts for each survey type's own point
+ * scale) — NOT by a raw average of individual question ratings. Averaging
+ * raw ratings ignores that Contractor/Supplier/Subcontractor forms use
+ * different scales, so it silently produced the wrong "top performer" and
+ * displayed scores like "1.90 / 100.00" that didn't match the Dashboard.
+ */
 function computeTopPerformers(responses: SurveyResponse[], partnerCompanies: PartnerCompany[]) {
   const typeMap = new Map<string, SurveyType>();
   partnerCompanies.forEach((c) => typeMap.set(c.name, c.type));
 
   const companyMap = new Map<string, { name: string; sum: number; count: number; type: SurveyType }>();
-  responses.forEach((r) => {
-    if (r.rating === 'N/A') return;
-    if (!companyMap.has(r.company)) {
-      companyMap.set(r.company, { name: r.company, sum: 0, count: 0, type: typeMap.get(r.company) ?? r.surveyType });
+  submissionScores(responses).forEach((submission) => {
+    if (!companyMap.has(submission.company)) {
+      companyMap.set(submission.company, {
+        name: submission.company,
+        sum: 0,
+        count: 0,
+        type: typeMap.get(submission.company) ?? submission.surveyType,
+      });
     }
-    const bucket = companyMap.get(r.company)!;
-    bucket.sum += r.rating as number;
+    const bucket = companyMap.get(submission.company)!;
+    bucket.sum += submission.score;
     bucket.count += 1;
   });
 
