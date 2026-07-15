@@ -37,6 +37,7 @@ import { Slide } from '../utils/presentation';
 import { exportSlidesAsPDF } from '../utils/presentationPdf';
 import { SurveyResponse, SurveyType } from '../types/survey';
 import { surveyTypeDisplayLabel } from '../data/questionWeights';
+import { getScoreAxisDomain } from '../utils/analytics';
 import { computeCompanyComposite, getCompanyTrend, getSectionPeerAverages } from '../utils/scoring';
 
 interface SlideDeckProps {
@@ -450,6 +451,11 @@ function ComparisonSlide({ slide, responses = [] }: { slide: Extract<Slide, { ki
     return stats.slice(0, limit);
   }, [responses, activeSurveyTypes, performanceMode, limit]);
 
+  const topCompaniesAxisDomain = useMemo(
+    () => getScoreAxisDomain(topCompaniesData.map((item) => item.score)),
+    [topCompaniesData],
+  );
+
   return (
     <div className="flex h-full w-full flex-col bg-white px-8 py-6 sm:px-14 sm:py-8 text-slate-900">
       {/* Slide Header with Interactive Controls */}
@@ -534,7 +540,7 @@ function ComparisonSlide({ slide, responses = [] }: { slide: Extract<Slide, { ki
                     tickFormatter={(v) => truncateCompanyName(v, limit === 10 ? 10 : 14)}
                     tick={{ fontSize: 9, fill: '#475569', fontWeight: 'bold' }}
                   />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} />
+                  <YAxis domain={topCompaniesAxisDomain} tick={{ fontSize: 9, fill: '#64748b' }} />
                   <Tooltip />
                   <Bar dataKey="score" radius={[6, 6, 0, 0]} barSize={limit === 10 ? 24 : 36}>
                     <LabelList

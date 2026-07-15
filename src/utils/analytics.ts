@@ -68,6 +68,46 @@ export function formatNumber(value: number, digits = 1) {
   return Number.isFinite(value) ? value.toFixed(digits) : '0.0';
 }
 
+/**
+ * Picks a Y-axis domain (0-100 scale) for score bar charts.
+ *
+ * A fixed [0, 100] domain makes tightly clustered scores (e.g. 90, 91, 92)
+ * look like near-identical bar heights, hiding real differences between
+ * companies. When the values are close together, this zooms the axis in
+ * around them (snapped to nice multiples of 5) so the differences read
+ * clearly. When values are already spread out, it falls back to the full
+ * 0-100 scale so the chart doesn't exaggerate an already-visible gap.
+ */
+export function getScoreAxisDomain(values: number[]): [number, number] {
+  const finite = values.filter((value) => Number.isFinite(value));
+  if (finite.length === 0) return [0, 100];
+
+  const min = Math.min(...finite);
+  const max = Math.max(...finite);
+  const spread = max - min;
+
+  // Values are already spread across a wide range - the standard scale
+  // already shows the differences clearly, so don't zoom in.
+  if (spread > 30) return [0, 100];
+
+  // Pad around the cluster so bars don't touch the chart edges, with a
+  // floor so we never zoom in so far that noise looks like signal.
+  const padding = Math.max(spread * 0.6, 4);
+  let lower = Math.floor((min - padding) / 5) * 5;
+  let upper = Math.ceil((max + padding) / 5) * 5;
+
+  lower = Math.max(0, lower);
+  upper = Math.min(100, upper);
+
+  // Guarantee a minimum visible span even for a single identical value.
+  if (upper - lower < 10) {
+    upper = Math.min(100, lower + 10);
+    lower = Math.max(0, upper - 10);
+  }
+
+  return [lower, upper];
+}
+
 export function applyFilters(responses: SurveyResponse[], filters: FilterState) {
   const search = filters.search.trim().toLowerCase();
 

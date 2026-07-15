@@ -15,7 +15,7 @@ import { CompanyPerformancePanel } from '../components/CompanyPerformancePanel';
 import { StateMessage } from '../components/StateMessage';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { FilterState, SurveyResponse, SurveyType } from '../types/survey';
-import { naFrequency, questionPerformance, responseVolume } from '../utils/analytics';
+import { getScoreAxisDomain, naFrequency, questionPerformance, responseVolume } from '../utils/analytics';
 import { computeCompanyComposite } from '../utils/scoring';
 
 interface AnalyticsPageProps {
@@ -37,15 +37,10 @@ function truncateQuestion(text: string, max = 44) {
 
 export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilters }: AnalyticsPageProps) {
   const isMobile = useIsMobile();
-
-  if (!responses.length) {
-    return <StateMessage title="No analytics available" message="Adjust filters to compare survey groups." />;
-  }
-
-  const comparableResponses = responses;
-
   const [limit, setLimit] = useState<5 | 10>(5);
   const [performanceMode, setPerformanceMode] = useState<'highest' | 'lowest'>('highest');
+
+  const comparableResponses = responses;
 
   const truncateCompanyName = (name: string, maxLen = 14) => {
     return name.length > maxLen ? `${name.substring(0, maxLen)}…` : name;
@@ -91,11 +86,20 @@ export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilter
     return stats.slice(0, limit);
   }, [comparableResponses, activeSurveyTypes, performanceMode, limit]);
 
+  const topCompaniesAxisDomain = useMemo(
+    () => getScoreAxisDomain(topCompaniesData.map((item) => item.score)),
+    [topCompaniesData],
+  );
+
   const rankedQuestions = questionPerformance(comparableResponses);
   const topQuestions = rankedQuestions.slice(0, 5);
   const remainingQuestions = rankedQuestions.slice(5);
   const bottomQuestions = remainingQuestions.slice(-5);
   const spreadQuestions = [...topQuestions, ...bottomQuestions];
+
+  if (!responses.length) {
+    return <StateMessage title="No analytics available" message="Adjust filters to compare survey groups." />;
+  }
 
   const toggleSurveyType = (type: SurveyType) => {
     let newTypes = [...filters.surveyType];
@@ -211,7 +215,7 @@ export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilter
                   tickFormatter={(v) => truncateCompanyName(v, isMobile ? 8 : 12)}
                   tick={{ fontSize: 10, fill: '#64748b' }}
                 />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} />
+                <YAxis domain={topCompaniesAxisDomain} tick={{ fontSize: 10, fill: '#64748b' }} />
                 <Tooltip />
                 <Bar dataKey="score" radius={[6, 6, 0, 0]} barSize={isMobile ? 24 : 40}>
                   <LabelList

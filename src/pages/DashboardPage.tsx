@@ -190,18 +190,6 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
     }
   }, [activeCategory]);
 
-  if (isLoading) {
-    return <StateMessage title="Loading analytics" message="Reading centralized survey list records." />;
-  }
-
-  if (error) {
-    return <StateMessage title="Unable to load dashboard" message={error} />;
-  }
-
-  if (!responses.length) {
-    return <StateMessage title="No responses match the current filters" message="Reset filters or broaden the date range to restore analytics." />;
-  }
-
   const summary = getKpiSummary(responses);
   const trend = monthlyTrend(responses);
   const questions = questionPerformance(responses);
@@ -292,6 +280,23 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
   const lowestLabel = activeCategory === 'All' 
     ? 'Lowest Rated Company' 
     : `Lowest Rated ${activeCategory}`;
+
+  // NOTE: these checks must come AFTER every hook above (useState/useMemo/useEffect) so the
+  // same number and order of hooks run on every render. Returning early before a hook call
+  // caused a "rendered fewer/more hooks than previous render" crash (white screen) whenever
+  // the response count changed between 0 and >0, e.g. clicking "Add Evaluation" or the Bulk
+  // Seed checkbox while the dashboard had no data yet.
+  if (isLoading) {
+    return <StateMessage title="Loading analytics" message="Reading centralized survey list records." />;
+  }
+
+  if (error) {
+    return <StateMessage title="Unable to load dashboard" message={error} />;
+  }
+
+  if (!responses.length) {
+    return <StateMessage title="No responses match the current filters" message="Reset filters or broaden the date range to restore analytics." />;
+  }
 
   return (
     <div className="space-y-6">

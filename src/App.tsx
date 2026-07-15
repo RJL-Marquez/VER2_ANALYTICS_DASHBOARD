@@ -108,8 +108,7 @@ export default function App() {
     resetAllData,
     isFullDatasetActive,
     clearResponses,
-    addSingleMockResponse,
-    toggleFullDataset,
+    addEvaluations,
   } = useSurveyData();
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
@@ -396,8 +395,7 @@ export default function App() {
                   isDashboard={activePage === 'dashboard'}
                   isFullDatasetActive={isFullDatasetActive}
                   clearResponses={clearResponses}
-                  addSingleMockResponse={addSingleMockResponse}
-                  toggleFullDataset={toggleFullDataset}
+                  addEvaluations={addEvaluations}
                 />
               </aside>
             )}

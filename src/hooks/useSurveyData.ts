@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { sharePointService } from '../services/sharepointService';
 import { QuestionDefinition, ResponseNotification, SurveyResponse, SurveyType, CustomForm, Rating, PartnerCompany } from '../types/survey';
 import { surveyQuestions } from '../data/questions';
-import { generateMockResponses, generateAllMockResponses, generateSingleMockResponse } from '../data/mockResponses';
+import { generateMockResponses, generateAllMockResponses, generateSingleMockResponse, generateBulkMockResponses } from '../data/mockResponses';
 
 const NOTIFICATION_HISTORY_LIMIT = 200;
 const INITIAL_NOTIFICATION_SEED = 15;
@@ -1074,49 +1074,24 @@ export function useSurveyData() {
     window.location.reload();
   };
 
-  const clearResponses = () => {
-    setResponses([]);
-    setNotifications([]);
-    setUnreadCount(0);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
-    setIsFullDatasetActive(false);
-    localStorage.setItem('survey_analytics_full_dataset_active', 'false');
-    window.location.reload();
-  };
+  const NON_ADMIN_USERS = [
+    { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
+    { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
+    { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
+    { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
+    { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
+  ];
 
-  const addSingleMockResponse = () => {
-    const nonAdminUsers = [
-      { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
-      { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
-      { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
-      { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
-      { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
-    ];
+  const BULK_BATCH_SIZE = 15;
 
-    const newRows = generateSingleMockResponse(surveys, partnerCompanies, nonAdminUsers);
-    if (newRows.length > 0) {
-      const updated = [...responses, ...newRows];
-      setResponses(updated);
-      localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updated));
-
-      const notification = toNotification(newRows);
-      if (notification) {
-        setNotifications((current) => [notification, ...current].slice(0, NOTIFICATION_HISTORY_LIMIT));
-        setUnreadCount((count) => count + 1);
-      }
-    }
-  };
-
-  const toggleFullDataset = (enable: boolean) => {
-    if (enable) {
-      const nonAdminUsers = [
-        { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
-        { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
-        { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
-        { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
-        { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
-      ];
-      const fullRows = generateAllMockResponses(surveys, partnerCompanies, nonAdminUsers);
+  // Single unified entry point for the admin "Add Evaluation" test tool.
+  // - single: adds one random evaluation on top of whatever already exists.
+  // - bulk: adds a batch of random evaluations on top of whatever already exists.
+  // - complete: replaces all responses with a fully-covered dataset where every
+  //   non-admin employee has evaluated every registered company.
+  const addEvaluations = (mode: 'single' | 'bulk' | 'complete') => {
+    if (mode === 'complete') {
+      const fullRows = generateAllMockResponses(surveys, partnerCompanies, NON_ADMIN_USERS);
       setResponses(fullRows);
       localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(fullRows));
 
@@ -1125,9 +1100,37 @@ export function useSurveyData() {
       setUnreadCount(0);
       setIsFullDatasetActive(true);
       localStorage.setItem('survey_analytics_full_dataset_active', 'true');
-    } else {
-      clearResponses();
+      return;
     }
+
+    const newRows =
+      mode === 'bulk'
+        ? generateBulkMockResponses(BULK_BATCH_SIZE, surveys, partnerCompanies, NON_ADMIN_USERS)
+        : generateSingleMockResponse(surveys, partnerCompanies, NON_ADMIN_USERS);
+
+    if (newRows.length === 0) return;
+
+    const updated = [...responses, ...newRows];
+    setResponses(updated);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updated));
+    setIsFullDatasetActive(false);
+    localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+
+    const newNotifications = groupResponsesToNotifications(newRows);
+    if (newNotifications.length > 0) {
+      setNotifications((current) => [...newNotifications, ...current].slice(0, NOTIFICATION_HISTORY_LIMIT));
+      setUnreadCount((count) => count + newNotifications.length);
+    }
+  };
+
+  const clearResponses = () => {
+    setResponses([]);
+    setNotifications([]);
+    setUnreadCount(0);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
+    setIsFullDatasetActive(false);
+    localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+    window.location.reload();
   };
 
   const markNotificationsRead = () => setUnreadCount(0);
@@ -1185,8 +1188,7 @@ export function useSurveyData() {
     resetAllData,
     isFullDatasetActive,
     clearResponses,
-    addSingleMockResponse,
-    toggleFullDataset,
+    addEvaluations,
   };
 }
 

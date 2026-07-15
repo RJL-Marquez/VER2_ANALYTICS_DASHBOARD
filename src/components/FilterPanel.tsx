@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { FilterState, QuestionDefinition, Rating, SurveyType } from '../types/survey';
 
@@ -11,8 +11,7 @@ interface FilterPanelProps {
   isDashboard?: boolean;
   isFullDatasetActive?: boolean;
   clearResponses?: () => void;
-  addSingleMockResponse?: () => void;
-  toggleFullDataset?: (enable: boolean) => void;
+  addEvaluations?: (mode: 'single' | 'bulk' | 'complete') => void;
 }
 
 const ratings: Array<'All' | Rating> = ['All', 0, 1, 2, 3, 4, 'N/A'];
@@ -33,9 +32,9 @@ export function FilterPanel({
   isDashboard,
   isFullDatasetActive,
   clearResponses,
-  addSingleMockResponse,
-  toggleFullDataset,
+  addEvaluations,
 }: FilterPanelProps) {
+  const [evaluationMode, setEvaluationMode] = useState<'single' | 'bulk' | 'complete'>('single');
   const update = <Key extends keyof FilterState>(key: Key, value: FilterState[Key]) => onChange({ ...filters, [key]: value });
 
   const toggleSurveyType = (type: SurveyType) => {
@@ -149,31 +148,51 @@ export function FilterPanel({
       </div>
 
       {/* Test Controls / Database Test Suite */}
-      {clearResponses && addSingleMockResponse && toggleFullDataset && (
+      {clearResponses && addEvaluations && (
         <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800 space-y-4">
           <div>
             <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Database Test Suite</h4>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Simulate evaluations to verify real-time charts and PDF report generators.</p>
           </div>
           <div className="flex flex-col gap-2.5">
+            <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+              {(
+                [
+                  { value: 'single' as const, label: 'Single', description: 'Add one random evaluation.' },
+                  { value: 'bulk' as const, label: 'Bulk', description: 'Add a batch of random evaluations.' },
+                  { value: 'complete' as const, label: 'Complete', description: 'Every employee evaluates every company.' },
+                ]
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className="flex cursor-pointer items-start gap-2.5 text-sm font-normal text-slate-600 dark:text-slate-300"
+                >
+                  <input
+                    type="radio"
+                    name="evaluation-mode"
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
+                    checked={evaluationMode === option.value}
+                    onChange={() => setEvaluationMode(option.value)}
+                  />
+                  <span>
+                    <span className="block font-medium text-slate-700 dark:text-slate-200">{option.label}</span>
+                    <span className="block text-xs font-normal text-slate-400 dark:text-slate-500">{option.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
             <button
               className="button bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2 px-3 rounded-md transition-colors"
-              onClick={addSingleMockResponse}
+              onClick={() => addEvaluations(evaluationMode)}
               type="button"
             >
-              Add Single Evaluation
+              Add Evaluation
             </button>
-            <label className="flex items-center gap-2.5 cursor-pointer select-none py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
-                checked={!!isFullDatasetActive}
-                onChange={(e) => toggleFullDataset(e.target.checked)}
-              />
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                Bulk Seed All Non-Admin Accounts
-              </span>
-            </label>
+            {isFullDatasetActive && (
+              <p className="text-center text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                Complete dataset currently active — every employee has evaluated every company.
+              </p>
+            )}
             <button
               className="ghost-button border border-red-200 dark:border-red-900 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs py-2 px-3 rounded-md text-center justify-center"
               onClick={clearResponses}

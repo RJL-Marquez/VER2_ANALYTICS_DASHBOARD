@@ -352,6 +352,19 @@ export function generateAllMockResponses(
   return rows;
 }
 
+export function generateBulkMockResponses(
+  count: number,
+  surveysToUse: CustomForm[],
+  companiesToUse: PartnerCompany[],
+  usersToUse: { rType: string; dept: string; email: string }[]
+): SurveyResponse[] {
+  const rows: SurveyResponse[] = [];
+  for (let i = 0; i < count; i++) {
+    rows.push(...generateSingleMockResponse(surveysToUse, companiesToUse, usersToUse));
+  }
+  return rows;
+}
+
 export function generateSingleMockResponse(
   surveysToUse: CustomForm[],
   companiesToUse: PartnerCompany[],
