@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Search, ChevronLeft, CalendarClock, ChevronDown, Check } from 'lucide-react';
 import { SurveyResponse, CustomForm } from '../types/survey';
+import { isScoredQuestion } from '../data/questionWeights';
 
 interface SurveyExplorerPageProps {
   responses: SurveyResponse[];
@@ -14,15 +15,12 @@ export function SurveyExplorerPage({ responses, surveys = [] }: SurveyExplorerPa
 
   const selectedSurvey = useMemo(() => surveys.find(s => s.id === selectedSurveyId), [selectedSurveyId, surveys]);
 
-  // When a survey is selected, find all responses that belong to it.
-  // We match by questionId.
   const surveyResponses = useMemo(() => {
     if (!selectedSurvey) return [];
     const questionIds = new Set(selectedSurvey.questions.map(q => q.questionId));
     return responses.filter(r => questionIds.has(r.questionId));
   }, [selectedSurvey, responses]);
 
-  // Get unique emails for the selected survey
   const emails = useMemo(() => {
     const emailSet = new Set<string>();
     surveyResponses.forEach(r => {
@@ -35,13 +33,11 @@ export function SurveyExplorerPage({ responses, surveys = [] }: SurveyExplorerPa
 
   const filteredEmails = emails.filter(e => e.includes(emailSearch.toLowerCase()));
 
-  // Get responses for the selected email
   const emailResponses = useMemo(() => {
     if (!selectedEmail) return [];
     return surveyResponses.filter(r => r.respondentEmail?.toLowerCase() === selectedEmail.toLowerCase());
   }, [surveyResponses, selectedEmail]);
 
-  // Group email responses by responseId (submission)
   const groupedResponses = useMemo(() => {
     const groups: Record<string, SurveyResponse[]> = {};
     emailResponses.forEach(r => {
@@ -133,7 +129,7 @@ export function SurveyExplorerPage({ responses, surveys = [] }: SurveyExplorerPa
           <p className="text-sm text-slate-500 dark:text-slate-400">{selectedSurvey.description}</p>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 relative z-20">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
           <label className="block text-sm font-semibold mb-2">Select Respondent Email</label>
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -145,7 +141,6 @@ export function SurveyExplorerPage({ responses, surveys = [] }: SurveyExplorerPa
               onChange={(e) => setEmailSearch(e.target.value)}
               onFocus={() => { if (!selectedEmail) setEmailSearch(''); }}
             />
-            {/* Dropdown suggestions */}
             {emailSearch !== selectedEmail && (
               <div className="absolute top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg z-50">
                 {filteredEmails.length === 0 ? (
@@ -199,17 +194,11 @@ export function SurveyExplorerPage({ responses, surveys = [] }: SurveyExplorerPa
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{ans.questionCategory} - Q{ans.questionNumber}</p>
                     <p className="font-medium text-slate-900 dark:text-slate-100 mb-2">{ans.question}</p>
                     
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Answer:</span>
-                        <span className="font-bold text-[#0063a9] dark:text-blue-400">{ans.rating}</span>
-                      </div>
-                      {ans.comment && (
-                        <div>
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Comment:</span>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 italic">{ans.comment}</p>
-                        </div>
-                      )}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Answer:</span>
+                      <span className="font-bold text-[#0063a9] dark:text-blue-400">
+                        {isScoredQuestion(ans.surveyType, ans.questionId) ? ans.rating : (ans.comment || 'N/A')}
+                      </span>
                     </div>
                   </div>
                 ))}

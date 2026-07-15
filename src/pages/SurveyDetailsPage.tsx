@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, ExternalLink, Trash, Calendar, CalendarClock, Users, ClipboardCheck, MessageSquare, AlertTriangle, Eye, Pencil, Building2, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Trash, Calendar, CalendarClock, Users, ClipboardCheck, AlertTriangle, Eye, Pencil, Building2, Check } from 'lucide-react';
 import { CustomForm, SurveyResponse, PartnerCompany } from '../types/survey';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
 import { formatNumber, scoredResponses, submissionScores } from '../utils/analytics';
@@ -21,7 +21,6 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
-  // Companies matching this survey's category that the current user has/hasn't evaluated yet.
   const { pendingCompanies, completedCount, totalCompanies } = useMemo(() => {
     const normalizedUserEmail = userEmail.trim().toLowerCase();
     const evaluatedNames = new Set<string>();
@@ -41,9 +40,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
     };
   }, [partnerCompanies, responses, userEmail, survey.surveyType]);
 
-  // Filter responses specific to this survey
   const surveyResponses = useMemo(() => {
-    // A response belongs to this survey if it matches the survey's type and its question IDs
     const surveyQuestionIds = new Set(survey.questions.map((q) => q.questionId));
     return responses.filter((r) => {
       if (r.surveyType !== survey.surveyType) return false;
@@ -445,9 +442,9 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                       <span className="text-slate-400 font-bold mr-1">{idx + 1}.</span>
                       {ans.question}
                     </p>
-                    {isScored ? (
+                      {isScored ? (
                     <span className={`inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md font-bold text-xs ${
-                      ans.rating === 'N/A' 
+                      ans.rating === 'N/A'
                         ? 'bg-slate-100 text-slate-500 dark:bg-slate-800'
                         : ans.rating >= 3 
                         ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' 
@@ -455,21 +452,14 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                         ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400'
                         : 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400'
                     }`}>
-                      {ans.rating === 'N/A' ? 'N/A' : `Score: ${ans.rating}`}
+                      {`ANSWER: ${ans.rating}`}
                     </span>
                     ) : (
                     <span className="inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 font-bold text-xs">
-                      Text
+                      ANSWER: {ans.comment || 'N/A'}
                     </span>
                     )}
                   </div>
-
-                  {ans.comment && (
-                    <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                      <MessageSquare size={13} className="text-slate-400 mt-0.5" />
-                      <p className="italic">"{ans.comment}"</p>
-                    </div>
-                  )}
                 </div>
               );
               })}

@@ -1081,6 +1081,7 @@ export function useSurveyData() {
     localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
     setIsFullDatasetActive(false);
     localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+    window.location.reload();
   };
 
   const addSingleMockResponse = () => {
@@ -1104,6 +1105,7 @@ export function useSurveyData() {
         setUnreadCount((count) => count + 1);
       }
     }
+    window.location.reload();
   };
 
   const toggleFullDataset = (enable: boolean) => {
