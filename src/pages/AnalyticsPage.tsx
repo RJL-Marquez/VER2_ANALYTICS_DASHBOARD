@@ -1,21 +1,14 @@
-<<<<<<< HEAD
 import { useState, useMemo, useEffect } from 'react';
 import { Award, Ban, ClipboardList, Star, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'motion/react';
-=======
-import { useState, useMemo } from 'react';
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   LabelList,
-<<<<<<< HEAD
   Line,
   LineChart,
-=======
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,7 +17,6 @@ import {
 import { ChartCard } from '../components/ChartCard';
 import { CompanyPerformancePanel } from '../components/CompanyPerformancePanel';
 import { StateMessage } from '../components/StateMessage';
-<<<<<<< HEAD
 import { StatCard } from '../components/StatCard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { FilterState, PartnerCompany, SurveyResponse, SurveyType } from '../types/survey';
@@ -39,11 +31,6 @@ import {
   getMaxRatingForResponses,
   submissionScores,
 } from '../utils/analytics';
-=======
-import { useIsMobile } from '../hooks/useIsMobile';
-import { FilterState, SurveyResponse, SurveyType } from '../types/survey';
-import { getScoreAxisDomain, naFrequency, questionPerformance, responseVolume } from '../utils/analytics';
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 import { computeCompanyComposite } from '../utils/scoring';
 
 interface AnalyticsPageProps {
@@ -209,7 +196,6 @@ function truncateQuestion(text: string, max = 44) {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
-<<<<<<< HEAD
 export function AnalyticsPage({
   responses,
   allResponses = [],
@@ -218,16 +204,12 @@ export function AnalyticsPage({
   filters,
   setFilters
 }: AnalyticsPageProps) {
-=======
-export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilters }: AnalyticsPageProps) {
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   const isMobile = useIsMobile();
   const [limit, setLimit] = useState<5 | 10>(5);
   const [performanceMode, setPerformanceMode] = useState<'highest' | 'lowest'>('highest');
 
   const comparableResponses = responses;
 
-<<<<<<< HEAD
   const summary = useMemo(() => getKpiSummary(responses), [responses]);
   const trend = useMemo(() => monthlyTrend(responses), [responses]);
   const questions = useMemo(() => questionPerformance(responses), [responses]);
@@ -329,8 +311,6 @@ export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilter
   const activeColor = categoryColors[displayedCompany.type] || categoryColors['N/A'];
   const standingDetails = getSatisfactionColor(score);
 
-=======
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   const truncateCompanyName = (name: string, maxLen = 14) => {
     return name.length > maxLen ? `${name.substring(0, maxLen)}…` : name;
   };
@@ -404,7 +384,6 @@ export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilter
 
   return (
     <div className="space-y-5">
-<<<<<<< HEAD
       {/* Prominent KPI Section: Overall Satisfaction */}
       <div className={`panel flex flex-col md:flex-row items-center justify-between p-6 md:p-8 border-2 border-slate-100 dark:border-slate-800/40 shadow-lg relative overflow-hidden bg-gradient-to-r from-white to-slate-50/50 dark:from-slate-950 dark:to-slate-900/40 gap-6 md:gap-10`}>
         
@@ -592,8 +571,6 @@ export function AnalyticsPage({ responses, activeSurveyTypes, filters, setFilter
         </div>
       )}
 
-=======
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
       <CompanyPerformancePanel responses={comparableResponses} filters={filters} setFilters={setFilters} />
 
       <section className="panel">

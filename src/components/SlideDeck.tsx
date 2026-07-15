@@ -74,11 +74,6 @@ function slideTitleFor(slide: Slide, index: number): string {
       return 'Top & Bottom Questions';
     case 'spotlight':
       return 'Spotlight';
-<<<<<<< HEAD
-=======
-    case 'distribution':
-      return 'Rating Distribution';
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
     case 'closing':
       return 'Key Takeaways';
     default:
@@ -845,7 +840,6 @@ function LeaderboardSlide({ slide, responses = [] }: { slide: Extract<Slide, { k
     );
   }
 
-<<<<<<< HEAD
   const numGroups = slide.groups.length;
 
   const layoutConfig = useMemo(() => {
@@ -944,57 +938,6 @@ function LeaderboardSlide({ slide, responses = [] }: { slide: Extract<Slide, { k
             </div>
           ))}
         </div>
-=======
-  return (
-    <div className="flex h-full w-full flex-col bg-white px-8 py-8 sm:px-14 sm:py-10 text-slate-900">
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#0063a9]">Category</p>
-      <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">Company Leaderboard</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Top-ranked partners within each survey type. Click a company to view interactive breakdown & trends.
-      </p>
-      <div className="mt-5 grid flex-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-3">
-        {slide.groups.map((group) => (
-          <div key={group.surveyType} className="rounded-xl border border-slate-100 p-3 bg-slate-50/30">
-            <p
-              className="mb-2 text-xs font-bold uppercase tracking-wider"
-              style={{ color: surveyTypeColors[group.surveyType] }}
-            >
-              {group.surveyType}
-            </p>
-            {group.rows.length ? (
-              <ol className="space-y-1.5">
-                {group.rows.map((row) => (
-                  <li key={row.company}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedCompany({
-                          company: row.company,
-                          surveyType: group.surveyType,
-                        })
-                      }
-                      title={`Click to view detailed metrics for ${row.company}`}
-                      className="flex w-full items-center gap-2 rounded-lg p-1 text-left transition hover:bg-slate-100 group cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-                    >
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 group-hover:bg-[#0063a9]/10 group-hover:text-[#0063a9] transition-colors">
-                        {row.rank}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700 group-hover:text-[#0063a9] group-hover:underline transition-all">
-                        {row.company}
-                      </span>
-                      <span className="shrink-0 text-xs font-bold transition-all group-hover:scale-105" style={{ color: row.hex }}>
-                        {row.score.toFixed(0)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-xs text-slate-400">No data for this window.</p>
-            )}
-          </div>
-        ))}
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
       </div>
     </div>
   );

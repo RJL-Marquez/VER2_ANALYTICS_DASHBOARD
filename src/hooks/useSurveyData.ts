@@ -831,11 +831,7 @@ export function useSurveyData() {
               description: 'Standard satisfaction reporting for external courier and logistics contractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-<<<<<<< HEAD
               questions: contractorQuestions as any,
-=======
-              questions: contractorQuestions,
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
             },
             {
               id: 'default-supplier',
@@ -844,11 +840,7 @@ export function useSurveyData() {
               description: 'Product quality and commercial terms assessment for inventory suppliers.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-<<<<<<< HEAD
               questions: supplierQuestions as any,
-=======
-              questions: supplierQuestions,
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
             },
             {
               id: 'default-subcontractor',
@@ -857,11 +849,7 @@ export function useSurveyData() {
               description: 'On-site execution, compliance, and schedule feedback for active subcontractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-<<<<<<< HEAD
               questions: subcontractorQuestions as any,
-=======
-              questions: subcontractorQuestions,
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
             },
           ];
           localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(loadedSurveys));
@@ -985,7 +973,6 @@ export function useSurveyData() {
 
   // Update an existing survey form
   const updateSurvey = (updatedForm: CustomForm) => {
-<<<<<<< HEAD
     setSurveys((currentSurveys) => {
       const updated = currentSurveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
       localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updated));
@@ -1004,14 +991,6 @@ export function useSurveyData() {
     });
   };
 
-=======
-    const updatedSurveys = surveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
-    setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
-    return updatedForm;
-  };
-
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
   // Delete a survey form
   const deleteSurvey = (surveyId: string) => {
     const updatedSurveys = surveys.filter((s) => s.id !== surveyId);
@@ -1277,10 +1256,7 @@ export function useSurveyData() {
     markNotificationsRead,
     createSurvey,
     updateSurvey,
-<<<<<<< HEAD
     updateSurveysBulk,
-=======
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
     deleteSurvey,
     submitResponse,
     resetAllData,

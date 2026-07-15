@@ -24,10 +24,7 @@ export interface SurveyResponse {
   rating: Rating;
   comment: string;
   respondentEmail?: string;
-<<<<<<< HEAD
   archived?: boolean;
-=======
->>>>>>> 610b8683607a0519107a35b5350bf4eb1dc6c19f
 }
 
 export interface FilterState {
