@@ -54,6 +54,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
   const [comments, setComments] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [copyPreviousAnswers, setCopyPreviousAnswers] = useState(true);
 
   const activeSurvey = surveys.find((s) => s.id === selectedSurveyId);
 
@@ -83,6 +84,53 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
   const hasEvaluatedAll = useMemo(() => {
     return allCompaniesOfThisType.length > 0 && matchingCompanies.length === 0;
   }, [allCompaniesOfThisType, matchingCompanies]);
+
+  // This employee's most recent full submission for the currently selected survey
+  // type (regardless of which company it was for). Lets a new evaluation start
+  // from what they typically rate this survey type instead of always defaulting
+  // to the maximum score, so they only have to adjust what's actually different.
+  const lastSubmissionForType = useMemo(() => {
+    if (!activeSurvey) return null;
+    const mine = responses.filter(
+      (r) => r.respondentEmail === userEmail && r.surveyType === activeSurvey.surveyType
+    );
+    if (mine.length === 0) return null;
+
+    // Group by responseId so we compare whole submissions, then take the most recent one.
+    const byResponseId = new Map<string, typeof mine>();
+    mine.forEach((r) => {
+      const list = byResponseId.get(r.responseId) ?? [];
+      list.push(r);
+      byResponseId.set(r.responseId, list);
+    });
+
+    let latestId: string | null = null;
+    let latestDate = '';
+    byResponseId.forEach((rows, id) => {
+      const date = rows[0]?.submissionDate ?? '';
+      if (!latestId || date > latestDate) {
+        latestId = id;
+        latestDate = date;
+      }
+    });
+    if (!latestId) return null;
+
+    const rows = byResponseId.get(latestId)!;
+    const answers = new Map<string, Rating>();
+    rows.forEach((r) => answers.set(r.questionId, r.rating));
+
+    return {
+      company: rows[0]?.company ?? '',
+      submissionDate: latestDate,
+      answers,
+    };
+  }, [responses, userEmail, activeSurvey]);
+
+  // Reset the toggle to its default whenever a fresh previous submission becomes
+  // available for a newly selected survey type.
+  useEffect(() => {
+    setCopyPreviousAnswers(true);
+  }, [lastSubmissionForType?.company, lastSubmissionForType?.submissionDate]);
 
   // Sync company with selected survey type
   useEffect(() => {
@@ -125,6 +173,8 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     const initialComments: Record<string, string> = {};
     activeSurvey?.questions.forEach((q) => {
       const qMax = getQuestionMaxPoints(activeSurvey.surveyType, q.questionId);
+      const previousAnswer = copyPreviousAnswers ? lastSubmissionForType?.answers.get(q.questionId) : undefined;
+
       if (draftRatings[q.questionId] !== undefined) {
         initialRatings[q.questionId] = draftRatings[q.questionId];
       } else {
@@ -133,13 +183,26 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
         } else if (q.inputType === 'checkbox') {
           initialRatings[q.questionId] = [];
         } else if (q.inputType === 'matrix') {
-          initialRatings[q.questionId] = {};
+          // Copy each sub-question's previous rating individually, keyed the same
+          // way it's stored on submission: `${q.questionId}-${sub.id}`.
+          const subDefaults: Record<string, any> = {};
+          q.subQuestions?.forEach((sub) => {
+            const previousSubAnswer = copyPreviousAnswers
+              ? lastSubmissionForType?.answers.get(`${q.questionId}-${sub.id}`)
+              : undefined;
+            if (previousSubAnswer !== undefined) {
+              subDefaults[sub.id] = previousSubAnswer;
+            }
+          });
+          initialRatings[q.questionId] = subDefaults;
         } else if (q.inputType === 'date-range') {
           initialRatings[q.questionId] = { from: '', to: '' };
-        } else if (q.inputType === 'text' || q.inputType === 'select' || q.inputType === 'typed-rating') {
+        } else if (q.inputType === 'text' || q.inputType === 'select') {
           initialRatings[q.questionId] = '';
+        } else if (q.inputType === 'typed-rating') {
+          initialRatings[q.questionId] = previousAnswer !== undefined ? previousAnswer : '';
         } else {
-          initialRatings[q.questionId] = qMax; // default to maximum scale value
+          initialRatings[q.questionId] = previousAnswer !== undefined ? previousAnswer : qMax; // fall back to maximum scale value
         }
       }
 
@@ -236,6 +299,82 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
   const handleCommentChange = (qId: string, value: string) => {
     setComments((prev) => ({ ...prev, [qId]: value }));
+  };
+
+  // Moves focus to the next question card after a keyboard-driven rating action,
+  // so Tab/Enter can hop between questions without tabbing through every
+  // individual rating button.
+  const focusNextQuestion = (currentOrder: number) => {
+    requestAnimationFrame(() => {
+      const next = document.querySelector<HTMLElement>(`[data-question-order="${currentOrder + 1}"]`);
+      if (!next) return;
+      const focusable = next.querySelector<HTMLElement>('[tabindex="0"], input, select, textarea, button:not([tabindex="-1"])');
+      focusable?.focus();
+    });
+  };
+
+  // Keyboard shortcuts for the number-scale rating buttons: digit keys jump
+  // straight to that score, arrow keys step through the scale, and Enter moves
+  // on to the next question. Tab already moves to the next question on its own
+  // because only the currently-selected button in each group stays in the tab
+  // order (a "roving tabindex" - see the tabIndex logic where these buttons render).
+  const handleRatingKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    questionId: string,
+    order: number,
+    optionValues: Array<number | 'N/A'>,
+  ) => {
+    const focusOption = (value: number | 'N/A') => {
+      requestAnimationFrame(() => {
+        document.getElementById(`rating-btn-${questionId}-${value}`)?.focus();
+      });
+    };
+
+    if (/^[0-9]$/.test(e.key)) {
+      const digit = Number(e.key);
+      if (optionValues.includes(digit)) {
+        e.preventDefault();
+        handleRatingChange(questionId, digit);
+        focusOption(digit);
+      }
+      return;
+    }
+
+    if (e.key === 'n' || e.key === 'N') {
+      if (optionValues.includes('N/A')) {
+        e.preventDefault();
+        handleRatingChange(questionId, 'N/A');
+        focusOption('N/A');
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const current = ratings[questionId];
+      const currentIdx = optionValues.findIndex((v) => v.toString() === (current ?? '').toString());
+      const nextIdx = Math.min(optionValues.length - 1, (currentIdx === -1 ? -1 : currentIdx) + 1);
+      const nextVal = optionValues[nextIdx];
+      handleRatingChange(questionId, nextVal);
+      focusOption(nextVal);
+      return;
+    }
+
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = ratings[questionId];
+      const currentIdx = optionValues.findIndex((v) => v.toString() === (current ?? '').toString());
+      const prevIdx = Math.max(0, (currentIdx === -1 ? optionValues.length : currentIdx) - 1);
+      const prevVal = optionValues[prevIdx];
+      handleRatingChange(questionId, prevVal);
+      focusOption(prevVal);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      focusNextQuestion(order);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -583,6 +722,31 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                     </select>
                   </div>
                 )}
+
+                {lastSubmissionForType && (
+                  <label
+                    htmlFor="filler-copy-previous"
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#0063a9]/20 bg-[#0063a9]/5 p-4 text-sm dark:border-blue-900/40 dark:bg-blue-950/20"
+                  >
+                    <input
+                      id="filler-copy-previous"
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
+                      checked={copyPreviousAnswers}
+                      onChange={(e) => setCopyPreviousAnswers(e.target.checked)}
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-700 dark:text-slate-200">
+                        Start from my last evaluation's ratings
+                      </span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        We'll pre-fill this form with the ratings from your most recent {activeSurvey?.surveyType.toLowerCase()} evaluation
+                        ({lastSubmissionForType.company}, {new Date(lastSubmissionForType.submissionDate).toLocaleDateString()}) — just adjust
+                        whatever's different for this company instead of rating every question from scratch.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </>
             ) : (
               <div className="text-center py-6 text-slate-400 text-xs">
@@ -671,6 +835,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
                     <div
                       id={`q-container-${q.questionId}`}
+                      data-question-order={idx}
                       className={`panel p-5 space-y-4 shadow-sm hover:shadow-md transition duration-200 border-l-4 ${
                         validationErrors[q.questionId]
                           ? 'border-l-rose-500 bg-rose-50/10 ring-1 ring-rose-300 dark:border-l-rose-500 dark:bg-rose-950/5 dark:ring-rose-900/30'
@@ -875,56 +1040,75 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">Select Performance Rating:</span>
                           <div className="flex flex-wrap items-center gap-2">
-                            {Array.from({ length: maxVal + 1 }, (_, i) => i).map((r) => {
-                              const isSelected = currentRating === r;
-                              const ratio = maxVal > 0 ? r / maxVal : 1;
-                              
-                              let btnStyle = 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900';
-                              if (isSelected) {
-                                if (ratio <= 0.3) {
-                                  btnStyle = 'bg-rose-50 border-rose-500 text-rose-600 ring-2 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-900/30';
-                                } else if (ratio < 0.75) {
-                                  btnStyle = 'bg-amber-50 border-amber-500 text-amber-600 ring-2 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900/30';
-                                } else {
-                                  btnStyle = 'bg-emerald-50 border-emerald-500 text-emerald-600 ring-2 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900/30';
+                            {(() => {
+                              // Options in scale order (used for arrow-key stepping and the
+                              // roving tabIndex below, so Tab exits the group in one hop).
+                              const optionValues: Array<number | 'N/A'> = [
+                                ...Array.from({ length: maxVal + 1 }, (_, i) => i),
+                                'N/A',
+                              ];
+
+                              return Array.from({ length: maxVal + 1 }, (_, i) => i).map((r) => {
+                                const isSelected = currentRating === r;
+                                const ratio = maxVal > 0 ? r / maxVal : 1;
+
+                                let btnStyle = 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900';
+                                if (isSelected) {
+                                  if (ratio <= 0.3) {
+                                    btnStyle = 'bg-rose-50 border-rose-500 text-rose-600 ring-2 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-900/30';
+                                  } else if (ratio < 0.75) {
+                                    btnStyle = 'bg-amber-50 border-amber-500 text-amber-600 ring-2 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900/30';
+                                  } else {
+                                    btnStyle = 'bg-emerald-50 border-emerald-500 text-emerald-600 ring-2 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900/30';
+                                  }
                                 }
-                              }
 
-                              let label = '';
-                              if (r === 0) label = 'Poor';
-                              else if (r === maxVal) label = 'Excellent';
-                              else if (r === Math.round(maxVal / 2)) label = 'Fair';
+                                let label = '';
+                                if (r === 0) label = 'Poor';
+                                else if (r === maxVal) label = 'Excellent';
+                                else if (r === Math.round(maxVal / 2)) label = 'Fair';
 
-                              return (
+                                return (
+                                  <button
+                                    key={r}
+                                    id={`rating-btn-${q.questionId}-${r}`}
+                                    type="button"
+                                    tabIndex={isSelected ? 0 : -1}
+                                    onClick={() => handleRatingChange(q.questionId, r)}
+                                    onKeyDown={(e) => handleRatingKeyDown(e, q.questionId, idx, optionValues)}
+                                    className={`flex-1 min-w-[42px] h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${btnStyle}`}
+                                  >
+                                    <span className="text-base leading-none">{r}</span>
+                                    {label && (
+                                      <span className="text-[8px] font-semibold mt-0.5 tracking-tight uppercase opacity-70">
+                                        {label}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              }).concat(
                                 <button
-                                  key={r}
+                                  key="na"
+                                  id={`rating-btn-${q.questionId}-N/A`}
                                   type="button"
-                                  onClick={() => handleRatingChange(q.questionId, r)}
-                                  className={`flex-1 min-w-[42px] h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${btnStyle}`}
+                                  tabIndex={currentRating === 'N/A' ? 0 : -1}
+                                  onClick={() => handleRatingChange(q.questionId, 'N/A')}
+                                  onKeyDown={(e) => handleRatingKeyDown(e, q.questionId, idx, optionValues)}
+                                  className={`min-w-16 h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${
+                                    currentRating === 'N/A'
+                                      ? 'bg-slate-100 border-slate-400 text-slate-700 ring-2 ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300'
+                                      : 'border-slate-200 text-slate-400 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900'
+                                  }`}
                                 >
-                                  <span className="text-base leading-none">{r}</span>
-                                  {label && (
-                                    <span className="text-[8px] font-semibold mt-0.5 tracking-tight uppercase opacity-70">
-                                      {label}
-                                    </span>
-                                  )}
+                                  <span className="text-sm leading-none">N/A</span>
+                                  <span className="text-[8px] font-semibold mt-0.5 uppercase tracking-tight opacity-70">Not App</span>
                                 </button>
                               );
-                            })}
-
-                            <button
-                              type="button"
-                              onClick={() => handleRatingChange(q.questionId, 'N/A')}
-                              className={`min-w-16 h-11 rounded-lg border text-sm font-bold flex flex-col items-center justify-center transition duration-150 cursor-pointer ${
-                                currentRating === 'N/A'
-                                  ? 'bg-slate-100 border-slate-400 text-slate-700 ring-2 ring-slate-200 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300'
-                                  : 'border-slate-200 text-slate-400 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900'
-                              }`}
-                            >
-                              <span className="text-sm leading-none">N/A</span>
-                              <span className="text-[8px] font-semibold mt-0.5 uppercase tracking-tight opacity-70">Not App</span>
-                            </button>
+                            })()}
                           </div>
+                          <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">
+                            Tip: with a rating focused, press 0–{maxVal} or the arrow keys to change it, then Enter to jump to the next question.
+                          </p>
                         </div>
                       )}
                     </div>
