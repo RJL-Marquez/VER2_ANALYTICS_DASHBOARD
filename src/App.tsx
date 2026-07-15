@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
@@ -12,7 +12,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SurveyExplorerPage } from './pages/SurveyExplorerPage';
 import { CreateSurveyPage } from './pages/CreateSurveyPage';
 import { SurveyDetailsPage } from './pages/SurveyDetailsPage';
-import { SurveyFillerPage } from './pages/SurveyFillerPage';
+import { SurveyFillerPage, SurveyFillerHandle } from './pages/SurveyFillerPage';
 import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
 import { SurveyFormsPage } from './pages/SurveyFormsPage';
 import { PresentPage } from './pages/PresentPage';
@@ -113,6 +113,20 @@ export default function App() {
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
+  const surveyFillerRef = useRef<SurveyFillerHandle>(null);
+
+  // Any navigation away from the survey-filling page (sidebar Home logo, a
+  // top-level nav item, or picking a different survey from the sidebar
+  // dropdown) should go through this, so an in-progress evaluation can warn
+  // the respondent and offer to save a draft instead of silently discarding
+  // their answers.
+  const navigateFrom = (targetPage: PageKey, run: () => void) => {
+    if (activePage === 'fill-form' && targetPage !== 'fill-form' && surveyFillerRef.current) {
+      surveyFillerRef.current.attemptExit(run);
+    } else {
+      run();
+    }
+  };
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
@@ -272,6 +286,7 @@ export default function App() {
     })(),
     'fill-form': (
       <SurveyFillerPage
+        ref={surveyFillerRef}
         surveys={surveys}
         partnerCompanies={partnerCompanies}
         initialSurveyId={selectedSurveyId}
@@ -296,8 +311,10 @@ export default function App() {
             <button
               key={survey.id}
               onClick={() => {
-                setSelectedSurveyId(survey.id);
-                setActivePage('view-form');
+                navigateFrom('view-form', () => {
+                  setSelectedSurveyId(survey.id);
+                  setActivePage('view-form');
+                });
               }}
               className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition ${
                 isViewing
@@ -319,7 +336,7 @@ export default function App() {
 
         {isAdmin && (
           <button
-            onClick={() => setActivePage('create-form')}
+            onClick={() => navigateFrom('create-form', () => setActivePage('create-form'))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition cursor-pointer"
             type="button"
             id="btn-sidebar-create"
@@ -338,8 +355,11 @@ export default function App() {
         pages={visiblePages}
         activePage={activePage as any}
         onPageChange={(page) => {
-          setActivePage(page as any);
-          if (page === 'notifications') markNotificationsRead();
+          const targetPage = page as PageKey;
+          navigateFrom(targetPage, () => {
+            setActivePage(targetPage);
+            if (targetPage === 'notifications') markNotificationsRead();
+          });
         }}
         title={activeTitle}
         renderDropdown={renderSidebarDropdown}

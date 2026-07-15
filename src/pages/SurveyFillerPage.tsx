@@ -1,8 +1,24 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { CheckCircle, Info, Shield, ArrowRight, ClipboardCopy, Send, UserCheck, ArrowLeft } from 'lucide-react';
 import { CustomForm, Rating, PartnerCompany } from '../types/survey';
 import { isValidDDMMYYYY } from '../utils/time';
 import { getQuestionMaxPoints } from '../data/questionWeights';
+
+// Exposed to parent components (via ref) so that navigation triggered from
+// OUTSIDE this page — e.g. clicking the sidebar Home logo or another nav
+// item while the respondent is in the middle of the Questions Form — can be
+// intercepted and routed through the same "Save Progress Draft?" warning
+// used internally, instead of silently discarding in-progress answers.
+export interface SurveyFillerHandle {
+  /**
+   * Ask the survey filler whether it's safe to navigate away right now.
+   * If the respondent is mid-survey (step 2), this shows the draft-save
+   * warning and only calls `onAllowed` once the respondent resolves it
+   * (Save Draft & Exit / Exit Without Saving). If there's nothing at risk
+   * (step 1 or 3), `onAllowed` is invoked immediately.
+   */
+  attemptExit: (onAllowed: () => void) => void;
+}
 
 interface SurveyFillerPageProps {
   surveys: CustomForm[];
@@ -37,10 +53,23 @@ const RESPONDENT_TYPES = [
   'Executive'
 ];
 
-export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurveyId, userEmail, responses, onSubmitted, onCancel }: SurveyFillerPageProps) {
+export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageProps>(function SurveyFillerPage(
+  { surveys, partnerCompanies = [], initialSurveyId, userEmail, responses, onSubmitted, onCancel },
+  ref
+) {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>(initialSurveyId || (surveys[0]?.id ?? ''));
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Info, 2: Questions, 3: Success
   const [showDraftModal, setShowDraftModal] = useState(false);
+  // True once the respondent has entered the Questions Form at least once for
+  // this session. Lets us tell apart the *first* transition into step 2
+  // (where answers should be freshly initialized from any saved draft) from
+  // a *later* transition via the "Return" button (where in-progress answers
+  // already sitting in state must be preserved, not overwritten).
+  const [hasStartedForm, setHasStartedForm] = useState(false);
+  // Holds the navigation callback to run once the respondent resolves the
+  // "Save Progress Draft?" warning, when that warning was triggered by
+  // navigation initiated OUTSIDE this component (e.g. sidebar Home click).
+  const pendingExitRef = useRef<(() => void) | null>(null);
 
   // Respondent metadata
   const [company, setCompany] = useState('');
@@ -141,6 +170,19 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     }
   }, [matchingCompanies]);
 
+  useImperativeHandle(ref, () => ({
+    attemptExit: (onAllowed: () => void) => {
+      if (step === 2) {
+        // Mid-survey: don't let external navigation (Home, sidebar, etc.)
+        // silently wipe in-progress answers — surface the same draft warning.
+        pendingExitRef.current = onAllowed;
+        setShowDraftModal(true);
+      } else {
+        onAllowed();
+      }
+    },
+  }), [step]);
+
   const handleStartForm = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -152,6 +194,20 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
 
     if (!selectedSurveyId) {
       setError('Please select a survey form to respond to.');
+      return;
+    }
+
+    if (hasStartedForm) {
+      // Respondent already started the Questions Form and used "Return" to
+      // revisit Respondent Info — keep their in-progress ratings/comments
+      // exactly as they are instead of re-initializing from the draft or
+      // defaults. Only sync the Period Covered value, in case it was
+      // changed while back on this step.
+      const periodQuestion = activeSurvey?.questions.find((q) => q.question === 'Period Covered');
+      if (periodQuestion) {
+        setRatings((prev) => ({ ...prev, [periodQuestion.questionId]: periodCovered }));
+      }
+      setStep(2);
       return;
     }
 
@@ -215,12 +271,29 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     setRatings(initialRatings);
     setComments(initialComments);
     setValidationErrors({});
+    setHasStartedForm(true);
 
     setStep(2);
   };
 
+  // Resolves the "Save Progress Draft?" warning, whether it was triggered by
+  // an in-form action or by navigation attempted from outside this page.
+  const finishExit = () => {
+    setShowDraftModal(false);
+    const pendingExit = pendingExitRef.current;
+    pendingExitRef.current = null;
+    if (pendingExit) {
+      pendingExit();
+    } else if (onCancel) {
+      onCancel();
+    }
+  };
+
   const handleSaveDraft = () => {
-    if (!selectedSurveyId || !company) return;
+    if (!selectedSurveyId || !company) {
+      finishExit();
+      return;
+    }
     const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company}`;
     const draftData = {
       ratings,
@@ -231,8 +304,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       address,
     };
     localStorage.setItem(draftKey, JSON.stringify(draftData));
-    setShowDraftModal(false);
-    if (onCancel) onCancel();
+    finishExit();
   };
 
   const handleExitWithoutSaving = () => {
@@ -240,8 +312,14 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       const draftKey = `survey_analytics_draft_${selectedSurveyId}_${company}`;
       localStorage.removeItem(draftKey);
     }
+    finishExit();
+  };
+
+  const handleCancelDraftModal = () => {
+    // Respondent chose to stay on the form — cancel any pending external
+    // navigation instead of letting it fire later.
+    pendingExitRef.current = null;
     setShowDraftModal(false);
-    if (onCancel) onCancel();
   };
 
   const handleRatingChange = (qId: string, value: any) => {
@@ -535,6 +613,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
     setComments({});
     setValidationErrors({});
     setError('');
+    setHasStartedForm(false);
     setStep(1);
   };
 
@@ -1129,14 +1208,6 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                 <ArrowLeft size={14} />
                 <span>Return</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setShowDraftModal(true)}
-                className="secondary-button text-xs py-2 px-3 hover:text-rose-600 hover:bg-rose-50/50 dark:hover:text-rose-400 dark:hover:bg-rose-950/10"
-              >
-                Back to Form Management
-              </button>
             </div>
             
             <button
@@ -1211,13 +1282,13 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                 <h3 className="text-lg font-bold text-slate-950 dark:text-white">Save Progress Draft?</h3>
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                You are returning to Form Management. Would you like to save your completed answers as a draft so you can resume later, or exit without saving?
+                You're about to leave this survey before submitting it. Would you like to save your completed answers as a draft so you can resume later, or exit without saving?
               </p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-950/60 px-6 py-4 flex flex-col sm:flex-row gap-2 sm:justify-end border-t border-slate-100 dark:border-slate-800/50">
               <button
                 type="button"
-                onClick={() => setShowDraftModal(false)}
+                onClick={handleCancelDraftModal}
                 className="secondary-button order-last sm:order-none text-xs py-2"
               >
                 Cancel
@@ -1242,4 +1313,4 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
       )}
     </div>
   );
-}
+});
