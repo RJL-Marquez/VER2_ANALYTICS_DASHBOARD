@@ -48,8 +48,19 @@ function seededRandom(seed: number) {
 // Generates an integer rating between min and max (inclusive) that is biased
 // towards the higher end of the range, so 0/low scores are uncommon while
 // still possible, and top scores are the most likely outcome.
+//
+// Power is tuned (not just "some skew") against the real scoring bands in
+// questionWeights.ts: a composite score is the average of ~12-16 of these
+// weighted picks, so per-question variance mostly cancels out. A mild skew
+// (e.g. power 3) averages out to ~75% of max - which sounds fine in
+// isolation, but Courier/Supplier require 80%+ just to avoid the
+// "Unsatisfactory" band, so every company still landed in the red zone.
+// Power 8 centers composites around ~90%, so most companies land in
+// Good/Satisfactory/Excellent (or Top/Good Performer for Subcontractor,
+// whose bands are lower to begin with), while a small tail still dips into
+// Unsatisfactory - matching how a real partner scorecard should look.
 function weightedRating(rand: number, min: number, max: number): number {
-  const skewed = 1 - Math.pow(1 - rand, 3);
+  const skewed = 1 - Math.pow(1 - rand, 8);
   const value = Math.floor(min + skewed * (max - min + 1));
   return Math.min(value, max);
 }
