@@ -160,7 +160,7 @@ export function generateMockResponses(
             let rating: Rating = 'N/A';
             let comment = '';
 
-            const max = q.validationRange?.max ?? 4;
+            const max = q.validationRange?.max ?? 100;
             const min = q.validationRange?.min ?? 0;
 
             if (q.question === 'Period Covered' || q.inputType === 'select') {
@@ -272,7 +272,7 @@ export function generateAllMockResponses(
           } else {
             let rating: Rating = 'N/A';
             let comment = '';
-            const max = q.validationRange?.max ?? 4;
+            const max = q.validationRange?.max ?? 100;
             const min = q.validationRange?.min ?? 0;
 
             if (q.question === 'Period Covered' || q.inputType === 'select') {
@@ -388,7 +388,7 @@ export function generateSingleMockResponse(
     } else {
       let rating: Rating = 'N/A';
       let comment = '';
-      const max = q.validationRange?.max ?? 4;
+      const max = q.validationRange?.max ?? 100;
       const min = q.validationRange?.min ?? 0;
 
       if (q.question === 'Period Covered' || q.inputType === 'select') {

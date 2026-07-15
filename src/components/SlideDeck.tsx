@@ -879,7 +879,7 @@ function TrendsSlide({ slide }: { slide: Extract<Slide, { kind: 'trends' }> }) {
 }
 
 function QuestionsSlide({ slide }: { slide: Extract<Slide, { kind: 'questions' }> }) {
-  const maxValStr = (slide.maxRating ?? 4).toFixed(2);
+  const maxValStr = (slide.maxRating ?? 100).toFixed(2);
   return (
     <div className="flex h-full w-full flex-col bg-white px-8 py-8 sm:px-14 sm:py-10">
       <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#0063a9]">Category</p>

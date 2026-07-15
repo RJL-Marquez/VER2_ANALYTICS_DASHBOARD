@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { ArrowLeft, ExternalLink, Trash, Calendar, CalendarClock, Users, ClipboardCheck, MessageSquare, AlertTriangle, Eye, Pencil, Building2, Check } from 'lucide-react';
 import { CustomForm, SurveyResponse, PartnerCompany } from '../types/survey';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
+import { formatNumber, scoredResponses, submissionScores } from '../utils/analytics';
+import { isScoredQuestion } from '../data/questionWeights';
 
 interface SurveyDetailsPageProps {
   survey: CustomForm;
@@ -43,7 +45,11 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
   const surveyResponses = useMemo(() => {
     // A response belongs to this survey if it matches the survey's type and its question IDs
     const surveyQuestionIds = new Set(survey.questions.map((q) => q.questionId));
-    return responses.filter((r) => r.surveyType === survey.surveyType && surveyQuestionIds.has(r.questionId));
+    return responses.filter((r) => {
+      if (r.surveyType !== survey.surveyType) return false;
+      if (surveyQuestionIds.has(r.questionId)) return true;
+      return [...surveyQuestionIds].some((questionId) => r.questionId.startsWith(`${questionId}-`));
+    });
   }, [responses, survey]);
 
   // Group responses by submission (responseId)
@@ -76,22 +82,15 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
 
   // Calculate stats
   const stats = useMemo(() => {
-    const validRatings = surveyResponses.filter((r) => r.rating !== 'N/A');
-    const currentMaxRating = survey.maxRating ?? 4;
-    if (validRatings.length === 0) {
-      return { total: 0, avg: 0, percentage: 0 };
-    }
-
-    const sum = validRatings.reduce((acc, r) => acc + (r.rating as number), 0);
-    const avg = sum / validRatings.length;
-    const percentage = (avg / currentMaxRating) * 100; // Rating is scaled dynamically
+    const scores = submissionScores(surveyResponses);
+    const avg = scores.length ? scores.reduce((sum, item) => sum + item.score, 0) / scores.length : 0;
 
     return {
       total: submissions.length,
-      avg: parseFloat(avg.toFixed(2)),
-      percentage: Math.round(percentage),
+      avg: Number(avg.toFixed(2)),
+      percentage: Math.round(avg),
     };
-  }, [surveyResponses, submissions, survey.maxRating]);
+  }, [surveyResponses, submissions]);
 
   const activeSubmissionDetail = useMemo(() => {
     if (!selectedSubmissionId) return null;
@@ -248,7 +247,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
 
               <div className="rounded-lg bg-slate-50 p-4 text-center dark:bg-slate-900/50">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average Rating</p>
-                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{stats.avg} <span className="text-xs text-slate-400">/ {survey.maxRating ?? 4}</span></p>
+                <p className="text-3xl font-bold text-[#0063a9] dark:text-blue-300 mt-1">{formatNumber(stats.avg, 2)} <span className="text-xs text-slate-400">/ 100</span></p>
               </div>
             </div>
 
@@ -317,8 +316,9 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {submissions.map((sub) => {
                   const validAnswers = sub.answers.filter((a) => a.rating !== 'N/A');
-                  const sum = validAnswers.reduce((acc, a) => acc + (a.rating as number), 0);
-                  const score = validAnswers.length > 0 ? (sum / validAnswers.length).toFixed(1) : 'N/A';
+                  const scoredAnswerCount = scoredResponses(sub.answers).length;
+                  const submissionScore = submissionScores(sub.answers)[0]?.score;
+                  const score = scoredAnswerCount > 0 && submissionScore !== undefined ? formatNumber(submissionScore, 2) : 'N/A';
 
                   return (
                     <tr key={sub.responseId} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition">
@@ -328,7 +328,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                       <td className="px-4 py-3">{new Date(sub.submissionDate).toLocaleString()}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
-                          {score} / {survey.maxRating ?? 4}
+                          {score} / 100
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -436,13 +436,16 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
             <div className="mt-5 space-y-4">
               <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-2">Detailed Questions Feedback</h4>
               
-              {activeSubmissionDetail.answers.map((ans, idx) => (
+              {activeSubmissionDetail.answers.map((ans, idx) => {
+                const isScored = isScoredQuestion(ans.surveyType, ans.questionId);
+                return (
                 <div key={ans.questionId} className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/50 dark:border-slate-800/80 dark:bg-slate-900/20 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                       <span className="text-slate-400 font-bold mr-1">{idx + 1}.</span>
                       {ans.question}
                     </p>
+                    {isScored ? (
                     <span className={`inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md font-bold text-xs ${
                       ans.rating === 'N/A' 
                         ? 'bg-slate-100 text-slate-500 dark:bg-slate-800'
@@ -454,6 +457,11 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                     }`}>
                       {ans.rating === 'N/A' ? 'N/A' : `Score: ${ans.rating}`}
                     </span>
+                    ) : (
+                    <span className="inline-flex shrink-0 items-center justify-center h-7 px-2 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 font-bold text-xs">
+                      Text
+                    </span>
+                    )}
                   </div>
 
                   {ans.comment && (
@@ -463,7 +471,8 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
                     </div>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             <div className="flex items-center justify-end border-t border-slate-100 pt-4 mt-6 dark:border-slate-800">

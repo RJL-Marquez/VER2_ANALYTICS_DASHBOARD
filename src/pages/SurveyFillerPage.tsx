@@ -281,7 +281,7 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
         } else {
           const num = Number(valStr);
           const min = q.validationRange?.min ?? 0;
-          const max = q.validationRange?.max ?? 5;
+          const max = q.validationRange?.max ?? 100;
           if (isNaN(num) || !Number.isInteger(num) || num < min || num > max) {
             errors[q.questionId] = `Invalid input. Must be "N/A" or a whole number between ${min} and ${max}.`;
           }
@@ -846,11 +846,11 @@ export function SurveyFillerPage({ surveys, partnerCompanies = [], initialSurvey
                       ) : q.inputType === 'typed-rating' ? (
                         <div>
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                            Type Rating (Value: {q.validationRange ? `${q.validationRange.min}-${q.validationRange.max}` : '0-5'} or "N/A"): <span className="text-rose-500 font-bold">*</span>
+                            Type Rating (Value: {q.validationRange ? `${q.validationRange.min}-${q.validationRange.max}` : '0-100'} or "N/A"): <span className="text-rose-500 font-bold">*</span>
                           </span>
                           <input
                             type="text"
-                            placeholder={`Enter N/A or number from ${q.validationRange?.min || 0} to ${q.validationRange?.max || 5}`}
+                            placeholder={`Enter N/A or number from ${q.validationRange?.min || 0} to ${q.validationRange?.max || 100}`}
                             className={`field w-full max-w-sm ${validationErrors[q.questionId] ? 'border-rose-400 focus:ring-rose-200' : ''}`}
                             value={ratings[q.questionId] !== undefined ? ratings[q.questionId].toString() : ''}
                             onChange={(e) => {

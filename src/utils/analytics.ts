@@ -1,5 +1,5 @@
 import { FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../types/survey';
-import { getQuestionMaxPoints } from '../data/questionWeights';
+import { getQuestionMaxPoints, isScoredQuestion } from '../data/questionWeights';
 
 const SURVEY_TOTAL_POINTS: Record<SurveyType, number> = {
   Contractor: 100,
@@ -137,6 +137,14 @@ export function submissionScores(responses: SurveyResponse[]) {
   }));
 }
 
+export function submissionCount(responses: SurveyResponse[]) {
+  return new Set(responses.map(getSubmissionKey)).size;
+}
+
+export function scoredResponses(responses: SurveyResponse[]) {
+  return responses.filter((response) => isScoredQuestion(response.surveyType, response.questionId));
+}
+
 function averageByQuestion(responses: SurveyResponse[]) {
   const groups = new Map<string, SurveyResponse[]>();
   responses.forEach((response) => {
@@ -145,7 +153,12 @@ function averageByQuestion(responses: SurveyResponse[]) {
 
   return [...groups.entries()]
     .map(([question, questionResponses]) => {
-      const validRatings = questionResponses
+      const scoredQuestionResponses = scoredResponses(questionResponses);
+      if (scoredQuestionResponses.length === 0) {
+        return null;
+      }
+
+      const validRatings = scoredQuestionResponses
         .map((r) => numericRating(r.rating))
         .filter((rating): rating is number => rating !== null);
 
@@ -154,13 +167,13 @@ function averageByQuestion(responses: SurveyResponse[]) {
       }
 
       const average = validRatings.reduce((sum, rating) => sum + rating, 0) / validRatings.length;
-      const surveyType = questionResponses[0]?.surveyType ?? 'Contractor';
-      const maxPoints = getQuestionMaxPoints(surveyType, questionResponses[0]?.questionId ?? '');
+      const surveyType = scoredQuestionResponses[0]?.surveyType ?? 'Contractor';
+      const maxPoints = getQuestionMaxPoints(surveyType, scoredQuestionResponses[0]?.questionId ?? '');
 
       return {
         question,
         average: maxPoints > 0 ? (average / maxPoints) * 100 : 0,
-        responses: questionResponses.length,
+        responses: scoredQuestionResponses.length,
       };
     })
     .filter((q): q is NonNullable<typeof q> => q !== null);
@@ -171,18 +184,19 @@ export function getMaxRatingForResponses(responses: SurveyResponse[]): number {
 }
 
 export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
-  const questionAverages = averageByQuestion(responses).filter((item) => item.responses > 0);
+  const scored = scoredResponses(responses);
+  const questionAverages = averageByQuestion(scored).filter((item) => item.responses > 0);
   const sorted = [...questionAverages].sort((left, right) => right.average - left.average);
-  const naCount = responses.filter((response) => response.rating === 'N/A').length;
-  const average = averageRating(responses);
+  const naCount = scored.filter((response) => response.rating === 'N/A').length;
+  const average = averageRating(scored);
 
   const satScore = average;
 
   return {
     overallSatisfactionScore: satScore,
-    totalResponses: responses.length,
+    totalResponses: submissionCount(responses),
     averageRating: average,
-    naPercentage: responses.length ? (naCount / responses.length) * 100 : 0,
+    naPercentage: scored.length ? (naCount / scored.length) * 100 : 0,
     highestRatedQuestion: sorted[0]?.question ?? 'No responses',
     lowestRatedQuestion: sorted[sorted.length - 1]?.question ?? 'No responses',
     maxRating: 100,
@@ -218,7 +232,7 @@ export function averageBySurveyType(responses: SurveyResponse[], types: SurveyTy
   return types.map((surveyType) => ({
     surveyType,
     average: Number(formatNumber(averageRating(responses.filter((response) => response.surveyType === surveyType)))),
-    responses: responses.filter((response) => response.surveyType === surveyType).length,
+    responses: submissionCount(responses.filter((response) => response.surveyType === surveyType)),
   }));
 }
 
@@ -251,7 +265,7 @@ export function questionPerformance(responses: SurveyResponse[]) {
 export function responseVolume(responses: SurveyResponse[], types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']) {
   return types.map((surveyType) => ({
     surveyType,
-    responses: responses.filter((response) => response.surveyType === surveyType).length,
+    responses: submissionCount(responses.filter((response) => response.surveyType === surveyType)),
   }));
 }
 
@@ -266,7 +280,7 @@ export function categoryPerformance(responses: SurveyResponse[]) {
       category,
       average: Number(formatNumber(averageByQuestion(categoryResponses).reduce((sum, item) => sum + item.average, 0) / Math.max(averageByQuestion(categoryResponses).length, 1))),
       responses: categoryResponses.length,
-      naCount: categoryResponses.filter((response) => response.rating === 'N/A').length,
+      naCount: scoredResponses(categoryResponses).filter((response) => response.rating === 'N/A').length,
     }))
     .sort((left, right) => right.average - left.average);
 }
@@ -279,7 +293,6 @@ export function naFrequency(responses: SurveyResponse[]) {
 
   return [...groups.entries()].map(([category, categoryResponses]) => ({
     category,
-    count: categoryResponses.filter((response) => response.rating === 'N/A').length,
+    count: scoredResponses(categoryResponses).filter((response) => response.rating === 'N/A').length,
   }));
 }
-

@@ -182,5 +182,10 @@ export function getQuestionMaxPoints(surveyType: SurveyType, questionId: string)
   const canonicalId = getCanonicalQuestionId(questionId);
   const weight = questionWeights[surveyType]?.find((w) => w.questionId === canonicalId);
   if (weight) return weight.maxPoints;
-  return 4; // default fallback if not found
+  return 100; // default fallback if not found
+}
+
+export function isScoredQuestion(surveyType: SurveyType, questionId: string): boolean {
+  const canonicalId = getCanonicalQuestionId(questionId);
+  return questionWeights[surveyType]?.some((w) => w.questionId === canonicalId) ?? false;
 }

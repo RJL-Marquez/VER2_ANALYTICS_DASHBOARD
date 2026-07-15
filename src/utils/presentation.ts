@@ -216,7 +216,7 @@ function generateTakeaways(
 ): string[] {
   const takeaways: string[] = [];
   const summary = getKpiSummary(responses);
-  const maxVal = summary.maxRating ?? 4;
+  const maxVal = summary.maxRating ?? 100;
   const maxValStr = maxVal.toFixed(2);
 
   if (topPerformers.top) {
@@ -299,7 +299,7 @@ export function buildSlides(options: BuildSlidesOptions): Slide[] {
   });
 
   // 3. Overview (always included, highlights top performers)
-  const maxVal = summary.maxRating ?? 4;
+  const maxVal = summary.maxRating ?? 100;
   const maxValStr = maxVal.toFixed(2);
 
   const kpis: KpiStat[] = [

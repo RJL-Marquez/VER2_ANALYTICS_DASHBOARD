@@ -48,7 +48,7 @@ function getMaxRatingForResponse(questionId: string): number {
       }
     }
   } catch (e) {}
-  return 4; // fallback
+  return 100; // fallback
 }
 
 /**

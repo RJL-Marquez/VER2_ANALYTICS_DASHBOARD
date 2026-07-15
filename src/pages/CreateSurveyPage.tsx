@@ -33,7 +33,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
   const [title, setTitle] = useState(surveyToEdit ? surveyToEdit.title : '');
   const [surveyType, setSurveyType] = useState<SurveyType>(surveyToEdit ? surveyToEdit.surveyType : 'Contractor');
   const [description, setDescription] = useState(surveyToEdit ? surveyToEdit.description : '');
-  const [maxRating, setMaxRating] = useState(surveyToEdit ? (surveyToEdit.maxRating ?? 4) : 4);
+  const [maxRating, setMaxRating] = useState(surveyToEdit ? (surveyToEdit.maxRating ?? 100) : 100);
   const [deadlineDate, setDeadlineDate] = useState(surveyToEdit ? (surveyToEdit.deadlineDate ?? '') : '');
   const [deadlineError, setDeadlineError] = useState('');
   const [questions, setQuestions] = useState<QuestionInput[]>(

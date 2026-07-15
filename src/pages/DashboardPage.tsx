@@ -173,11 +173,6 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
   const trend = monthlyTrend(responses);
   const questions = questionPerformance(responses);
 
-  // Compute precise top and bottom rated scores directly
-  const sortedQuestions = [...questions].sort((left, right) => right.average - left.average);
-  const highestScore = sortedQuestions[0]?.average ?? 4.0;
-  const lowestScore = sortedQuestions[sortedQuestions.length - 1]?.average ?? 0.0;
-
   const portfolioMaxRating = useMemo(() => {
     return getMaxRatingForResponses(allResponses);
   }, [allResponses]);
@@ -374,7 +369,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               {topContractor ? (
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topContractor.name}</h4>
-                  <p className="text-xs text-slate-400 mt-1">Based on {topContractor.count} evaluation answers</p>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topContractor.count} submitted evaluations</p>
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
@@ -405,7 +400,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               {topSupplier ? (
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSupplier.name}</h4>
-                  <p className="text-xs text-slate-400 mt-1">Based on {topSupplier.count} evaluation answers</p>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSupplier.count} submitted evaluations</p>
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
@@ -436,7 +431,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
               {topSubcontractor ? (
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSubcontractor.name}</h4>
-                  <p className="text-xs text-slate-400 mt-1">Based on {topSubcontractor.count} evaluation answers</p>
+                  <p className="text-xs text-slate-400 mt-1">Based on {topSubcontractor.count} submitted evaluations</p>
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">No evaluations submitted yet.</p>
@@ -459,7 +454,7 @@ export function DashboardPage({ responses, allResponses = [], partnerCompanies =
         <StatCard
           label="Total Responses"
           value={String(summary.totalResponses)}
-          detail="Consolidated response records extracted directly from Microsoft Forms platforms."
+          detail="Submitted evaluations extracted directly from Microsoft Forms platforms."
           icon={ClipboardList}
         />
         <StatCard

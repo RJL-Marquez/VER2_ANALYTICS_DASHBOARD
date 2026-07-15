@@ -71,7 +71,7 @@ export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
       <section className="grid gap-4 md:grid-cols-3">
         <ReportCard
           title="Summary Report"
-          detail={`${responses.length} responses, ${formatNumber(summary.averageRating)} average rating`}
+          detail={`${summary.totalResponses} submitted evaluations, ${formatNumber(summary.averageRating)} average rating`}
           icon={FileBarChart}
           isAdmin={isAdmin}
           onExport={(format) => handleCardExport(format, 'summary')}
