@@ -1105,7 +1105,6 @@ export function useSurveyData() {
         setUnreadCount((count) => count + 1);
       }
     }
-    window.location.reload();
   };
 
   const toggleFullDataset = (enable: boolean) => {

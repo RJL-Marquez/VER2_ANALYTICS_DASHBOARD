@@ -45,6 +45,18 @@ function seededRandom(seed: number) {
   return value - Math.floor(value);
 }
 
+// Generates an integer rating between min and max (inclusive) that is biased
+// towards the higher end of the range, so 0/low scores are uncommon while
+// still possible, and top scores are the most likely outcome.
+function weightedRating(rand: number, min: number, max: number): number {
+  const skewed = 1 - Math.pow(1 - rand, 3);
+  const value = Math.floor(min + skewed * (max - min + 1));
+  return Math.min(value, max);
+}
+
+// Standard chance of an answer coming back N/A for scored questions.
+const NA_CHANCE = 0.02;
+
 function pick<T>(items: T[], seed: number): T {
   return items[Math.floor(seededRandom(seed) * items.length)];
 }
@@ -134,9 +146,9 @@ export function generateMockResponses(
               const max = sub.validationRange?.max ?? 2;
               const min = sub.validationRange?.min ?? 0;
               
-              // 10% chance of N/A, otherwise weighted high score
-              const isNa = seededRandom(subSeed) < 0.10 && (sub.validationRange?.allowNa ?? true);
-              const rating: Rating = isNa ? 'N/A' : Math.floor(min + seededRandom(subSeed + 2) * (max - min + 1));
+              // Small chance of N/A, otherwise weighted towards high scores
+              const isNa = seededRandom(subSeed) < NA_CHANCE && (sub.validationRange?.allowNa ?? true);
+              const rating: Rating = isNa ? 'N/A' : weightedRating(seededRandom(subSeed + 2), min, max);
               const comment = generateCommentForRating(rating, max || 2, subSeed + 3);
 
               rows.push({
@@ -184,13 +196,13 @@ export function generateMockResponses(
               comment = pick(positiveComments.concat(neutralComments), qSeed);
               rating = 'N/A';
             } else if (q.inputType === 'typed-rating') {
-              const isNa = seededRandom(qSeed) < 0.08 && (q.validationRange?.allowNa ?? true);
-              rating = isNa ? 'N/A' : Math.floor(min + seededRandom(qSeed + 4) * (max - min + 1));
+              const isNa = seededRandom(qSeed) < NA_CHANCE && (q.validationRange?.allowNa ?? true);
+              rating = isNa ? 'N/A' : weightedRating(seededRandom(qSeed + 4), min, max);
               comment = generateCommentForRating(rating, max, qSeed + 5);
             } else {
               // slider or default rating
-              const isNa = seededRandom(qSeed) < 0.05;
-              rating = isNa ? 'N/A' : Math.floor(min + seededRandom(qSeed + 6) * (max - min + 1));
+              const isNa = seededRandom(qSeed) < NA_CHANCE;
+              rating = isNa ? 'N/A' : weightedRating(seededRandom(qSeed + 6), min, max);
               comment = generateCommentForRating(rating, max, qSeed + 7);
             }
 
@@ -249,8 +261,8 @@ export function generateAllMockResponses(
               const subSeed = qSeed + subIdx * 11;
               const max = sub.validationRange?.max ?? 2;
               const min = sub.validationRange?.min ?? 0;
-              const isNa = seededRandom(subSeed) < 0.10 && (sub.validationRange?.allowNa ?? true);
-              const rating: Rating = isNa ? 'N/A' : Math.floor(min + seededRandom(subSeed + 2) * (max - min + 1));
+              const isNa = seededRandom(subSeed) < NA_CHANCE && (sub.validationRange?.allowNa ?? true);
+              const rating: Rating = isNa ? 'N/A' : weightedRating(seededRandom(subSeed + 2), min, max);
               const comment = generateCommentForRating(rating, max || 2, subSeed + 3);
 
               rows.push({
@@ -296,12 +308,12 @@ export function generateAllMockResponses(
               comment = pick(positiveComments.concat(neutralComments), qSeed);
               rating = 'N/A';
             } else if (q.inputType === 'typed-rating') {
-              const isNa = seededRandom(qSeed) < 0.08 && (q.validationRange?.allowNa ?? true);
-              rating = isNa ? 'N/A' : Math.floor(min + seededRandom(qSeed + 4) * (max - min + 1));
+              const isNa = seededRandom(qSeed) < NA_CHANCE && (q.validationRange?.allowNa ?? true);
+              rating = isNa ? 'N/A' : weightedRating(seededRandom(qSeed + 4), min, max);
               comment = generateCommentForRating(rating, max, qSeed + 5);
             } else {
-              const isNa = seededRandom(qSeed) < 0.05;
-              rating = isNa ? 'N/A' : Math.floor(min + seededRandom(qSeed + 6) * (max - min + 1));
+              const isNa = seededRandom(qSeed) < NA_CHANCE;
+              rating = isNa ? 'N/A' : weightedRating(seededRandom(qSeed + 6), min, max);
               comment = generateCommentForRating(rating, max, qSeed + 7);
             }
 
@@ -365,8 +377,8 @@ export function generateSingleMockResponse(
         const subSeed = qSeed + subIdx * 11;
         const max = sub.validationRange?.max ?? 2;
         const min = sub.validationRange?.min ?? 0;
-        const isNa = Math.random() < 0.10 && (sub.validationRange?.allowNa ?? true);
-        const rating: Rating = isNa ? 'N/A' : Math.floor(min + Math.random() * (max - min + 1));
+        const isNa = Math.random() < NA_CHANCE && (sub.validationRange?.allowNa ?? true);
+        const rating: Rating = isNa ? 'N/A' : weightedRating(Math.random(), min, max);
         const comment = generateCommentForRating(rating, max || 2, subSeed + 3);
 
         rows.push({
@@ -412,12 +424,12 @@ export function generateSingleMockResponse(
         comment = pick(positiveComments.concat(neutralComments), qSeed);
         rating = 'N/A';
       } else if (q.inputType === 'typed-rating') {
-        const isNa = Math.random() < 0.08 && (q.validationRange?.allowNa ?? true);
-        rating = isNa ? 'N/A' : Math.floor(min + Math.random() * (max - min + 1));
+        const isNa = Math.random() < NA_CHANCE && (q.validationRange?.allowNa ?? true);
+        rating = isNa ? 'N/A' : weightedRating(Math.random(), min, max);
         comment = generateCommentForRating(rating, max, qSeed + 5);
       } else {
-        const isNa = Math.random() < 0.05;
-        rating = isNa ? 'N/A' : Math.floor(min + Math.random() * (max - min + 1));
+        const isNa = Math.random() < NA_CHANCE;
+        rating = isNa ? 'N/A' : weightedRating(Math.random(), min, max);
         comment = generateCommentForRating(rating, max, qSeed + 7);
       }
 
