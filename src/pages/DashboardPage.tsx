@@ -479,56 +479,59 @@ export function DashboardPage({
                 : category === 'Supplier' 
                   ? 'stroke-emerald-500' 
                   : 'stroke-orange-500';
-              const badgeBg = category === 'Contractor' 
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' 
-                : category === 'Supplier' 
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' 
-                  : 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300';
-              
-              const radius = 34;
-              const circumference = 2 * Math.PI * radius;
-              const strokeDashoffset = circumference - (circumference * pct) / 100;
+              const textColor = category === 'Contractor'
+                ? 'text-blue-600 dark:text-blue-400'
+                : category === 'Supplier'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-orange-600 dark:text-orange-400';
+
+              // Half-circle (semicircle) gauge geometry.
+              // pathLength=100 lets us express progress directly as a 0-100 dash offset.
+              const gaugePath = 'M16 108 A92 92 0 0 1 200 108';
 
               return (
-                <div key={category} className="flex flex-col items-center p-5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/20 dark:bg-slate-950/20 shadow-2xs">
-                  <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md mb-4 ${badgeBg}`}>
-                    {category}
-                  </span>
-                  
-                  {/* Circular progress bar */}
-                  <div className="relative flex items-center justify-center w-20 h-20 mb-4">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r={radius}
-                        className="stroke-slate-100 dark:stroke-slate-800 fill-none"
-                        strokeWidth="6"
-                      />
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r={radius}
-                        className={`${strokeColor} fill-none`}
-                        strokeWidth="6"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
+                <div key={category} className="flex flex-col items-center p-7 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/20 dark:bg-slate-950/20 shadow-2xs">
+                  {/* Half-circle progress gauge */}
+                  <div className="relative w-full max-w-[260px]">
+                    <svg viewBox="0 0 216 120" className="w-full h-auto overflow-visible">
+                      <path
+                        d={gaugePath}
+                        fill="none"
+                        className="stroke-slate-100 dark:stroke-slate-800"
+                        strokeWidth="18"
                         strokeLinecap="round"
                       />
+                      <path
+                        d={gaugePath}
+                        fill="none"
+                        className={strokeColor}
+                        strokeWidth="18"
+                        strokeLinecap="round"
+                        pathLength={100}
+                        strokeDasharray={100}
+                        strokeDashoffset={100 - pct}
+                        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                      />
                     </svg>
-                    <div className="absolute flex flex-col items-center">
-                      <span className="text-sm font-bold text-slate-800 dark:text-white">
-                        {pct}%
-                      </span>
-                    </div>
                   </div>
 
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-350">
-                      {answered} / {total}
-                    </p>
-                    <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider mt-1">
-                      Companies Evaluated
+                  {/* Category label + percentage */}
+                  <div className="flex items-end justify-between w-full max-w-[260px] -mt-1">
+                    <span className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {category}
+                    </span>
+                    <span className={`text-4xl font-extrabold leading-none ${textColor}`}>
+                      {pct}%
+                    </span>
+                  </div>
+
+                  {/* Companies evaluated subtext */}
+                  <div className="w-full max-w-[260px] text-right mt-2">
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      {answered}/{total}
+                      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        Companies Evaluated
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -586,17 +589,17 @@ export function DashboardPage({
                 >
                   
                   {/* Widget Card Header */}
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50/40 dark:bg-slate-900/30 rounded-t-2xl">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-350 truncate max-w-[180px]" title={widget.title}>
+                  <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-850 bg-slate-50/40 dark:bg-slate-900/30 rounded-t-2xl">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-350 truncate" title={widget.title}>
                         {widget.title}
                       </h4>
                     </div>
 
                     {/* Widget Operations Toolbar */}
                     {isCustomizing && (
-                      <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200/60 dark:border-slate-800 shadow-2xs">
+                      <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200/60 dark:border-slate-800 shadow-2xs shrink-0">
                         {/* Move Left / Prev */}
                         <button
                           onClick={() => handleMoveWidget(index, 'prev')}
