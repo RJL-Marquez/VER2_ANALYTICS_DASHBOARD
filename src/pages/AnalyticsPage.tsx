@@ -490,7 +490,7 @@ export function AnalyticsPage({
               </div>
               {topContractor ? (
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topContractor.name}</h4>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white truncate">{topContractor.name}</h4>
                   <p className="text-xs text-slate-400 mt-1">Based on {topContractor.count} submitted evaluations</p>
                 </div>
               ) : (
@@ -521,7 +521,7 @@ export function AnalyticsPage({
               </div>
               {topSupplier ? (
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSupplier.name}</h4>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white truncate">{topSupplier.name}</h4>
                   <p className="text-xs text-slate-400 mt-1">Based on {topSupplier.count} submitted evaluations</p>
                 </div>
               ) : (
@@ -552,7 +552,7 @@ export function AnalyticsPage({
               </div>
               {topSubcontractor ? (
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">{topSubcontractor.name}</h4>
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white truncate">{topSubcontractor.name}</h4>
                   <p className="text-xs text-slate-400 mt-1">Based on {topSubcontractor.count} submitted evaluations</p>
                 </div>
               ) : (

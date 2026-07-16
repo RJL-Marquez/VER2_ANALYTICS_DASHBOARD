@@ -720,60 +720,75 @@ export function DashboardPage({
                       </div>
                     )}
 
-                    {widget.type === 'group-comparison' && (
-                      <div className="space-y-3.5 w-full">
-                        {/* Contractor Group Row */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                            <span>Contractors ({groupAverages.counts.Contractor} submissions)</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Contractor ? `${Math.round(groupAverages.Contractor)} / 100` : 'N/A'}
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-blue-500 rounded-full" 
-                              style={{ width: `${groupAverages.Contractor}%` }}
-                            />
-                          </div>
-                        </div>
+                    {widget.type === 'group-comparison' && (() => {
+                      // Group scores tend to cluster tightly in a high range (e.g. 85-95),
+                      // so a raw 0-100 width makes every bar look almost identical and full.
+                      // Rescale against a floor just below the lowest group score so the
+                      // relative differences between groups are actually visible.
+                      const groupValues = [groupAverages.Contractor, groupAverages.Supplier, groupAverages.Subcontractor]
+                        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+                      const minGroupValue = groupValues.length ? Math.min(...groupValues) : 0;
+                      const barFloor = Math.max(0, Math.floor(minGroupValue / 10) * 10 - 10);
+                      const normalizedWidth = (value?: number) => {
+                        if (!value) return 0;
+                        return Math.max(4, ((value - barFloor) / (100 - barFloor)) * 100);
+                      };
 
-                        {/* Supplier Group Row */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                            <span>Suppliers ({groupAverages.counts.Supplier} submissions)</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Supplier ? `${Math.round(groupAverages.Supplier)} / 100` : 'N/A'}
-                            </span>
+                      return (
+                        <div className="space-y-6 w-full">
+                          {/* Contractor Group Row */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400">
+                              <span>Contractors ({groupAverages.counts.Contractor} submissions)</span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                                {groupAverages.Contractor ? `${Math.round(groupAverages.Contractor)} / 100` : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                style={{ width: `${normalizedWidth(groupAverages.Contractor)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-emerald-500 rounded-full" 
-                              style={{ width: `${groupAverages.Supplier}%` }}
-                            />
-                          </div>
-                        </div>
 
-                        {/* Subcontractor Group Row */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                            <span>Subcontractors ({groupAverages.counts.Subcontractor} submissions)</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Subcontractor ? `${Math.round(groupAverages.Subcontractor)} / 100` : 'N/A'}
-                            </span>
+                          {/* Supplier Group Row */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400">
+                              <span>Suppliers ({groupAverages.counts.Supplier} submissions)</span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                                {groupAverages.Supplier ? `${Math.round(groupAverages.Supplier)} / 100` : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                style={{ width: `${normalizedWidth(groupAverages.Supplier)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-orange-500 rounded-full" 
-                              style={{ width: `${groupAverages.Subcontractor}%` }}
-                            />
+
+                          {/* Subcontractor Group Row */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400">
+                              <span>Subcontractors ({groupAverages.counts.Subcontractor} submissions)</span>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                                {groupAverages.Subcontractor ? `${Math.round(groupAverages.Subcontractor)} / 100` : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-orange-500 rounded-full transition-all duration-500"
+                                style={{ width: `${normalizedWidth(groupAverages.Subcontractor)}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {widget.type === 'active-forms' && (
-                      <div className="space-y-2.5">
+                      <div className="space-y-4">
                         {surveys.length === 0 ? (
                           <div className="text-center text-slate-400 text-xs py-4">
                             No published survey questionnaires are available.
@@ -785,12 +800,12 @@ export function DashboardPage({
                             // respondent submissions rather than raw per-question answer rows.
                             const count = submissionCount(allResponses.filter(r => r.surveyType === survey.surveyType));
                             return (
-                              <div key={survey.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-850 text-xs">
+                              <div key={survey.id} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-850 text-sm">
                                 <div className="min-w-0 flex-1 pr-2">
                                   <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{survey.title}</p>
-                                  <p className="text-[10px] text-slate-400 mt-0.5">Due: {survey.deadlineDate || 'No close date'}</p>
+                                  <p className="text-xs text-slate-400 mt-1">Due: {survey.deadlineDate || 'No close date'}</p>
                                 </div>
-                                <span className="shrink-0 px-2.5 py-1 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 font-bold text-blue-600 dark:text-blue-400 text-[10px]">
+                                <span className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 font-bold text-blue-600 dark:text-blue-400 text-xs">
                                   {count} respondents
                                 </span>
                               </div>
@@ -798,7 +813,7 @@ export function DashboardPage({
                           })
                         )}
                         {surveys.length > 3 && (
-                          <p className="text-[10px] text-center text-slate-400 italic font-medium pt-1">
+                          <p className="text-xs text-center text-slate-400 italic font-medium pt-1">
                             + {surveys.length - 3} more forms in the active registry.
                           </p>
                         )}
