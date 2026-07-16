@@ -69,7 +69,27 @@ function groupResponsesToNotifications(allResponses: SurveyResponse[]): Response
     .sort((a, b) => b.submissionDate.localeCompare(a.submissionDate));
 }
 
-export function useSurveyData() {
+// Fallback synthetic pool used only if no accounts are supplied to the hook
+// (e.g. very first render before account state is available). In normal
+// operation this is fully replaced by the live account roster below.
+const FALLBACK_NON_ADMIN_USERS = [
+  { rType: 'Rank & File', dept: 'Logistics', email: 'miguel.santos@mgenesis.com' },
+  { rType: 'Supervisory', dept: 'Logistics', email: 'denise.aquino@mgenesis.com' },
+  { rType: 'Managerial', dept: 'Procurement Group', email: 'angela.reyes@mgenesis.com' },
+  { rType: 'Director', dept: 'TASS', email: 'patricia.navarro@mgenesis.com' },
+  { rType: 'Executive', dept: 'Executive Office', email: 'rafael.concepcion@mgenesis.com' }
+];
+
+// Minimal shape needed from an account record — kept structural (not imported
+// from App.tsx) to avoid a circular import between the hook and the app shell.
+export interface SimulatableAccount {
+  email: string;
+  role: string;
+  designation: string;
+  department: string;
+}
+
+export function useSurveyData(accounts: SimulatableAccount[] = []) {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [surveys, setSurveys] = useState<CustomForm[]>([]);
   const [partnerCompanies, setPartnerCompanies] = useState<PartnerCompany[]>([]);
@@ -1086,13 +1106,16 @@ export function useSurveyData() {
     window.location.reload();
   };
 
-  const NON_ADMIN_USERS = [
-    { rType: 'Rank & File', dept: 'Logistics', email: 'miguel.santos@mgenesis.com' },
-    { rType: 'Supervisory', dept: 'Logistics', email: 'denise.aquino@mgenesis.com' },
-    { rType: 'Managerial', dept: 'Procurement Group', email: 'angela.reyes@mgenesis.com' },
-    { rType: 'Director', dept: 'TASS', email: 'patricia.navarro@mgenesis.com' },
-    { rType: 'Executive', dept: 'Executive Office', email: 'rafael.concepcion@mgenesis.com' }
-  ];
+  // Every non-admin account currently registered in the system becomes part
+  // of the synthetic respondent pool used by the Database Simulator. This
+  // means the pool automatically grows or shrinks as accounts are added or
+  // removed in Account Management — no hardcoded headcount to maintain.
+  const NON_ADMIN_USERS = useMemo(() => {
+    const derived = accounts
+      .filter((a) => a.role !== 'Admin')
+      .map((a) => ({ rType: a.designation, dept: a.department, email: a.email }));
+    return derived.length > 0 ? derived : FALLBACK_NON_ADMIN_USERS;
+  }, [accounts]);
 
   const BULK_BATCH_SIZE = 15;
 

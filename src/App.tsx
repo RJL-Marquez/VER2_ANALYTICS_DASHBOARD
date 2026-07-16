@@ -183,6 +183,26 @@ const adminPages = [
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 
 export default function App() {
+  const [account, setAccount] = useState<string | null>(null);
+
+  // Accounts Management State
+  const [accounts, setAccounts] = useState<AccountProfile[]>(() => {
+    const saved = localStorage.getItem('survey_accounts_v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return DEFAULT_ACCOUNTS;
+      }
+    }
+    return DEFAULT_ACCOUNTS;
+  });
+
+  const saveAccounts = (newAccounts: AccountProfile[]) => {
+    setAccounts(newAccounts);
+    localStorage.setItem('survey_accounts_v1', JSON.stringify(newAccounts));
+  };
+
   const {
     responses,
     archivedResponses,
@@ -212,7 +232,7 @@ export default function App() {
     clearResponses,
     addEvaluations,
     resetSimulation,
-  } = useSurveyData();
+  } = useSurveyData(accounts);
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
@@ -233,25 +253,6 @@ export default function App() {
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [darkMode, setDarkMode] = useState(false);
-  const [account, setAccount] = useState<string | null>(null);
-
-  // Accounts Management State
-  const [accounts, setAccounts] = useState<AccountProfile[]>(() => {
-    const saved = localStorage.getItem('survey_accounts_v1');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return DEFAULT_ACCOUNTS;
-      }
-    }
-    return DEFAULT_ACCOUNTS;
-  });
-
-  const saveAccounts = (newAccounts: AccountProfile[]) => {
-    setAccounts(newAccounts);
-    localStorage.setItem('survey_accounts_v1', JSON.stringify(newAccounts));
-  };
 
   const getUserProfile = (email: string | null) => {
     if (!email) return null;
