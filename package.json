@@ -8,6 +8,10 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
+<<<<<<< HEAD
+=======
+    "server": "node server/index.js",
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
     "lint": "tsc --noEmit"
   },
   "dependencies": {

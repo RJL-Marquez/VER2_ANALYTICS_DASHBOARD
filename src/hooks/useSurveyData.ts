@@ -1176,6 +1176,7 @@ export function useSurveyData() {
 
   const archiveResponsesForSurveys = (surveyIds: string[]) => {
     const targetSurveys = surveys.filter(s => surveyIds.includes(s.id));
+<<<<<<< HEAD
     const questionIdsToArchive = new Map<string, { id: string; title: string }>();
     const archiveDate = new Date().toISOString();
     
@@ -1185,10 +1186,17 @@ export function useSurveyData() {
         if (q.subQuestions) {
           q.subQuestions.forEach(sub => questionIdsToArchive.set(`${q.questionId}-${sub.id}`, { id: s.id, title: s.title }));
         }
+=======
+    const questionIdsToArchive = new Set<string>();
+    targetSurveys.forEach(s => {
+      s.questions.forEach(q => {
+        questionIdsToArchive.add(q.questionId);
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
       });
     });
 
     const updatedResponses = responses.map(r => {
+<<<<<<< HEAD
       const surveyInfo = questionIdsToArchive.get(r.questionId);
       if (surveyInfo) {
         return { 
@@ -1198,6 +1206,10 @@ export function useSurveyData() {
           archivedBySurveyId: surveyInfo.id,
           archivedBySurveyTitle: surveyInfo.title
         };
+=======
+      if (questionIdsToArchive.has(r.questionId)) {
+        return { ...r, archived: true };
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
       }
       return r;
     });
@@ -1221,6 +1233,7 @@ export function useSurveyData() {
   const restoreResponsesForSurvey = (surveyId: string) => {
     const targetSurvey = surveys.find(s => s.id === surveyId);
     if (!targetSurvey) return;
+<<<<<<< HEAD
     const questionIdsToRestore = new Set<string>();
     targetSurvey.questions.forEach(q => {
       questionIdsToRestore.add(q.questionId);
@@ -1228,6 +1241,9 @@ export function useSurveyData() {
         q.subQuestions.forEach(sub => questionIdsToRestore.add(`${q.questionId}-${sub.id}`));
       }
     });
+=======
+    const questionIdsToRestore = new Set(targetSurvey.questions.map(q => q.questionId));
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
 
     const updatedResponses = responses.map(r => {
       if (questionIdsToRestore.has(r.questionId)) {
@@ -1240,6 +1256,7 @@ export function useSurveyData() {
     localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
   };
 
+<<<<<<< HEAD
   const deleteArchivedResponseGroups = (groupIds: { archivedAt: string; surveyId: string }[]) => {
     const updatedResponses = responses.filter(r => {
       if (!r.archived || !r.archivedAt || !r.archivedBySurveyId) return true;
@@ -1263,6 +1280,8 @@ export function useSurveyData() {
     localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
   };
 
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
   // Derive unique active survey types (Contractor, Supplier, Subcontractor)
   const surveyTypes = useMemo<SurveyType[]>(() => {
     return ['Contractor', 'Supplier', 'Subcontractor'];
@@ -1301,8 +1320,11 @@ export function useSurveyData() {
     archiveResponsesForSurveys,
     restoreResponseGroup,
     restoreResponsesForSurvey,
+<<<<<<< HEAD
     deleteArchivedResponseGroups,
     restoreArchivedResponseGroups,
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
     surveys,
     surveyTypes,
     questions,

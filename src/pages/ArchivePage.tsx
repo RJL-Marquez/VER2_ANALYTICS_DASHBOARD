@@ -8,8 +8,11 @@ interface ArchivePageProps {
   onUpdateSurvey?: (survey: CustomForm) => void;
   onRestoreResponseGroup?: (responseId: string) => void;
   onRestoreResponsesForSurvey?: (surveyId: string) => void;
+<<<<<<< HEAD
   onDeleteArchivedResponseGroups?: (groupIds: { archivedAt: string; surveyId: string }[]) => void;
   onRestoreArchivedResponseGroups?: (groupIds: { archivedAt: string; surveyId: string }[]) => void;
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
   isAdmin: boolean;
 }
 
@@ -19,8 +22,11 @@ export function ArchivePage({
   onUpdateSurvey,
   onRestoreResponseGroup,
   onRestoreResponsesForSurvey,
+<<<<<<< HEAD
   onDeleteArchivedResponseGroups,
   onRestoreArchivedResponseGroups,
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
   isAdmin
 }: ArchivePageProps) {
   const [activeTab, setActiveTab] = useState<'surveys' | 'responses'>('surveys');
@@ -34,6 +40,7 @@ export function ArchivePage({
     return surveys.filter((s) => s.status === 'Archived');
   }, [surveys]);
 
+<<<<<<< HEAD
   // Group responses by survey form and date archived
   const groupedArchivedResponses = useMemo(() => {
     const groups: Record<string, {
@@ -75,6 +82,38 @@ export function ArchivePage({
     });
 
     return Object.values(groups).sort((a, b) => b.archivedAt.localeCompare(a.archivedAt));
+=======
+  // Group responses by responseId to display submissions as individual unified records
+  const groupedArchivedResponses = useMemo(() => {
+    const groups: Record<string, {
+      responseId: string;
+      surveyType: SurveyType;
+      respondentType: string;
+      submissionDate: string;
+      company: string;
+      department?: string;
+      respondentEmail?: string;
+      answers: SurveyResponse[];
+    }> = {};
+
+    archivedResponses.forEach((r) => {
+      if (!groups[r.responseId]) {
+        groups[r.responseId] = {
+          responseId: r.responseId,
+          surveyType: r.surveyType,
+          respondentType: r.respondentType,
+          submissionDate: r.submissionDate,
+          company: r.company,
+          department: r.department,
+          respondentEmail: r.respondentEmail,
+          answers: [],
+        };
+      }
+      groups[r.responseId].answers.push(r);
+    });
+
+    return Object.values(groups).sort((a, b) => b.submissionDate.localeCompare(a.submissionDate));
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
   }, [archivedResponses]);
 
   // Handle restoring an archived survey back to active/running status
@@ -119,11 +158,17 @@ export function ArchivePage({
     const needle = searchQuery.toLowerCase();
     return groupedArchivedResponses.filter(
       (g) =>
+<<<<<<< HEAD
         g.surveyTitle.toLowerCase().includes(needle) ||
+=======
+        g.company.toLowerCase().includes(needle) ||
+        g.respondentType.toLowerCase().includes(needle) ||
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
         g.surveyType.toLowerCase().includes(needle)
     );
   }, [groupedArchivedResponses, searchQuery]);
 
+<<<<<<< HEAD
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
 
@@ -180,6 +225,8 @@ export function ArchivePage({
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
   if (!isAdmin) {
     return (
       <div className="panel p-8 text-center text-slate-500 max-w-md mx-auto mt-10">
@@ -192,6 +239,17 @@ export function ArchivePage({
 
   return (
     <div className="space-y-6">
+<<<<<<< HEAD
+=======
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Archive Center</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Store, review, and restore archived evaluations and historical stakeholder submissions.
+        </p>
+      </div>
+
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
       {successMessage && (
         <div className="bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50 rounded-xl p-4 flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-sm animate-fade-in">
           <RefreshCw size={18} className="animate-spin-slow text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -348,6 +406,7 @@ export function ArchivePage({
               </div>
             ) : (
               <div className="space-y-4">
+<<<<<<< HEAD
                 {/* Bulk Actions Bar */}
                 {selectedGroups.size > 0 && (
                   <div className="bg-[#0063a9]/10 border border-[#0063a9]/20 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
@@ -462,6 +521,74 @@ export function ArchivePage({
                     </div>
                   );
                 })}
+=======
+                {filteredGroupedResponses.map((group) => (
+                  <div key={group.responseId} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="text-[#0063a9] dark:text-blue-400 shrink-0" size={16} />
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">{group.company}</span>
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          {group.surveyType}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                          <Calendar size={13} />
+                          <span>{new Date(group.submissionDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        </div>
+                        {onRestoreResponseGroup && (
+                          <button
+                            onClick={() => handleRestoreResponseGroup({ responseId: group.responseId, company: group.company, type: group.surveyType })}
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/20 px-2 py-1 text-[10.5px] font-bold transition cursor-pointer"
+                            type="button"
+                          >
+                            <RefreshCw size={10} />
+                            <span>Restore Submissions</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck size={14} className="text-slate-400" />
+                        <span>Evaluator: <strong>{group.respondentType}</strong></span>
+                      </div>
+                      {group.respondentEmail && (
+                        <div>
+                          Email: <strong className="text-slate-700 dark:text-slate-300">{group.respondentEmail}</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Inner mini table of scores */}
+                    <div className="overflow-hidden rounded-lg border border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-950/20 p-2 text-xs">
+                      <div className="font-bold text-slate-700 dark:text-slate-300 px-2 pb-1.5 border-b border-slate-100 dark:border-slate-900 flex justify-between">
+                        <span>Evaluation Questions</span>
+                        <span>Score / Comment</span>
+                      </div>
+                      <div className="divide-y divide-slate-100/50 dark:divide-slate-900/50">
+                        {group.answers.map((ans) => (
+                          <div key={ans.questionId} className="py-2 px-2 flex justify-between items-start gap-4">
+                            <span className="text-slate-600 dark:text-slate-400 max-w-md">
+                              Q{ans.questionNumber}. {ans.question}
+                            </span>
+                            <div className="text-right shrink-0">
+                              <span className="font-extrabold text-[#0063a9] dark:text-blue-400 text-sm">
+                                {ans.rating}
+                              </span>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 italic max-w-[200px] truncate" title={ans.comment}>
+                                {ans.comment}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
               </div>
             )}
           </div>
@@ -536,6 +663,7 @@ export function ArchivePage({
           </div>
         </div>
       )}
+<<<<<<< HEAD
 
       {confirmDeleteState.isOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in" id="confirm-bulk-delete-modal">
@@ -568,6 +696,8 @@ export function ArchivePage({
           </div>
         </div>
       )}
+=======
+>>>>>>> 4da41b7c54ae4966b309c7995dd9e2c9301fba1c
     </div>
   );
 }
