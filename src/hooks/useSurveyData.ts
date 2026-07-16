@@ -16,17 +16,17 @@ function toNotification(rows: SurveyResponse[]): ResponseNotification | null {
   if (!email) {
     const cleanType = first.respondentType.toLowerCase();
     if (cleanType.includes('rank') || cleanType.includes('file')) {
-      email = 'rankfile@mgenesis.com';
+      email = 'miguel.santos@mgenesis.com';
     } else if (cleanType.includes('super')) {
-      email = 'supervisory@mgenesis.com';
+      email = 'denise.aquino@mgenesis.com';
     } else if (cleanType.includes('manag')) {
-      email = 'managerial@mgenesis.com';
+      email = 'angela.reyes@mgenesis.com';
     } else if (cleanType.includes('direct')) {
-      email = 'director@mgenesis.com';
+      email = 'patricia.navarro@mgenesis.com';
     } else if (cleanType.includes('exec')) {
-      email = 'executive@mgenesis.com';
+      email = 'rafael.concepcion@mgenesis.com';
     } else {
-      email = 'rankfile@mgenesis.com';
+      email = 'miguel.santos@mgenesis.com';
     }
   }
 
@@ -34,11 +34,11 @@ function toNotification(rows: SurveyResponse[]): ResponseNotification | null {
   let designation = first.respondentType;
   const normalized = email.trim().toLowerCase();
   if (normalized === 'admin@mgenesis.com') designation = 'Executive';
-  else if (normalized === 'rankfile@mgenesis.com') designation = 'Rank & File';
-  else if (normalized === 'supervisory@mgenesis.com') designation = 'Supervisory';
-  else if (normalized === 'managerial@mgenesis.com') designation = 'Managerial';
-  else if (normalized === 'director@mgenesis.com') designation = 'Director';
-  else if (normalized === 'executive@mgenesis.com') designation = 'Executive';
+  else if (normalized === 'miguel.santos@mgenesis.com') designation = 'Rank & File';
+  else if (normalized === 'denise.aquino@mgenesis.com') designation = 'Supervisory';
+  else if (normalized === 'angela.reyes@mgenesis.com') designation = 'Managerial';
+  else if (normalized === 'patricia.navarro@mgenesis.com') designation = 'Director';
+  else if (normalized === 'rafael.concepcion@mgenesis.com') designation = 'Executive';
 
   return {
     id: first.responseId,
@@ -1087,11 +1087,11 @@ export function useSurveyData() {
   };
 
   const NON_ADMIN_USERS = [
-    { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
-    { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
-    { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' },
-    { rType: 'Director', dept: 'TASS', email: 'director@mgenesis.com' },
-    { rType: 'Executive', dept: 'Business Solutions Manager', email: 'executive@mgenesis.com' }
+    { rType: 'Rank & File', dept: 'Logistics', email: 'miguel.santos@mgenesis.com' },
+    { rType: 'Supervisory', dept: 'Logistics', email: 'denise.aquino@mgenesis.com' },
+    { rType: 'Managerial', dept: 'Procurement Group', email: 'angela.reyes@mgenesis.com' },
+    { rType: 'Director', dept: 'TASS', email: 'patricia.navarro@mgenesis.com' },
+    { rType: 'Executive', dept: 'Executive Office', email: 'rafael.concepcion@mgenesis.com' }
   ];
 
   const BULK_BATCH_SIZE = 15;

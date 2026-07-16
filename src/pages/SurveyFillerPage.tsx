@@ -40,6 +40,7 @@ interface SurveyFillerPageProps {
 const DEPARTMENTS = [
   'Accounts Payable - Trade',
   'Business Solutions Manager',
+  'Executive Office',
   'Logistics',
   'Procurement Group',
   'TASS'

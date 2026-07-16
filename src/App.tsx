@@ -31,41 +31,132 @@ export interface AccountProfile {
 }
 
 const DEFAULT_ACCOUNTS: AccountProfile[] = [
+  // System Administrator — unrestricted access to all modules and permissions.
   {
     email: 'admin@mgenesis.com',
     role: 'Admin',
     designation: 'Executive',
     department: 'Business Solutions Manager'
   },
+
+  // Procurement
   {
-    email: 'rankfile@mgenesis.com',
+    email: 'maria.fernandez@mgenesis.com',
     role: 'Employee',
     designation: 'Rank & File',
-    department: 'Accounts Payable - Trade'
+    department: 'Procurement Group'
   },
   {
-    email: 'supervisory@mgenesis.com',
+    email: 'carlos.bautista@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Procurement Group'
+  },
+  {
+    email: 'angela.reyes@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Procurement Group'
+  },
+
+  // Logistics
+  {
+    email: 'miguel.santos@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Logistics'
+  },
+  {
+    email: 'denise.aquino@mgenesis.com',
     role: 'Employee',
     designation: 'Supervisory',
     department: 'Logistics'
   },
   {
-    email: 'managerial@mgenesis.com',
+    email: 'ramon.villanueva@mgenesis.com',
     role: 'Employee',
     designation: 'Managerial',
-    department: 'Procurement Group'
+    department: 'Logistics'
+  },
+
+  // Accounts Payable - Trade
+  {
+    email: 'kristine.manalo@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Accounts Payable - Trade'
   },
   {
-    email: 'director@mgenesis.com',
+    email: 'paolo.cruz@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Accounts Payable - Trade'
+  },
+  {
+    email: 'bianca.torres@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Accounts Payable - Trade'
+  },
+
+  // Business Solutions Manager (BSM)
+  {
+    email: 'joshua.ramos@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'katrina.lopez@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'nathaniel.garcia@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'estrella.domingo@mgenesis.com',
+    role: 'Employee',
+    designation: 'Director',
+    department: 'Business Solutions Manager'
+  },
+
+  // TASS
+  {
+    email: 'julius.mercado@mgenesis.com',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'TASS'
+  },
+  {
+    email: 'corazon.ilagan@mgenesis.com',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'TASS'
+  },
+  {
+    email: 'vincent.alvarez@mgenesis.com',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'TASS'
+  },
+  {
+    email: 'patricia.navarro@mgenesis.com',
     role: 'Employee',
     designation: 'Director',
     department: 'TASS'
   },
+
+  // Executive Office (new department)
   {
-    email: 'executive@mgenesis.com',
+    email: 'rafael.concepcion@mgenesis.com',
     role: 'Employee',
     designation: 'Executive',
-    department: 'Business Solutions Manager'
+    department: 'Executive Office'
   }
 ];
 
@@ -182,9 +273,13 @@ export default function App() {
 
   const activeTitle = useMemo(() => {
     if (activePage === 'dashboard') {
-      const name = profile?.email ? profile.email.split('@')[0] : 'User';
-      const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-      return `Welcome Back, ${capitalizedName}!`;
+      const namePart = profile?.email ? profile.email.split('@')[0] : 'User';
+      const capitalizedName = namePart
+        .split('.')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+      return `Welcome Back, ${capitalizedName || 'User'}!`;
     }
     if (activePage === 'partner-companies') return 'Administrative Partner Registry';
     if (activePage === 'account-management') return 'Account Management';

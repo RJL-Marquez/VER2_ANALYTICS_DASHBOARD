@@ -10,7 +10,7 @@ interface AccountManagementPageProps {
 }
 
 const DESIGNATION_OPTIONS = ['Rank & File', 'Supervisory', 'Managerial', 'Director', 'Executive'];
-const DEPARTMENT_OPTIONS = ['Accounts Payable - Trade', 'Business Solutions Manager', 'Logistics', 'Procurement Group', 'TASS'];
+const DEPARTMENT_OPTIONS = ['Accounts Payable - Trade', 'Business Solutions Manager', 'Executive Office', 'Logistics', 'Procurement Group', 'TASS'];
 
 export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, currentUserEmail }: AccountManagementPageProps) {
   const [searchTerm, setSearchTerm] = useState('');

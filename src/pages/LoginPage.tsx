@@ -13,40 +13,143 @@ export const DEMO_ACCOUNTS = [
     designation: 'Executive',
     department: 'Business Solutions Manager'
   },
+
+  // Procurement
   {
-    email: 'rankfile@mgenesis.com',
+    email: 'maria.fernandez@mgenesis.com',
     password: 'password123',
     role: 'Employee',
     designation: 'Rank & File',
-    department: 'Accounts Payable - Trade'
+    department: 'Procurement Group'
   },
   {
-    email: 'supervisory@mgenesis.com',
+    email: 'carlos.bautista@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Procurement Group'
+  },
+  {
+    email: 'angela.reyes@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Procurement Group'
+  },
+
+  // Logistics
+  {
+    email: 'miguel.santos@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Logistics'
+  },
+  {
+    email: 'denise.aquino@mgenesis.com',
     password: 'password123',
     role: 'Employee',
     designation: 'Supervisory',
     department: 'Logistics'
   },
   {
-    email: 'managerial@mgenesis.com',
+    email: 'ramon.villanueva@mgenesis.com',
     password: 'password123',
     role: 'Employee',
     designation: 'Managerial',
-    department: 'Procurement Group'
+    department: 'Logistics'
+  },
+
+  // Accounts Payable - Trade
+  {
+    email: 'kristine.manalo@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Accounts Payable - Trade'
   },
   {
-    email: 'director@mgenesis.com',
+    email: 'paolo.cruz@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Accounts Payable - Trade'
+  },
+  {
+    email: 'bianca.torres@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Accounts Payable - Trade'
+  },
+
+  // Business Solutions Manager (BSM)
+  {
+    email: 'joshua.ramos@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'katrina.lopez@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'nathaniel.garcia@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'Business Solutions Manager'
+  },
+  {
+    email: 'estrella.domingo@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Director',
+    department: 'Business Solutions Manager'
+  },
+
+  // TASS
+  {
+    email: 'julius.mercado@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Rank & File',
+    department: 'TASS'
+  },
+  {
+    email: 'corazon.ilagan@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Supervisory',
+    department: 'TASS'
+  },
+  {
+    email: 'vincent.alvarez@mgenesis.com',
+    password: 'password123',
+    role: 'Employee',
+    designation: 'Managerial',
+    department: 'TASS'
+  },
+  {
+    email: 'patricia.navarro@mgenesis.com',
     password: 'password123',
     role: 'Employee',
     designation: 'Director',
     department: 'TASS'
   },
+
+  // Executive Office (new department)
   {
-    email: 'executive@mgenesis.com',
+    email: 'rafael.concepcion@mgenesis.com',
     password: 'password123',
     role: 'Employee',
     designation: 'Executive',
-    department: 'Business Solutions Manager'
+    department: 'Executive Office'
   }
 ];
 

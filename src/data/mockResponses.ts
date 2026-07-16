@@ -73,12 +73,12 @@ function pick<T>(items: T[], seed: number): T {
 }
 
 function getMockRespondentEmail(rType: string, dept: string) {
-  if (rType === 'Rank & File') return 'rankfile@mgenesis.com';
-  if (rType === 'Supervisory') return 'supervisory@mgenesis.com';
-  if (rType === 'Managerial') return 'managerial@mgenesis.com';
-  if (rType === 'Director') return 'director@mgenesis.com';
-  if (rType === 'Executive') return 'executive@mgenesis.com';
-  return 'rankfile@mgenesis.com';
+  if (rType === 'Rank & File') return 'miguel.santos@mgenesis.com';
+  if (rType === 'Supervisory') return 'denise.aquino@mgenesis.com';
+  if (rType === 'Managerial') return 'angela.reyes@mgenesis.com';
+  if (rType === 'Director') return 'patricia.navarro@mgenesis.com';
+  if (rType === 'Executive') return 'rafael.concepcion@mgenesis.com';
+  return 'miguel.santos@mgenesis.com';
 }
 
 function generateCommentForRating(rating: Rating, max: number, seed: number) {
@@ -131,9 +131,9 @@ export function generateMockResponses(
     matchingCompanies.forEach((company, compIdx) => {
       // Create 2-3 evaluations per company, from different users (avoid duplicate user evaluations for same company)
       const mockUsers = [
-        { rType: 'Rank & File', dept: 'Logistics', email: 'rankfile@mgenesis.com' },
-        { rType: 'Supervisory', dept: 'Logistics', email: 'supervisory@mgenesis.com' },
-        { rType: 'Managerial', dept: 'Procurement Group', email: 'managerial@mgenesis.com' }
+        { rType: 'Rank & File', dept: 'Logistics', email: 'miguel.santos@mgenesis.com' },
+        { rType: 'Supervisory', dept: 'Logistics', email: 'denise.aquino@mgenesis.com' },
+        { rType: 'Managerial', dept: 'Procurement Group', email: 'angela.reyes@mgenesis.com' }
       ];
 
       mockUsers.forEach((user, userIdx) => {
