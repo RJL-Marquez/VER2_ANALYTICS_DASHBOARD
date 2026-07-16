@@ -831,7 +831,7 @@ export function useSurveyData() {
               description: 'Standard satisfaction reporting for external courier and logistics contractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-              questions: contractorQuestions,
+              questions: contractorQuestions as any,
             },
             {
               id: 'default-supplier',
@@ -840,7 +840,7 @@ export function useSurveyData() {
               description: 'Product quality and commercial terms assessment for inventory suppliers.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-              questions: supplierQuestions,
+              questions: supplierQuestions as any,
             },
             {
               id: 'default-subcontractor',
@@ -849,7 +849,7 @@ export function useSurveyData() {
               description: 'On-site execution, compliance, and schedule feedback for active subcontractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
-              questions: subcontractorQuestions,
+              questions: subcontractorQuestions as any,
             },
           ];
           localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(loadedSurveys));
@@ -973,10 +973,22 @@ export function useSurveyData() {
 
   // Update an existing survey form
   const updateSurvey = (updatedForm: CustomForm) => {
-    const updatedSurveys = surveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
-    setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
+    setSurveys((currentSurveys) => {
+      const updated = currentSurveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
+      localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updated));
+      return updated;
+    });
     return updatedForm;
+  };
+
+  // Bulk update multiple survey forms simultaneously to prevent React state batching overwrites
+  const updateSurveysBulk = (updatedSurveysList: CustomForm[]) => {
+    const map = new Map(updatedSurveysList.map((s) => [s.id, s]));
+    setSurveys((currentSurveys) => {
+      const updated = currentSurveys.map((s) => map.has(s.id) ? map.get(s.id)! : s);
+      localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Delete a survey form
@@ -1133,7 +1145,123 @@ export function useSurveyData() {
     window.location.reload();
   };
 
+  const resetSimulation = () => {
+    const isSimulated = (id: string) => 
+      id.startsWith('RESP-MOCK-') || 
+      id.startsWith('RESP-SINGLE-') || 
+      id.startsWith('RESP-BULK-');
+      
+    const filtered = responses.filter(r => !isSimulated(r.responseId));
+    setResponses(filtered);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(filtered));
+    setIsFullDatasetActive(false);
+    localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+
+    const remainingSimulated = filtered.filter(r => isSimulated(r.responseId));
+    const groupedNotifs = groupResponsesToNotifications(filtered);
+    setNotifications(groupedNotifs.slice(0, NOTIFICATION_HISTORY_LIMIT));
+    setUnreadCount(0);
+  };
+
   const markNotificationsRead = () => setUnreadCount(0);
+
+  // Split active and archived responses so the active dashboard is unaffected
+  const activeResponses = useMemo(() => {
+    return responses.filter(r => !r.archived);
+  }, [responses]);
+
+  const archivedResponses = useMemo(() => {
+    return responses.filter(r => r.archived);
+  }, [responses]);
+
+  const archiveResponsesForSurveys = (surveyIds: string[]) => {
+    const targetSurveys = surveys.filter(s => surveyIds.includes(s.id));
+    const questionIdsToArchive = new Map<string, { id: string; title: string }>();
+    const archiveDate = new Date().toISOString();
+    
+    targetSurveys.forEach(s => {
+      s.questions.forEach(q => {
+        questionIdsToArchive.set(q.questionId, { id: s.id, title: s.title });
+        if (q.subQuestions) {
+          q.subQuestions.forEach(sub => questionIdsToArchive.set(`${q.questionId}-${sub.id}`, { id: s.id, title: s.title }));
+        }
+      });
+    });
+
+    const updatedResponses = responses.map(r => {
+      const surveyInfo = questionIdsToArchive.get(r.questionId);
+      if (surveyInfo) {
+        return { 
+          ...r, 
+          archived: true,
+          archivedAt: archiveDate,
+          archivedBySurveyId: surveyInfo.id,
+          archivedBySurveyTitle: surveyInfo.title
+        };
+      }
+      return r;
+    });
+
+    setResponses(updatedResponses);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+  };
+
+  const restoreResponseGroup = (responseId: string) => {
+    const updatedResponses = responses.map(r => {
+      if (r.responseId === responseId) {
+        return { ...r, archived: false };
+      }
+      return r;
+    });
+
+    setResponses(updatedResponses);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+  };
+
+  const restoreResponsesForSurvey = (surveyId: string) => {
+    const targetSurvey = surveys.find(s => s.id === surveyId);
+    if (!targetSurvey) return;
+    const questionIdsToRestore = new Set<string>();
+    targetSurvey.questions.forEach(q => {
+      questionIdsToRestore.add(q.questionId);
+      if (q.subQuestions) {
+        q.subQuestions.forEach(sub => questionIdsToRestore.add(`${q.questionId}-${sub.id}`));
+      }
+    });
+
+    const updatedResponses = responses.map(r => {
+      if (questionIdsToRestore.has(r.questionId)) {
+        return { ...r, archived: false };
+      }
+      return r;
+    });
+
+    setResponses(updatedResponses);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+  };
+
+  const deleteArchivedResponseGroups = (groupIds: { archivedAt: string; surveyId: string }[]) => {
+    const updatedResponses = responses.filter(r => {
+      if (!r.archived || !r.archivedAt || !r.archivedBySurveyId) return true;
+      const match = groupIds.some(g => g.archivedAt === r.archivedAt && g.surveyId === r.archivedBySurveyId);
+      return !match;
+    });
+    setResponses(updatedResponses);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+  };
+
+  const restoreArchivedResponseGroups = (groupIds: { archivedAt: string; surveyId: string }[]) => {
+    const updatedResponses = responses.map(r => {
+      if (!r.archived || !r.archivedAt || !r.archivedBySurveyId) return r;
+      const match = groupIds.some(g => g.archivedAt === r.archivedAt && g.surveyId === r.archivedBySurveyId);
+      if (match) {
+        return { ...r, archived: false };
+      }
+      return r;
+    });
+    setResponses(updatedResponses);
+    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+  };
 
   // Derive unique active survey types (Contractor, Supplier, Subcontractor)
   const surveyTypes = useMemo<SurveyType[]>(() => {
@@ -1168,7 +1296,13 @@ export function useSurveyData() {
   }, [partnerCompanies]);
 
   return {
-    responses,
+    responses: activeResponses,
+    archivedResponses,
+    archiveResponsesForSurveys,
+    restoreResponseGroup,
+    restoreResponsesForSurvey,
+    deleteArchivedResponseGroups,
+    restoreArchivedResponseGroups,
     surveys,
     surveyTypes,
     questions,
@@ -1183,12 +1317,14 @@ export function useSurveyData() {
     markNotificationsRead,
     createSurvey,
     updateSurvey,
+    updateSurveysBulk,
     deleteSurvey,
     submitResponse,
     resetAllData,
     isFullDatasetActive,
     clearResponses,
     addEvaluations,
+    resetSimulation,
   };
 }
 

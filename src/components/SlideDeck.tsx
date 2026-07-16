@@ -74,8 +74,6 @@ function slideTitleFor(slide: Slide, index: number): string {
       return 'Top & Bottom Questions';
     case 'spotlight':
       return 'Spotlight';
-    case 'distribution':
-      return 'Rating Distribution';
     case 'closing':
       return 'Key Takeaways';
     default:
@@ -499,7 +497,7 @@ function ComparisonSlide({ slide, responses = [] }: { slide: Extract<Slide, { ki
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#0063a9]">Performance Insight</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl leading-tight">
-            {performanceMode === 'highest' ? 'Top Rated Companies' : 'Underperforming Companies'}
+            {performanceMode === 'highest' ? 'Top Rated Companies' : 'Least Rated Companies'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Compare stakeholder satisfaction rating of your partner companies.
@@ -842,55 +840,104 @@ function LeaderboardSlide({ slide, responses = [] }: { slide: Extract<Slide, { k
     );
   }
 
+  const numGroups = slide.groups.length;
+
+  const layoutConfig = useMemo(() => {
+    if (numGroups === 1) {
+      return {
+        containerClass: "mt-4 max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center",
+        gridClass: "grid grid-cols-1",
+        groupBlockClass: "rounded-2xl border-2 border-slate-100 p-8 bg-slate-50/40 shadow-md",
+        titleClass: "mb-6 text-lg sm:text-2xl font-black uppercase tracking-[0.2em] text-center block",
+        listSpacingClass: "space-y-3.5",
+        buttonPaddingClass: "py-3 px-4",
+        rankClass: "flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs sm:text-lg font-bold text-slate-500 group-hover:bg-[#0063a9]/10 group-hover:text-[#0063a9] transition-colors",
+        companyClass: "min-w-0 flex-1 truncate text-sm sm:text-lg font-bold text-slate-800 group-hover:text-[#0063a9] group-hover:underline transition-all",
+        scoreClass: "shrink-0 text-sm sm:text-lg font-extrabold transition-all group-hover:scale-105",
+        noDataClass: "text-base sm:text-lg text-slate-400 text-center py-6",
+      };
+    } else if (numGroups === 2) {
+      return {
+        containerClass: "mt-4 max-w-5xl mx-auto w-full flex-1 flex flex-col justify-center",
+        gridClass: "grid grid-cols-1 sm:grid-cols-2 gap-8",
+        groupBlockClass: "rounded-xl border-2 border-slate-100 p-6 bg-slate-50/30 shadow-sm",
+        titleClass: "mb-5 text-sm sm:text-lg font-extrabold uppercase tracking-wider text-center block",
+        listSpacingClass: "space-y-2.5",
+        buttonPaddingClass: "py-2 px-3",
+        rankClass: "flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs sm:text-base font-bold text-slate-500 group-hover:bg-[#0063a9]/10 group-hover:text-[#0063a9] transition-colors",
+        companyClass: "min-w-0 flex-1 truncate text-xs sm:text-base font-semibold text-slate-700 group-hover:text-[#0063a9] group-hover:underline transition-all",
+        scoreClass: "shrink-0 text-xs sm:text-base font-bold transition-all group-hover:scale-105",
+        noDataClass: "text-xs sm:text-sm text-slate-400 text-center py-4",
+      };
+    } else {
+      return {
+        containerClass: "mt-4 w-full flex-1",
+        gridClass: "grid grid-cols-1 sm:grid-cols-3 gap-4",
+        groupBlockClass: "rounded-xl border border-slate-100 p-4 bg-slate-50/30",
+        titleClass: "mb-3 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-center block",
+        listSpacingClass: "space-y-1.5",
+        buttonPaddingClass: "py-1.5 px-2.5",
+        rankClass: "flex h-5 w-5 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] sm:text-xs font-bold text-slate-500 group-hover:bg-[#0063a9]/10 group-hover:text-[#0063a9] transition-colors",
+        companyClass: "min-w-0 flex-1 truncate text-xs sm:text-sm font-bold text-slate-700 group-hover:text-[#0063a9] group-hover:underline transition-all",
+        scoreClass: "shrink-0 text-xs sm:text-sm font-bold transition-all group-hover:scale-105",
+        noDataClass: "text-xs text-slate-400 text-center py-2",
+      };
+    }
+  }, [numGroups]);
+
   return (
-    <div className="flex h-full w-full flex-col bg-white px-8 py-8 sm:px-14 sm:py-10 text-slate-900">
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#0063a9]">Category</p>
-      <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">Company Leaderboard</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Top-ranked partners within each survey type. Click a company to view interactive breakdown & trends.
-      </p>
-      <div className="mt-5 grid flex-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-3">
-        {slide.groups.map((group) => (
-          <div key={group.surveyType} className="rounded-xl border border-slate-100 p-3 bg-slate-50/30">
-            <p
-              className="mb-2 text-xs font-bold uppercase tracking-wider"
-              style={{ color: surveyTypeColors[group.surveyType] }}
-            >
-              {group.surveyType}
-            </p>
-            {group.rows.length ? (
-              <ol className="space-y-1.5">
-                {group.rows.map((row) => (
-                  <li key={row.company}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedCompany({
-                          company: row.company,
-                          surveyType: group.surveyType,
-                        })
-                      }
-                      title={`Click to view detailed metrics for ${row.company}`}
-                      className="flex w-full items-center gap-2 rounded-lg p-1 text-left transition hover:bg-slate-100 group cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-                    >
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 group-hover:bg-[#0063a9]/10 group-hover:text-[#0063a9] transition-colors">
-                        {row.rank}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700 group-hover:text-[#0063a9] group-hover:underline transition-all">
-                        {row.company}
-                      </span>
-                      <span className="shrink-0 text-xs font-bold transition-all group-hover:scale-105" style={{ color: row.hex }}>
-                        {row.score.toFixed(0)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-xs text-slate-400">No data for this window.</p>
-            )}
-          </div>
-        ))}
+    <div className="flex h-full w-full flex-col bg-white px-8 py-6 sm:px-14 sm:py-8 text-slate-900">
+      <div className="shrink-0">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#0063a9]">Category</p>
+        <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Company Leaderboard</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Top-ranked partners within each survey type. Click a company to view interactive breakdown & trends.
+        </p>
+      </div>
+      <div className={layoutConfig.containerClass}>
+        <div className={layoutConfig.gridClass}>
+          {slide.groups.map((group) => (
+            <div key={group.surveyType} className={layoutConfig.groupBlockClass}>
+              <p
+                className={layoutConfig.titleClass}
+                style={{ color: surveyTypeColors[group.surveyType] }}
+              >
+                {group.surveyType}
+              </p>
+              {group.rows.length ? (
+                <ol className={layoutConfig.listSpacingClass}>
+                  {group.rows.map((row) => (
+                    <li key={row.company}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedCompany({
+                            company: row.company,
+                            surveyType: group.surveyType,
+                          })
+                        }
+                        title={`Click to view detailed metrics for ${row.company}`}
+                        className={`flex w-full items-center gap-2.5 rounded-lg text-left transition hover:bg-slate-100 group cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50 ${layoutConfig.buttonPaddingClass}`}
+                      >
+                        <span className={layoutConfig.rankClass}>
+                          {row.rank}
+                        </span>
+                        <span className={layoutConfig.companyClass}>
+                          {row.company}
+                        </span>
+                        <span className={layoutConfig.scoreClass} style={{ color: row.hex }}>
+                          {row.score.toFixed(0)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className={layoutConfig.noDataClass}>No data for this window.</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

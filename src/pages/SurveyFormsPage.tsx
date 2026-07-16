@@ -13,6 +13,8 @@ interface SurveyFormsPageProps {
   onNavigateToCreate: () => void;
   onFillForm: (id: string) => void;
   onUpdateSurvey?: (survey: CustomForm) => void;
+  onUpdateSurveysBulk?: (updatedSurveysList: CustomForm[]) => void;
+  onArchiveResponses?: (surveyIds: string[]) => void;
   isAdmin?: boolean;
 }
 
@@ -30,6 +32,30 @@ const surveyTypeBadges: Record<SurveyType, string> = {
   Subcontractor: 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20',
 };
 
+function ddmmToYyyymmdd(ddmm: string): string {
+  if (!ddmm) return '';
+  const parts = ddmm.split('/');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
+function yyyymmddToDdmm(yyyymmdd: string): string {
+  if (!yyyymmdd) return '';
+  const parts = yyyymmdd.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const month = parts[1].padStart(2, '0');
+    const day = parts[2].padStart(2, '0');
+    return `${day}/${month}/${year}`;
+  }
+  return yyyymmdd;
+}
+
 export function SurveyFormsPage({
   surveys,
   responses,
@@ -39,12 +65,30 @@ export function SurveyFormsPage({
   onNavigateToCreate,
   onFillForm,
   onUpdateSurvey,
+  onUpdateSurveysBulk,
+  onArchiveResponses,
   isAdmin
 }: SurveyFormsPageProps) {
   const [surveyType, setSurveyType] = useState<'All' | SurveyType>('All');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSurvey, setEditingSurvey] = useState<CustomForm | null>(null);
+
+  // State for bulk modification
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedSurveyIds, setSelectedSurveyIds] = useState<Set<string>>(new Set());
+  const [isModifyOpen, setIsModifyOpen] = useState(false);
+  const [overrideDeadline, setOverrideDeadline] = useState(false);
+  const [newDeadlineDate, setNewDeadlineDate] = useState('');
+  const [overrideStatus, setOverrideStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState<'Running' | 'Paused' | 'Completed' | 'Archived'>('Running');
+
+  // Custom passcode and warning modals
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [archivePasscode, setArchivePasscode] = useState('');
+  const [resetPasscode, setResetPasscode] = useState('');
+  const [archiveError, setArchiveError] = useState('');
+  const [resetError, setResetError] = useState('');
 
   // Identify unique set of evaluated companies for this user
   const userEvaluations = useMemo(() => {
@@ -111,6 +155,9 @@ export function SurveyFormsPage({
 
   const filteredSurveys = useMemo(() => {
     return surveys.filter((survey) => {
+      // If Archived, it must not be seen in the table
+      if (survey.status === 'Archived') return false;
+
       if (surveyType !== 'All' && survey.surveyType !== surveyType) return false;
 
       if (search.trim()) {
@@ -122,6 +169,127 @@ export function SurveyFormsPage({
       return true;
     });
   }, [surveys, surveyType, search]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedSurveyIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    const allFilteredIds = filteredSurveys.map((s) => s.id);
+    const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedSurveyIds.has(id));
+    if (allSelected) {
+      setSelectedSurveyIds((prev) => {
+        const next = new Set(prev);
+        allFilteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedSurveyIds((prev) => {
+        const next = new Set(prev);
+        allFilteredIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkSaveChanges = () => {
+    if (!onUpdateSurveysBulk && !onUpdateSurvey) return;
+    if (selectedSurveyIds.size === 0) return;
+    if (!overrideDeadline && !overrideStatus) {
+      alert("Please select at least one property to override (check the box next to Deadline Date or Form Status).");
+      return;
+    }
+
+    const updatedSurveysList: CustomForm[] = [];
+    surveys.forEach((survey) => {
+      if (selectedSurveyIds.has(survey.id)) {
+        const updated = { ...survey };
+        if (overrideDeadline) {
+          updated.deadlineDate = yyyymmddToDdmm(newDeadlineDate);
+        }
+        if (overrideStatus) {
+          updated.status = newStatus;
+        }
+        updatedSurveysList.push(updated);
+      }
+    });
+
+    if (onUpdateSurveysBulk) {
+      onUpdateSurveysBulk(updatedSurveysList);
+    } else if (onUpdateSurvey) {
+      updatedSurveysList.forEach((s) => onUpdateSurvey(s));
+    }
+
+    // Reset select state and exit
+    setIsSelectMode(false);
+    setSelectedSurveyIds(new Set());
+    setIsModifyOpen(false);
+    setOverrideDeadline(false);
+    setOverrideStatus(false);
+  };
+
+  const handleProceedArchive = () => {
+    const validCodes = ['1234', 'mgenesis', 'admin123'];
+    if (!validCodes.includes(archivePasscode)) {
+      setArchiveError('Invalid administrator passcode! Access denied.');
+      return;
+    }
+
+    if (!onUpdateSurveysBulk && !onUpdateSurvey) {
+      setArchiveError('Survey update callback is not configured.');
+      return;
+    }
+
+    const updatedSurveysList: CustomForm[] = [];
+    surveys.forEach((survey) => {
+      if (selectedSurveyIds.has(survey.id)) {
+        updatedSurveysList.push({ ...survey, status: 'Archived' });
+      }
+    });
+
+    if (onUpdateSurveysBulk) {
+      onUpdateSurveysBulk(updatedSurveysList);
+    } else if (onUpdateSurvey) {
+      updatedSurveysList.forEach((s) => onUpdateSurvey(s));
+    }
+
+    alert("Selected survey forms have been successfully archived!");
+    setIsSelectMode(false);
+    setSelectedSurveyIds(new Set());
+    setIsModifyOpen(false);
+    setIsArchiveConfirmOpen(false);
+    setArchivePasscode('');
+    setArchiveError('');
+  };
+
+  const handleProceedReset = () => {
+    const validCodes = ['1234', 'mgenesis', 'admin123'];
+    if (!validCodes.includes(resetPasscode)) {
+      setResetError('Invalid administrator passcode! Access denied.');
+      return;
+    }
+
+    if (onArchiveResponses) {
+      onArchiveResponses([...selectedSurveyIds]);
+      alert("Selected survey responses have been archived successfully, and the forms have been reset!");
+      setIsSelectMode(false);
+      setSelectedSurveyIds(new Set());
+      setIsModifyOpen(false);
+      setIsResetConfirmOpen(false);
+      setResetPasscode('');
+      setResetError('');
+    } else {
+      setResetError('Response archiver callback is not configured.');
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -202,24 +370,55 @@ export function SurveyFormsPage({
 
       {/* Main List Section */}
       <section className="panel">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h3 className="text-base font-semibold">Active Survey Forms</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Interactive forms for evaluating performance metrics, contracts, and service level agreements.
-            </p>
-          </div>
-          <div className="segmented-control">
-            {surveyTypeOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={surveyType === option ? 'segmented-active' : ''}
-                onClick={() => setSurveyType(option)}
-              >
-                {option}
-              </button>
-            ))}
+        <div className="mb-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="text-base font-semibold">Active Survey Forms</h3>
+                {isAdmin && isSelectMode && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    Bulk Mode Active
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Interactive forms for evaluating performance metrics, contracts, and service level agreements.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-3 lg:items-end">
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setIsSelectMode(!isSelectMode);
+                    setSelectedSurveyIds(new Set());
+                    setIsModifyOpen(false);
+                  }}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold shadow-sm transition cursor-pointer border ${
+                    isSelectMode
+                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30'
+                      : 'bg-[#0063a9] text-white hover:bg-[#00528c] border-[#0063a9] dark:bg-blue-600 dark:hover:bg-blue-700 dark:border-blue-600'
+                  }`}
+                  type="button"
+                >
+                  {isSelectMode ? 'Cancel Selection' : 'Select Forms'}
+                </button>
+              )}
+              
+              <div className="segmented-control mt-1">
+                {surveyTypeOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={surveyType === option ? 'segmented-active' : ''}
+                    onClick={() => setSurveyType(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -254,19 +453,23 @@ export function SurveyFormsPage({
             <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
-                  <th className="px-4 py-3.5">Survey Title</th>
+                  <th className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      {isSelectMode && (
+                        <input
+                          type="checkbox"
+                          checked={filteredSurveys.length > 0 && filteredSurveys.every(s => selectedSurveyIds.has(s.id))}
+                          onChange={handleToggleSelectAll}
+                          className="h-4.5 w-4.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9] transition cursor-pointer"
+                        />
+                      )}
+                      <span>Survey Title</span>
+                    </div>
+                  </th>
                   <th className="px-4 py-3.5">Category Type</th>
-                  {isAdmin ? (
-                    <>
-                      <th className="px-4 py-3.5">Status</th>
-                      <th className="px-4 py-3.5">Deadline Date</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-4 py-3.5">Deadline Date</th>
-                      <th className="px-4 py-3.5">Status</th>
-                    </>
-                  )}
+                  <th className="px-4 py-3.5">Status</th>
+                  <th className="px-4 py-3.5">Completion</th>
+                  <th className="px-4 py-3.5">Deadline Date</th>
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -275,17 +478,36 @@ export function SurveyFormsPage({
                   const deadlineLabel = formatDeadline(survey.deadlineDate);
                   const totalForType = companyTotalsByType[survey.surveyType] || 0;
                   const completedForType = companyCompletedByType[survey.surveyType] || 0;
-
+ 
                   return (
                     <tr key={survey.id} className="align-middle hover:bg-slate-50/40 dark:hover:bg-slate-900/10">
                       <td className="px-4 py-3.5">
-                        <div className="space-y-0.5 max-w-sm">
-                          <span className="font-bold text-slate-850 dark:text-slate-100 hover:text-[#0063a9] dark:hover:text-blue-400 cursor-pointer" onClick={() => onSelectSurvey(survey.id)}>
-                            {survey.title}
-                          </span>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1" title={survey.description}>
-                            {survey.description || 'No description provided.'}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          {isSelectMode && (
+                            <input
+                              type="checkbox"
+                              checked={selectedSurveyIds.has(survey.id)}
+                              onChange={() => handleToggleSelect(survey.id)}
+                              className="h-4.5 w-4.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9] transition cursor-pointer"
+                            />
+                          )}
+                          <div className="space-y-0.5 max-w-sm">
+                            <span
+                              className="font-bold text-slate-850 dark:text-slate-100 hover:text-[#0063a9] dark:hover:text-blue-400 cursor-pointer"
+                              onClick={() => {
+                                if (isSelectMode) {
+                                  handleToggleSelect(survey.id);
+                                } else {
+                                  onSelectSurvey(survey.id);
+                                }
+                              }}
+                            >
+                              {survey.title}
+                            </span>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1" title={survey.description}>
+                              {survey.description || 'No description provided.'}
+                            </p>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5">
@@ -293,31 +515,27 @@ export function SurveyFormsPage({
                           {survey.surveyType}
                         </span>
                       </td>
-                      {isAdmin ? (
-                        <>
-                          <td className="px-4 py-3.5">
-                            <CompletionStatusBar completed={completedForType} total={totalForType} />
-                          </td>
-                          <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarClock size={13} className="text-slate-400" />
-                              {deadlineLabel}
-                            </span>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarClock size={13} className="text-slate-400" />
-                              {deadlineLabel}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <CompletionStatusBar completed={completedForType} total={totalForType} />
-                          </td>
-                        </>
-                      )}
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${
+                          survey.status === 'Running' || !survey.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400' :
+                          survey.status === 'Paused' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/20 dark:text-amber-400' :
+                          survey.status === 'Completed' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400' :
+                          'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                        }`}>
+                          {survey.status === 'Running' || !survey.status ? 'ACTIVE' :
+                           survey.status === 'Completed' ? 'ENDED' :
+                           survey.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <CompletionStatusBar completed={completedForType} total={totalForType} />
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarClock size={13} className="text-slate-400" />
+                          {deadlineLabel}
+                        </span>
+                      </td>
                       <td className="px-4 py-3.5 text-right">
                         {isAdmin ? (
                           <div className="flex items-center justify-end gap-2.5">
@@ -331,7 +549,14 @@ export function SurveyFormsPage({
                               <span>Manage</span>
                             </button>
                             <button
-                              onClick={() => setEditingSurvey(survey)}
+                              onClick={() => {
+                                setSelectedSurveyIds(new Set([survey.id]));
+                                setNewStatus(survey.status === 'Paused' ? 'Paused' : survey.status === 'Completed' ? 'Completed' : 'Running');
+                                setNewDeadlineDate(ddmmToYyyymmdd(survey.deadlineDate || ''));
+                                setOverrideStatus(true);
+                                setOverrideDeadline(true);
+                                setIsModifyOpen(true);
+                              }}
                               className="inline-flex items-center justify-center gap-2 w-36 rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 px-4 py-2 text-sm font-bold transition cursor-pointer"
                               type="button"
                               title="Modify Survey"
@@ -517,61 +742,365 @@ export function SurveyFormsPage({
           </div>
         </div>
       )}
-      {/* Modify Survey Modal */}
-      {editingSurvey && isAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-            <h3 className="text-lg font-bold mb-4">Modify Survey Properties</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                <select 
-                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
-                  value={editingSurvey.status || 'Running'}
-                  onChange={(e) => setEditingSurvey({ ...editingSurvey, status: e.target.value as any })}
-                >
-                  <option value="Running">Running</option>
-                  <option value="Paused">Paused</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Archived">Archived</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Deadline Date</label>
-                <input 
-                  type="date"
-                  className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
-                  value={editingSurvey.deadlineDate || ''}
-                  onChange={(e) => setEditingSurvey({ ...editingSurvey, deadlineDate: e.target.value })}
-                />
+
+      {/* Bulk Modify Footer Selection Bar & Modal Popup */}
+      {isAdmin && isSelectMode && (
+        <>
+          {/* Bottom Sticky Selection Bar (only when modal is NOT open) */}
+          {!isModifyOpen && (
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] p-4 transition-all duration-300 animate-in slide-in-from-bottom">
+              <div className="max-w-5xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-2.5 w-2.5 rounded-full bg-[#0063a9] dark:bg-blue-500 animate-pulse" />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <strong className="text-slate-900 dark:text-white font-extrabold">{selectedSurveyIds.size}</strong> {selectedSurveyIds.size === 1 ? 'survey' : 'surveys'} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setIsSelectMode(false);
+                      setSelectedSurveyIds(new Set());
+                    }}
+                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-semibold transition cursor-pointer"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedSurveyIds.size === 0) {
+                        alert("Please select at least one survey form to modify.");
+                        return;
+                      }
+                      setIsModifyOpen(true);
+                    }}
+                    disabled={selectedSurveyIds.size === 0}
+                    className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition cursor-pointer ${
+                      selectedSurveyIds.size === 0
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-900 dark:text-slate-600'
+                        : 'bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700'
+                    }`}
+                    type="button"
+                  >
+                    Modify Selected Survey
+                  </button>
+                </div>
               </div>
             </div>
+          )}
 
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button
-                onClick={() => setEditingSurvey(null)}
-                className="secondary-button"
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (onUpdateSurvey) {
-                    onUpdateSurvey(editingSurvey);
-                  }
-                  setEditingSurvey(null);
-                }}
-                className="inline-flex items-center justify-center rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] px-4 py-2 text-sm font-semibold transition cursor-pointer"
-                type="button"
-              >
-                Save Changes
-              </button>
+          {/* Centered Modal with Darkened Background Overlay */}
+          {isModifyOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Darkened Backdrop */}
+              <div 
+                className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+                onClick={() => setIsModifyOpen(false)}
+              />
+
+              {/* Centered Modal Container */}
+              <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-5 animate-in zoom-in-95 duration-200">
+                
+                {/* Modal Title Banner */}
+                <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-950 dark:text-white">
+                      Bulk Modify Settings
+                    </h3>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      Applying to {selectedSurveyIds.size} selected survey forms
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsModifyOpen(false)}
+                    className="p-1 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Section 1: Survey Status & Archive */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      Survey/s Status:
+                    </span>
+                    <button
+                      onClick={() => {
+                        setArchivePasscode('');
+                        setArchiveError('');
+                        setIsArchiveConfirmOpen(true);
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30 px-3 py-1.5 text-xs font-bold transition cursor-pointer"
+                      type="button"
+                    >
+                      Archive Form/s
+                    </button>
+                  </div>
+
+                  {/* Radio Choice List */}
+                  <div className="space-y-2 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/60">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <input
+                        type="radio"
+                        name="bulkStatus"
+                        checked={overrideStatus && newStatus === 'Running'}
+                        onChange={() => {
+                          setNewStatus('Running');
+                          setOverrideStatus(true);
+                        }}
+                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                      />
+                      <span>Active</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <input
+                        type="radio"
+                        name="bulkStatus"
+                        checked={overrideStatus && newStatus === 'Paused'}
+                        onChange={() => {
+                          setNewStatus('Paused');
+                          setOverrideStatus(true);
+                        }}
+                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                      />
+                      <span>Paused</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <input
+                        type="radio"
+                        name="bulkStatus"
+                        checked={overrideStatus && newStatus === 'Completed'}
+                        onChange={() => {
+                          setNewStatus('Completed');
+                          setOverrideStatus(true);
+                        }}
+                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                      />
+                      <span>Ended</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Section 2: Set Deadline */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
+                    Set Deadline
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0063a9] pl-10 cursor-pointer"
+                      value={newDeadlineDate}
+                      onChange={(e) => {
+                        setNewDeadlineDate(e.target.value);
+                        setOverrideDeadline(true);
+                      }}
+                    />
+                    <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Modal Footer Buttons */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
+                  <button
+                    onClick={() => {
+                      setIsModifyOpen(false);
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => {
+                        setResetPasscode('');
+                        setResetError('');
+                        setIsResetConfirmOpen(true);
+                      }}
+                      className="px-4 py-2.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 dark:border-rose-900/30 dark:hover:bg-rose-950/20 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
+                      type="button"
+                    >
+                      Reset Form/s
+                    </button>
+                    <button
+                      onClick={handleBulkSaveChanges}
+                      className="px-4 py-2.5 rounded-xl bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 text-xs font-bold uppercase tracking-wider cursor-pointer transition shadow-md"
+                      type="button"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* Custom Archive Confirmation Modal */}
+          {isArchiveConfirmOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div 
+                className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+                onClick={() => setIsArchiveConfirmOpen(false)}
+              />
+              <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-rose-100 dark:border-rose-950/30 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <span className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30">
+                    <X size={20} className="text-rose-600 dark:text-rose-400" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-950 dark:text-white uppercase tracking-wider">
+                      Archive Selected Forms
+                    </h3>
+                    <p className="text-xs text-rose-500 font-semibold mt-0.5">
+                      Applying to {selectedSurveyIds.size} survey forms
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="bg-rose-50/75 dark:bg-rose-950/15 p-3.5 rounded-xl border border-rose-100 dark:border-rose-900/30 text-xs text-rose-700 dark:text-rose-300 leading-relaxed space-y-1.5">
+                    <p className="font-bold">⚠️ CRITICAL WARNING:</p>
+                    <p>Archiving these survey forms will completely hide them from both active administrator tables and employee evaluation dashboards.</p>
+                    <p>The forms will no longer accept responses, but their historic responses will be preserved in the Archive Center.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
+                      Enter Admin Passcode:
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Enter administrator passcode to verify"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                      value={archivePasscode}
+                      onChange={(e) => {
+                        setArchivePasscode(e.target.value);
+                        setArchiveError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleProceedArchive();
+                        }
+                      }}
+                    />
+                    {archiveError && (
+                      <p className="text-xs font-bold text-rose-600 dark:text-rose-400 animate-pulse mt-1">
+                        {archiveError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    onClick={() => {
+                      setIsArchiveConfirmOpen(false);
+                      setArchivePasscode('');
+                      setArchiveError('');
+                    }}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleProceedArchive}
+                    className="px-4 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-700 dark:hover:bg-rose-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition shadow-md"
+                    type="button"
+                  >
+                    Proceed & Archive
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Custom Reset Confirmation Modal */}
+          {isResetConfirmOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div 
+                className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+                onClick={() => setIsResetConfirmOpen(false)}
+              />
+              <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-amber-100 dark:border-amber-950/30 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <span className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                    <X size={20} className="text-amber-600 dark:text-amber-400" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-950 dark:text-white uppercase tracking-wider">
+                      Reset Selected Forms
+                    </h3>
+                    <p className="text-xs text-amber-500 font-semibold mt-0.5">
+                      Applying to {selectedSurveyIds.size} survey forms
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="bg-amber-50/75 dark:bg-amber-950/15 p-3.5 rounded-xl border border-amber-100 dark:border-amber-900/30 text-xs text-amber-700 dark:text-amber-300 leading-relaxed space-y-1.5">
+                    <p className="font-bold">⚠️ CRITICAL WARNING:</p>
+                    <p>Resetting these forms will archive all previous responses submitted by employees for these specific survey questions.</p>
+                    <p>This allows employees to answer the evaluation forms completely fresh, while previous answers are moved securely to historical archives.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
+                      Enter Admin Passcode:
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Enter administrator passcode to verify"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      value={resetPasscode}
+                      onChange={(e) => {
+                        setResetPasscode(e.target.value);
+                        setResetError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleProceedReset();
+                        }
+                      }}
+                    />
+                    {resetError && (
+                      <p className="text-xs font-bold text-rose-600 dark:text-rose-400 animate-pulse mt-1">
+                        {resetError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    onClick={() => {
+                      setIsResetConfirmOpen(false);
+                      setResetPasscode('');
+                      setResetError('');
+                    }}
+                    className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleProceedReset}
+                    className="px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition shadow-md"
+                    type="button"
+                  >
+                    Proceed & Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

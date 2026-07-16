@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation } from 'lucide-react';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation, Archive, Database, UserCog } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
@@ -16,11 +16,21 @@ import { SurveyFillerPage, SurveyFillerHandle } from './pages/SurveyFillerPage';
 import { PartnerCompaniesPage } from './pages/PartnerCompaniesPage';
 import { SurveyFormsPage } from './pages/SurveyFormsPage';
 import { PresentPage } from './pages/PresentPage';
+import { ArchivePage } from './pages/ArchivePage';
+import { SimulatorPage } from './pages/SimulatorPage';
+import { AccountManagementPage } from './pages/AccountManagementPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
 
-const DEMO_ACCOUNTS = [
+export interface AccountProfile {
+  email: string;
+  role: string;
+  designation: string;
+  department: string;
+}
+
+const DEFAULT_ACCOUNTS: AccountProfile[] = [
   {
     email: 'admin@mgenesis.com',
     role: 'Admin',
@@ -59,30 +69,20 @@ const DEMO_ACCOUNTS = [
   }
 ];
 
-function getUserProfile(email: string | null) {
-  if (!email) return null;
-  const normalized = email.trim().toLowerCase();
-  const matched = DEMO_ACCOUNTS.find((acc) => acc.email === normalized);
-  if (matched) return matched;
-  return {
-    email: normalized,
-    role: 'Employee',
-    designation: 'Rank & File',
-    department: 'Logistics'
-  };
-}
-
-type PageKey = 'dashboard' | 'partner-companies' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form';
+type PageKey = 'dashboard' | 'partner-companies' | 'account-management' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form' | 'archive' | 'simulator';
 
 const adminPages = [
   { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
+  { key: 'account-management' as const, label: 'Account Management', icon: UserCog },
   { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
   { key: 'present' as const, label: 'Present', icon: Presentation },
   { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
   { key: 'reports' as const, label: 'Reports', icon: FileText },
   { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
   { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true },
+  { key: 'archive' as const, label: 'Archive Center', icon: Archive },
+  { key: 'simulator' as const, label: 'Database Simulator', icon: Database },
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -90,6 +90,12 @@ const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']
 export default function App() {
   const {
     responses,
+    archivedResponses,
+    archiveResponsesForSurveys,
+    restoreResponseGroup,
+    restoreResponsesForSurvey,
+    deleteArchivedResponseGroups,
+    restoreArchivedResponseGroups,
     surveys,
     questions,
     companies,
@@ -103,12 +109,14 @@ export default function App() {
     markNotificationsRead,
     createSurvey,
     updateSurvey,
+    updateSurveysBulk,
     deleteSurvey,
     submitResponse,
     resetAllData,
     isFullDatasetActive,
     clearResponses,
     addEvaluations,
+    resetSimulation,
   } = useSurveyData();
 
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
@@ -132,11 +140,50 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
 
+  // Accounts Management State
+  const [accounts, setAccounts] = useState<AccountProfile[]>(() => {
+    const saved = localStorage.getItem('survey_accounts_v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return DEFAULT_ACCOUNTS;
+      }
+    }
+    return DEFAULT_ACCOUNTS;
+  });
+
+  const saveAccounts = (newAccounts: AccountProfile[]) => {
+    setAccounts(newAccounts);
+    localStorage.setItem('survey_accounts_v1', JSON.stringify(newAccounts));
+  };
+
+  const getUserProfile = (email: string | null) => {
+    if (!email) return null;
+    const normalized = email.trim().toLowerCase();
+    const matched = accounts.find((acc) => acc.email === normalized);
+    if (matched) return matched;
+    return {
+      email: normalized,
+      role: 'Employee',
+      designation: 'Rank & File',
+      department: 'Logistics'
+    };
+  };
+
   const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
   const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
 
+  const profile = useMemo(() => getUserProfile(account), [account, accounts]);
+
   const activeTitle = useMemo(() => {
+    if (activePage === 'dashboard') {
+      const name = profile?.email ? profile.email.split('@')[0] : 'User';
+      const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+      return `Welcome Back, ${capitalizedName}!`;
+    }
     if (activePage === 'partner-companies') return 'Administrative Partner Registry';
+    if (activePage === 'account-management') return 'Account Management';
     if (activePage === 'create-form') return editingSurveyId ? 'Edit Survey Form' : 'Create Survey Form';
     if (activePage === 'view-form') {
       const selected = surveys.find((s) => s.id === selectedSurveyId);
@@ -144,24 +191,18 @@ export default function App() {
     }
     if (activePage === 'fill-form') return 'Fill Out Stakeholder Survey';
     return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
-  }, [activePage, selectedSurveyId, surveys, editingSurveyId]);
+  }, [activePage, selectedSurveyId, surveys, editingSurveyId, profile]);
 
-  const profile = useMemo(() => getUserProfile(account), [account]);
   const isAdmin = profile?.role === 'Admin';
 
   const visiblePages = useMemo(() => {
     if (isAdmin) return adminPages;
-    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present');
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive');
   }, [isAdmin]);
 
   const handleLogin = (email: string) => {
     setAccount(email);
-    const prof = getUserProfile(email);
-    if (prof && prof.role === 'Admin') {
-      setActivePage('dashboard');
-    } else {
-      setActivePage('survey-forms');
-    }
+    setActivePage('dashboard');
   };
 
   // Auth Guard
@@ -193,6 +234,9 @@ export default function App() {
         isLoading={isLoading}
         error={error}
         surveyTypeFilter={filters.surveyType}
+        surveys={surveys}
+        isAdmin={isAdmin}
+        userEmail={account || ''}
       />
     ),
     'partner-companies': (
@@ -204,6 +248,13 @@ export default function App() {
         isAdmin={isAdmin}
       />
     ),
+    'account-management': (
+      <AccountManagementPage 
+        accounts={accounts}
+        onUpdateAccounts={saveAccounts}
+        isAdmin={isAdmin}
+      />
+    ),
     'survey-forms': (
       <SurveyFormsPage
         surveys={surveys}
@@ -211,6 +262,8 @@ export default function App() {
         partnerCompanies={partnerCompanies}
         userEmail={account || ''}
         onUpdateSurvey={updateSurvey}
+        onUpdateSurveysBulk={updateSurveysBulk}
+        onArchiveResponses={archiveResponsesForSurveys}
         onSelectSurvey={(id) => {
           setSelectedSurveyId(id);
           setActivePage('view-form');
@@ -223,10 +276,19 @@ export default function App() {
         isAdmin={isAdmin}
       />
     ),
-    analytics: <AnalyticsPage responses={filteredResponses} activeSurveyTypes={activeSurveyTypes} filters={filters} setFilters={setFilters} />,
+    analytics: (
+      <AnalyticsPage
+        responses={filteredResponses}
+        allResponses={responses}
+        partnerCompanies={partnerCompanies}
+        activeSurveyTypes={activeSurveyTypes}
+        filters={filters}
+        setFilters={setFilters}
+      />
+    ),
     present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} surveys={surveys} />,
-    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} />,
+    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} isAllCompanies={!filters.company} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
       <CreateSurveyPage
@@ -237,7 +299,12 @@ export default function App() {
         surveyToEdit={editingSurveyId ? surveys.find(s => s.id === editingSurveyId) : undefined}
         onSave={(surveyData) => {
           if (editingSurveyId) {
-            updateSurvey(editingSurveyId, surveyData);
+            const currentSurvey = surveys.find(s => s.id === editingSurveyId);
+            updateSurvey({
+              ...surveyData,
+              id: editingSurveyId,
+              createdAt: currentSurvey?.createdAt || new Date().toISOString(),
+            });
             setEditingSurveyId(null);
             setActivePage('view-form');
           } else {
@@ -294,6 +361,26 @@ export default function App() {
         responses={responses}
         onSubmitted={handleSurveySubmit}
         onCancel={() => setActivePage('view-form')}
+      />
+    ),
+    archive: (
+      <ArchivePage
+        surveys={surveys}
+        archivedResponses={archivedResponses}
+        onUpdateSurvey={updateSurvey}
+        onRestoreResponseGroup={restoreResponseGroup}
+        onRestoreResponsesForSurvey={restoreResponsesForSurvey}
+        onDeleteArchivedResponseGroups={deleteArchivedResponseGroups}
+        onRestoreArchivedResponseGroups={restoreArchivedResponseGroups}
+        isAdmin={isAdmin}
+      />
+    ),
+    simulator: (
+      <SimulatorPage
+        responses={responses}
+        archivedResponses={archivedResponses}
+        onSimulate={addEvaluations}
+        onResetSimulation={resetSimulation}
       />
     ),
   }[activePage];
@@ -404,18 +491,14 @@ export default function App() {
             <div className="min-w-0 flex-1">{pageContent}</div>
             
             {/* Show Filter Panel only on Admin-view pages that need filters */}
-            {activePage !== 'notifications' && activePage !== 'analytics' && activePage !== 'create-form' && activePage !== 'view-form' && activePage !== 'fill-form' && activePage !== 'partner-companies' && activePage !== 'survey-forms' && activePage !== 'present' && activePage !== 'explorer' && (
+            {activePage === 'reports' && (
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
-                  questions={questions}
-                  companies={companies}
+                  partnerCompanies={partnerCompanies}
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
-                  isDashboard={activePage === 'dashboard'}
-                  isFullDatasetActive={isFullDatasetActive}
-                  clearResponses={clearResponses}
-                  addEvaluations={addEvaluations}
+                  isDashboard={false}
                 />
               </aside>
             )}

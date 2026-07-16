@@ -243,6 +243,28 @@ export function getKpiSummary(responses: SurveyResponse[]): KpiSummary {
   };
 }
 
+export function getCompanyPerformance(responses: SurveyResponse[]) {
+  const scores = submissionScores(responses);
+  const companyMap = new Map<string, { totalScore: number; count: number }>();
+  
+  scores.forEach(item => {
+    const current = companyMap.get(item.company) || { totalScore: 0, count: 0 };
+    current.totalScore += item.score;
+    current.count += 1;
+    companyMap.set(item.company, current);
+  });
+  
+  const companyAverages = Array.from(companyMap.entries()).map(([company, data]) => ({
+    company,
+    average: data.totalScore / data.count,
+    evaluations: data.count,
+  }));
+  
+  companyAverages.sort((a, b) => b.average - a.average);
+  
+  return companyAverages;
+}
+
 export function ratingDistribution(responses: SurveyResponse[]) {
   const uniqueRatings = new Set<Rating>();
   responses.forEach((response) => {

@@ -24,6 +24,10 @@ export interface SurveyResponse {
   rating: Rating;
   comment: string;
   respondentEmail?: string;
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBySurveyId?: string;
+  archivedBySurveyTitle?: string;
 }
 
 export interface FilterState {

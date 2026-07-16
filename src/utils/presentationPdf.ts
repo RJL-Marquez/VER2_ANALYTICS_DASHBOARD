@@ -312,21 +312,7 @@ function renderSlide(doc: jsPDF, slide: Slide, pdfMaxRating: number) {
       }
       break;
     }
-    case 'distribution': {
-      drawHeader(doc, 'Category', 'Rating Distribution', `${slide.naPercentage.toFixed(1)}% of ratings marked N/A`);
-      let y = 160;
-      const max = Math.max(1, ...slide.ratings.map((r) => r.count));
-      slide.ratings.forEach((row) => {
-        setText(doc, INK);
-        doc.setFontSize(9);
-        doc.text(`Rating ${row.rating}`, MARGIN, y);
-        bar(doc, MARGIN + 90, y - 7, PAGE_W - MARGIN * 2 - 170, 10, row.count / max, BRAND);
-        setText(doc, '#64748b');
-        doc.text(String(row.count), PAGE_W - MARGIN - 30, y);
-        y += 28;
-      });
-      break;
-    }
+
     case 'closing': {
       drawClosingBackground(doc);
       doc.setTextColor(255, 255, 255);

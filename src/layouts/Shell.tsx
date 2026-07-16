@@ -29,7 +29,7 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
   return (
     <div className="min-h-screen bg-cloud text-ink dark:bg-slate-950 dark:text-slate-100 flex flex-col">
       {/* Top Header Layer */}
-      <header className="sticky top-0 z-20 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-sm">
+      <header className="sticky top-0 z-40 h-20 border-b border-[#00528c] bg-[#0063a9] flex items-center justify-between w-full lg:pr-8 shadow-sm">
         <div className="flex items-center h-full flex-1 min-w-0">
           {/* Brand Box / Logo Area - Fixed Width, unaffected by collapsing */}
           <div className="relative z-10 flex items-center justify-center h-full bg-[#0063a9] shrink-0 w-[220px] px-4">
@@ -184,9 +184,12 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
         {/* Page Content - Below Header */}
         <main className="min-w-0 flex-1 transition-colors duration-300">
           <div className="px-4 py-6 lg:px-8">
-            <div className="mb-6">
-              <p className="text-xs font-medium uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">Centralized stakeholder satisfaction reporting</p>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">Centralized stakeholder satisfaction reporting</p>
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+              </div>
+              <div id="shell-header-action"></div>
             </div>
             {children}
           </div>

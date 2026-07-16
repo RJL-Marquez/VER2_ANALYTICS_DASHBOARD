@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Download, FileBarChart, FileSpreadsheet, FileText, Printer, Table2 } from 'lucide-react';
 import { SurveyResponse } from '../types/survey';
-import { averageBySurveyType, formatNumber, getKpiSummary, questionPerformance } from '../utils/analytics';
+import { averageBySurveyType, formatNumber, getCompanyPerformance, getKpiSummary, questionPerformance } from '../utils/analytics';
 import { ExportTable, exportTablesAsCSV, exportTablesAsExcel, exportTablesAsPDF } from '../utils/exporters';
 
 interface ReportsPageProps {
   responses: SurveyResponse[];
   isAdmin?: boolean;
+  isAllCompanies?: boolean;
 }
 
 type ExportFormat = 'pdf' | 'csv' | 'excel';
@@ -17,11 +18,16 @@ function runExport(format: ExportFormat, reportTitle: string, tables: ExportTabl
   else exportTablesAsPDF(reportTitle, tables, filenameBase);
 }
 
-export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
+export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageProps) {
   const summary = getKpiSummary(responses);
   const allQuestionRows = questionPerformance(responses);
   const questionRows = allQuestionRows.slice(0, 5);
   const surveyRows = averageBySurveyType(responses);
+  const companyPerformance = getCompanyPerformance(responses);
+  
+  const splitCount = Math.min(10, Math.floor(companyPerformance.length / 2));
+  const topCompanies = companyPerformance.slice(0, splitCount);
+  const leastRatedCompanies = companyPerformance.slice().reverse().slice(0, splitCount);
 
   // --- Table builders: same underlying data the page renders, reshaped
   // into the generic { title, columns, rows } shape the export utils need.
@@ -36,6 +42,18 @@ export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
       ['Highest Rated Question', summary.highestRatedQuestion],
       ['Lowest Rated Question', summary.lowestRatedQuestion],
     ],
+  };
+
+  const topCompaniesTable: ExportTable = {
+    title: `Top Performing Companies (Top ${splitCount})`,
+    columns: ['Company', 'Average Score', 'Evaluations'],
+    rows: topCompanies.map((row) => [row.company, formatNumber(row.average), row.evaluations]),
+  };
+
+  const leastRatedCompaniesTable: ExportTable = {
+    title: `Least Rated Companies (Bottom ${splitCount})`,
+    columns: ['Company', 'Average Score', 'Evaluations'],
+    rows: leastRatedCompanies.map((row) => [row.company, formatNumber(row.average), row.evaluations]),
   };
 
   const questionHighlightsTable: ExportTable = {
@@ -57,18 +75,21 @@ export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
   };
 
   const handleExecutiveExport = (format: ExportFormat) => {
-    runExport(format, 'Executive Summary', [summaryTable, questionHighlightsTable, surveyReportTable], 'executive_summary');
+    const tables = [summaryTable, topCompaniesTable, leastRatedCompaniesTable, questionHighlightsTable];
+    if (isAllCompanies) tables.push(surveyReportTable);
+    runExport(format, 'Executive Summary', tables, 'executive_summary');
   };
 
-  const handleCardExport = (format: ExportFormat, card: 'summary' | 'question' | 'survey') => {
+  const handleCardExport = (format: ExportFormat, card: 'summary' | 'question' | 'survey' | 'companies') => {
     if (card === 'summary') runExport(format, 'Summary Report', [summaryTable], 'summary_report');
     else if (card === 'question') runExport(format, 'Question Report', [questionReportTable], 'question_report');
-    else runExport(format, 'Survey Report', [surveyReportTable], 'survey_report');
+    else if (card === 'companies') runExport(format, 'Companies Performance Report', [topCompaniesTable, leastRatedCompaniesTable], 'companies_report');
+    else if (isAllCompanies) runExport(format, 'Survey Report', [surveyReportTable], 'survey_report');
   };
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className={`grid gap-4 ${isAllCompanies ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <ReportCard
           title="Summary Report"
           detail={`${summary.totalResponses} submitted evaluations, ${formatNumber(summary.averageRating)} average rating`}
@@ -77,19 +98,28 @@ export function ReportsPage({ responses, isAdmin }: ReportsPageProps) {
           onExport={(format) => handleCardExport(format, 'summary')}
         />
         <ReportCard
+          title="Companies Report"
+          detail={`${companyPerformance.length} companies ranked by performance`}
+          icon={Table2}
+          isAdmin={isAdmin}
+          onExport={(format) => handleCardExport(format, 'companies')}
+        />
+        <ReportCard
           title="Question Report"
           detail={`${allQuestionRows.length} ranked question groups`}
           icon={FileSpreadsheet}
           isAdmin={isAdmin}
           onExport={(format) => handleCardExport(format, 'question')}
         />
-        <ReportCard
-          title="Survey Report"
-          detail="Contractor, Supplier, and Subcontractor comparison"
-          icon={Printer}
-          isAdmin={isAdmin}
-          onExport={(format) => handleCardExport(format, 'survey')}
-        />
+        {isAllCompanies && (
+          <ReportCard
+            title="Survey Report"
+            detail="Contractor, Supplier, and Subcontractor comparison"
+            icon={Printer}
+            isAdmin={isAdmin}
+            onExport={(format) => handleCardExport(format, 'survey')}
+          />
+        )}
       </section>
 
       <section className="panel">

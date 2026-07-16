@@ -38,14 +38,14 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
   const [deadlineError, setDeadlineError] = useState('');
   const [questions, setQuestions] = useState<QuestionInput[]>(
     surveyToEdit
-      ? surveyToEdit.questions.map((q) => ({
+      ? (surveyToEdit.questions.map((q) => ({
           question: q.question,
           questionCategory: q.questionCategory,
           section: q.section,
-          inputType: q.inputType,
+          inputType: q.inputType as any,
           options: q.options,
-          validationRange: q.validationRange,
-        }))
+          validationRange: q.validationRange as any,
+        })) as any[])
       : [{ question: '', questionCategory: 'Delivery' }]
   );
   const [error, setError] = useState('');
@@ -145,7 +145,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
       description: description.trim() || `Custom survey for ${surveyType} stakeholders.`,
       deadlineDate: deadlineDate.trim() || undefined,
       maxRating,
-      questions: formattedQuestions,
+      questions: formattedQuestions as any,
     });
   };
 

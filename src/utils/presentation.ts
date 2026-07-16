@@ -110,7 +110,7 @@ export const PRESENTATION_CATEGORIES: PresentationCategoryDef[] = [
   {
     id: 'comparison',
     label: 'Company Performance Rankings',
-    description: 'Interactive rankings of the best performing and underperforming companies across survey types',
+    description: 'Interactive rankings of the best performing and least rated companies across survey types',
   },
   {
     id: 'sections',

@@ -1,20 +1,14 @@
 import { useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { FilterState, QuestionDefinition, Rating, SurveyType } from '../types/survey';
+import { FilterState, PartnerCompany, SurveyType } from '../types/survey';
 
 interface FilterPanelProps {
   filters: FilterState;
-  questions: QuestionDefinition[];
-  companies: string[];
+  partnerCompanies: PartnerCompany[];
   onChange: (filters: FilterState) => void;
   onReset: () => void;
   isDashboard?: boolean;
-  isFullDatasetActive?: boolean;
-  clearResponses?: () => void;
-  addEvaluations?: (mode: 'single' | 'bulk' | 'complete') => void;
 }
-
-const ratings: Array<'All' | Rating> = ['All', 0, 1, 2, 3, 4, 'N/A'];
 
 const surveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 const surveyTypeColors: Record<SurveyType, string> = {
@@ -25,29 +19,37 @@ const surveyTypeColors: Record<SurveyType, string> = {
 
 export function FilterPanel({
   filters,
-  questions,
-  companies,
+  partnerCompanies,
   onChange,
   onReset,
   isDashboard,
-  isFullDatasetActive,
-  clearResponses,
-  addEvaluations,
 }: FilterPanelProps) {
-  const [evaluationMode, setEvaluationMode] = useState<'single' | 'bulk' | 'complete'>('single');
   const update = <Key extends keyof FilterState>(key: Key, value: FilterState[Key]) => onChange({ ...filters, [key]: value });
 
   const toggleSurveyType = (type: SurveyType) => {
     const next = filters.surveyType.includes(type)
       ? filters.surveyType.filter((value) => value !== type)
       : [...filters.surveyType, type];
+    
+    // If we have a specific company selected, verify if it still matches the new survey type selection
+    if (filters.company) {
+      const selectedCompanyData = partnerCompanies.find(c => c.name === filters.company);
+      if (selectedCompanyData) {
+        // If the newly selected types are not empty AND the selected company's type is NOT in the selected types
+        if (next.length > 0 && !next.includes(selectedCompanyData.type)) {
+           // Company doesn't match the new survey type filter, so clear the selected company
+           onChange({ ...filters, surveyType: next, company: '' });
+           return;
+        }
+      }
+    }
     update('surveyType', next);
   };
 
-  const filteredQuestions = useMemo(() => {
-    if (filters.surveyType.length === 0) return questions;
-    return questions.filter((question) => question.surveyTypes.some((type) => filters.surveyType.includes(type)));
-  }, [questions, filters.surveyType]);
+  const filteredCompanies = useMemo(() => {
+    if (filters.surveyType.length === 0) return partnerCompanies;
+    return partnerCompanies.filter(c => filters.surveyType.includes(c.type));
+  }, [partnerCompanies, filters.surveyType]);
 
   return (
     <section className="panel sticky top-24">
@@ -67,11 +69,20 @@ export function FilterPanel({
               value={filters.surveyType.length === 1 ? filters.surveyType[0] : 'All'}
               onChange={(event) => {
                 const val = event.target.value;
-                if (val === 'All') {
-                  update('surveyType', []);
-                } else {
-                  update('surveyType', [val as SurveyType]);
+                let nextSurveyType: SurveyType[] = [];
+                if (val !== 'All') {
+                  nextSurveyType = [val as SurveyType];
                 }
+                
+                // Clear company if it doesn't match new filter
+                if (filters.company) {
+                   const cData = partnerCompanies.find(c => c.name === filters.company);
+                   if (cData && nextSurveyType.length > 0 && !nextSurveyType.includes(cData.type)) {
+                       onChange({ ...filters, surveyType: nextSurveyType, company: '' });
+                       return;
+                   }
+                }
+                update('surveyType', nextSurveyType);
               }}
             >
               <option value="All">All Categories</option>
@@ -112,97 +123,15 @@ export function FilterPanel({
           </div>
         )}
         <label className="field-label">
-          Question
-          <select className="field" value={filters.questionId} onChange={(event) => update('questionId', event.target.value)}>
-            <option value="">All questions</option>
-            {filteredQuestions.map((question) => (
-              <option key={question.questionId} value={question.questionId}>
-                {question.questionId} - {question.questionCategory}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-label">
-          Rating
-          <select className="field" value={String(filters.rating)} onChange={(event) => update('rating', event.target.value === 'All' ? 'All' : event.target.value === 'N/A' ? 'N/A' : Number(event.target.value) as Rating)}>
-            {ratings.map((rating) => (
-              <option key={String(rating)} value={String(rating)}>
-                {rating}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-label">
           Company
-          <select className="field" value={filters.company} onChange={(event) => update('company', event.target.value)}>
+          <select className="field mt-1" value={filters.company} onChange={(event) => update('company', event.target.value)}>
             <option value="">All companies</option>
-            {companies.map((company) => (
-              <option key={company}>{company}</option>
+            {filteredCompanies.map((company) => (
+              <option key={company.id} value={company.name}>{company.name}</option>
             ))}
           </select>
-        </label>
-        <label className="field-label">
-          Search
-          <input className="field" placeholder="Company, comment, question..." value={filters.search} onChange={(event) => update('search', event.target.value)} />
         </label>
       </div>
-
-      {/* Test Controls / Database Test Suite */}
-      {clearResponses && addEvaluations && (
-        <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800 space-y-4">
-          <div>
-            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Database Test Suite</h4>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Simulate evaluations to verify real-time charts and PDF report generators.</p>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-              {(
-                [
-                  { value: 'single' as const, label: 'Single', description: 'Add one random evaluation.' },
-                  { value: 'bulk' as const, label: 'Bulk', description: 'Add a batch of random evaluations.' },
-                  { value: 'complete' as const, label: 'Complete', description: 'Every employee evaluates every company.' },
-                ]
-              ).map((option) => (
-                <label
-                  key={option.value}
-                  className="flex cursor-pointer items-start gap-2.5 text-sm font-normal text-slate-600 dark:text-slate-300"
-                >
-                  <input
-                    type="radio"
-                    name="evaluation-mode"
-                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-slate-300 text-azure focus:ring-azure dark:border-slate-700 dark:bg-slate-900"
-                    checked={evaluationMode === option.value}
-                    onChange={() => setEvaluationMode(option.value)}
-                  />
-                  <span>
-                    <span className="block font-medium text-slate-700 dark:text-slate-200">{option.label}</span>
-                    <span className="block text-xs font-normal text-slate-400 dark:text-slate-500">{option.description}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            <button
-              className="button bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2 px-3 rounded-md transition-colors"
-              onClick={() => addEvaluations(evaluationMode)}
-              type="button"
-            >
-              Add Evaluation
-            </button>
-            {isFullDatasetActive && (
-              <p className="text-center text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                Complete dataset currently active — every employee has evaluated every company.
-              </p>
-            )}
-            <button
-              className="ghost-button border border-red-200 dark:border-red-900 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs py-2 px-3 rounded-md text-center justify-center"
-              onClick={clearResponses}
-              type="button"
-            >
-              Clear All Responses
-            </button>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

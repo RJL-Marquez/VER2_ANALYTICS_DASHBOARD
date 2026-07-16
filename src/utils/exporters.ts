@@ -73,38 +73,96 @@ export function exportTablesAsPDF(reportTitle: string, tables: ExportTable[], fi
   const marginLeft = 40;
   let cursorY = 48;
 
-  doc.setFontSize(16);
+  // Title
+  doc.setFontSize(22);
+  doc.setTextColor(0, 99, 169);
   doc.text(reportTitle, marginLeft, cursorY);
-  cursorY += 14;
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(`Generated ${new Date().toLocaleString()}`, marginLeft, cursorY);
-  doc.setTextColor(0);
-  cursorY += 20;
+  cursorY += 16;
+  
+  // Date and Metadata
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, marginLeft, cursorY);
+  cursorY += 12;
+  doc.text(`Confidential: For internal distribution only`, marginLeft, cursorY);
+  cursorY += 30;
+
+  // Introduction Paragraph
+  doc.setFontSize(11);
+  doc.setTextColor(40);
+  const introText = doc.splitTextToSize(
+    `This report provides a comprehensive summary of survey analytics and stakeholder feedback. ` +
+    `The data compiled below highlights key performance indicators, comparative analysis across survey categories, ` +
+    `and detailed question-level responses. Review the insights carefully to inform continuous improvement initiatives ` +
+    `and strategic decision-making.`,
+    500
+  );
+  doc.text(introText, marginLeft, cursorY);
+  cursorY += (introText.length * 15) + 20;
 
   tables.forEach((table) => {
     if (cursorY > 700) {
       doc.addPage();
       cursorY = 48;
     }
-    doc.setFontSize(12);
+    
+    // Table Heading
+    doc.setFontSize(14);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold');
     doc.text(table.title, marginLeft, cursorY);
-    cursorY += 8;
+    cursorY += 12;
+    
+    // Table Description
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+    let description = '';
+    if (table.title.includes('Top Performing')) {
+      description = 'This section lists the highest-ranked partner companies based on overall satisfaction and average scores across evaluated categories.';
+    } else if (table.title.includes('Least Rated')) {
+      description = 'This section lists partner companies that received lower relative ratings, identifying potential areas for engagement and improvement.';
+    } else if (table.title.includes('Summary')) {
+      description = 'High-level key performance metrics representing the aggregate evaluation data.';
+    } else if (table.title.includes('Question')) {
+      description = 'Performance breakdown across individual evaluation questions, highlighting operational strengths and weaknesses.';
+    } else if (table.title.includes('Survey')) {
+      description = 'Comparison of scores between different survey categories and modules.';
+    }
+    if (description) {
+      const descLines = doc.splitTextToSize(description, 500);
+      doc.text(descLines, marginLeft, cursorY);
+      cursorY += (descLines.length * 12) + 5;
+    }
 
     autoTable(doc, {
       startY: cursorY,
       head: [table.columns],
       body: table.rows.map((row) => row.map(String)),
       margin: { left: marginLeft, right: marginLeft },
-      styles: { fontSize: 9, cellPadding: 5 },
-      headStyles: { fillColor: [0, 99, 169] },
+      styles: { fontSize: 9, cellPadding: 6 },
+      headStyles: { fillColor: [0, 99, 169], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       theme: 'striped',
     });
 
     // autoTable attaches the final Y position it landed on so the next
     // section starts below it instead of overlapping.
-    cursorY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 24;
+    cursorY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 30;
   });
+
+  // Add footer to all pages
+  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(
+      `Page ${i} of ${pageCount} - Microgenesis Survey Analytics`,
+      marginLeft,
+      doc.internal.pageSize.height - 20
+    );
+  }
 
   doc.save(`${filenameBase}_${timestamp()}.pdf`);
 }
