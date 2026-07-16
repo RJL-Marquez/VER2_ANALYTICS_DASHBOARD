@@ -293,32 +293,6 @@ export function SurveyFormsPage({
 
   return (
     <div className="space-y-5">
-      {isAdmin && (
-        <div className="flex justify-between items-center -mb-2 bg-slate-50/50 dark:bg-slate-900/10 p-2 px-3 rounded-lg border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              {isSelectMode ? 'Bulk Edit Mode Active' : 'Administrative Operations'}
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setIsSelectMode(!isSelectMode);
-              setSelectedSurveyIds(new Set());
-              setIsModifyOpen(false);
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold shadow-sm transition cursor-pointer border ${
-              isSelectMode
-                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30'
-                : 'bg-[#0063a9] text-white hover:bg-[#00528c] border-[#0063a9] dark:bg-blue-600 dark:hover:bg-blue-700 dark:border-blue-600'
-            }`}
-            type="button"
-          >
-            {isSelectMode ? 'Cancel Select' : 'Select'}
-          </button>
-        </div>
-      )}
-
       {/* Cards Row */}
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="panel p-5 flex items-center justify-between">
