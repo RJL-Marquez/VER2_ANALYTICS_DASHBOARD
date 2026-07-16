@@ -72,17 +72,21 @@ const DEFAULT_ACCOUNTS: AccountProfile[] = [
 type PageKey = 'dashboard' | 'partner-companies' | 'account-management' | 'survey-forms' | 'analytics' | 'present' | 'explorer' | 'reports' | 'notifications' | 'create-form' | 'view-form' | 'fill-form' | 'archive' | 'simulator';
 
 const adminPages = [
-  { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users },
-  { key: 'account-management' as const, label: 'Account Management', icon: UserCog },
-  { key: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
-  { key: 'present' as const, label: 'Present', icon: Presentation },
-  { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2 },
-  { key: 'reports' as const, label: 'Reports', icon: FileText },
-  { key: 'notifications' as const, label: 'Notification Logs', icon: Bell },
-  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true },
-  { key: 'archive' as const, label: 'Archive Center', icon: Archive },
-  { key: 'simulator' as const, label: 'Database Simulator', icon: Database },
+  { key: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard, section: 'Overview' },
+
+  { key: 'survey-forms' as const, label: 'Survey Forms', icon: ClipboardCheck, hasDropdown: true, section: 'Surveys' },
+  { key: 'explorer' as const, label: 'Survey Explorer', icon: Table2, section: 'Surveys' },
+
+  { key: 'analytics' as const, label: 'Analytics', icon: BarChart3, section: 'Analytics' },
+  { key: 'reports' as const, label: 'Reports', icon: FileText, section: 'Analytics' },
+  { key: 'present' as const, label: 'Present', icon: Presentation, section: 'Analytics' },
+
+  { key: 'partner-companies' as const, label: 'Partner Companies', icon: Users, section: 'Management' },
+  { key: 'account-management' as const, label: 'Account Management', icon: UserCog, section: 'Management' },
+
+  { key: 'notifications' as const, label: 'Notification Logs', icon: Bell, section: 'System' },
+  { key: 'archive' as const, label: 'Archive Center', icon: Archive, section: 'System' },
+  { key: 'simulator' as const, label: 'Database Simulator', icon: Database, section: 'System' },
 ];
 
 const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
@@ -197,7 +201,9 @@ export default function App() {
 
   const visiblePages = useMemo(() => {
     if (isAdmin) return adminPages;
-    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive' && page.key !== 'account-management');
+    return adminPages
+      .filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive' && page.key !== 'account-management')
+      .map(({ section: _section, ...page }) => page);
   }, [isAdmin]);
 
   const handleLogin = (email: string) => {
