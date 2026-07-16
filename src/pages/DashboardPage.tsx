@@ -487,13 +487,13 @@ export function DashboardPage({
 
               // Half-circle (semicircle) gauge geometry.
               // pathLength=100 lets us express progress directly as a 0-100 dash offset.
-              const gaugePath = 'M16 108 A92 92 0 0 1 200 108';
+              const gaugePath = 'M10 90 A90 90 0 0 1 190 90';
 
               return (
                 <div key={category} className="flex flex-col items-center p-7 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/20 dark:bg-slate-950/20 shadow-2xs">
-                  {/* Half-circle progress gauge */}
+                  {/* Half-circle progress gauge with percentage nested inside the arc */}
                   <div className="relative w-full max-w-[260px]">
-                    <svg viewBox="0 0 216 120" className="w-full h-auto overflow-visible">
+                    <svg viewBox="0 0 200 100" className="w-full h-auto overflow-visible">
                       <path
                         d={gaugePath}
                         fill="none"
@@ -513,27 +513,22 @@ export function DashboardPage({
                         style={{ transition: 'stroke-dashoffset 0.6s ease' }}
                       />
                     </svg>
-                  </div>
-
-                  {/* Category label + percentage */}
-                  <div className="flex items-end justify-between w-full max-w-[260px] -mt-1">
-                    <span className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      {category}
-                    </span>
-                    <span className={`text-4xl font-extrabold leading-none ${textColor}`}>
-                      {pct}%
-                    </span>
-                  </div>
-
-                  {/* Companies evaluated subtext */}
-                  <div className="w-full max-w-[260px] text-right mt-2">
-                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                      {answered}/{total}
-                      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        Companies Evaluated
+                    <div className="absolute inset-x-0 bottom-[22%] flex justify-center">
+                      <span className={`text-3xl font-extrabold leading-none ${textColor}`}>
+                        {pct}%
                       </span>
-                    </p>
+                    </div>
                   </div>
+
+                  {/* Category label, centered below the gauge */}
+                  <p className="mt-2 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 text-center">
+                    {category}
+                  </p>
+
+                  {/* Companies evaluated subtext, centered */}
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
+                    {answered}/{total} Companies Evaluated
+                  </p>
                 </div>
               );
             })}
