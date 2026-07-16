@@ -197,7 +197,7 @@ export default function App() {
 
   const visiblePages = useMemo(() => {
     if (isAdmin) return adminPages;
-    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive');
+    return adminPages.filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive' && page.key !== 'account-management');
   }, [isAdmin]);
 
   const handleLogin = (email: string) => {
@@ -253,6 +253,7 @@ export default function App() {
         accounts={accounts}
         onUpdateAccounts={saveAccounts}
         isAdmin={isAdmin}
+        currentUserEmail={account || ''}
       />
     ),
     'survey-forms': (

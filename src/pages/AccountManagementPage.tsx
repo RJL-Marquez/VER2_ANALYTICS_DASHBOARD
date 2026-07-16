@@ -6,9 +6,13 @@ interface AccountManagementPageProps {
   accounts: AccountProfile[];
   onUpdateAccounts: (accounts: AccountProfile[]) => void;
   isAdmin: boolean;
+  currentUserEmail: string;
 }
 
-export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: AccountManagementPageProps) {
+const DESIGNATION_OPTIONS = ['Rank & File', 'Supervisory', 'Managerial', 'Director', 'Executive'];
+const DEPARTMENT_OPTIONS = ['Accounts Payable - Trade', 'Business Solutions Manager', 'Logistics', 'Procurement Group', 'TASS'];
+
+export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, currentUserEmail }: AccountManagementPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
@@ -16,8 +20,22 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: A
   // Form State
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Employee');
-  const [designation, setDesignation] = useState('');
-  const [department, setDepartment] = useState('');
+  const [designation, setDesignation] = useState(DESIGNATION_OPTIONS[0]);
+  const [department, setDepartment] = useState(DEPARTMENT_OPTIONS[0]);
+
+  // The account currently signed in, used to prevent an admin from removing
+  // their own account or another account that shares their access level.
+  const currentAccount = useMemo(
+    () => accounts.find((a) => a.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()) || null,
+    [accounts, currentUserEmail]
+  );
+
+  const canDeleteAccount = (acc: AccountProfile) => {
+    if (!currentAccount) return true;
+    if (acc.email.trim().toLowerCase() === currentAccount.email.trim().toLowerCase()) return false;
+    if (acc.role === currentAccount.role) return false;
+    return true;
+  };
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter(a => 
@@ -30,8 +48,8 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: A
   const handleOpenAdd = () => {
     setEmail('');
     setRole('Employee');
-    setDesignation('');
-    setDepartment('');
+    setDesignation(DESIGNATION_OPTIONS[0]);
+    setDepartment(DEPARTMENT_OPTIONS[0]);
     setEditingEmail(null);
     setIsAddOpen(true);
   };
@@ -68,8 +86,9 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: A
   };
 
   const handleDelete = (targetEmail: string) => {
-    if (targetEmail.toLowerCase() === 'admin@mgenesis.com') {
-      alert('Cannot delete the primary admin account.');
+    const target = accounts.find(a => a.email === targetEmail);
+    if (target && !canDeleteAccount(target)) {
+      alert('You cannot remove your own account or another account that shares your access level.');
       return;
     }
     if (window.confirm(`Are you sure you want to remove ${targetEmail}?`)) {
@@ -185,13 +204,15 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: A
                       >
                         <Edit2 size={16} />
                       </button>
-                      <button
-                        onClick={() => handleDelete(acc.email)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
-                        title="Delete Account"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canDeleteAccount(acc) && (
+                        <button
+                          onClick={() => handleDelete(acc.email)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                          title="Delete Account"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -253,26 +274,30 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin }: A
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Designation / Title</label>
-                  <input 
-                    type="text"
+                  <select
                     required
                     value={designation}
                     onChange={e => setDesignation(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
-                    placeholder="e.g. Rank & File, Managerial"
-                  />
+                  >
+                    {DESIGNATION_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Department</label>
-                  <input 
-                    type="text"
+                  <select
                     required
                     value={department}
                     onChange={e => setDepartment(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
-                    placeholder="e.g. Logistics, Procurement"
-                  />
+                  >
+                    {DEPARTMENT_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </div>
               </form>
             </div>

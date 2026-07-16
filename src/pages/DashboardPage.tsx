@@ -369,9 +369,9 @@ export function DashboardPage({
     averages.Subcontractor = averageRating(subcontractorResponses);
 
     return {
-      Contractor: averages.Contractor > 0 ? (averages.Contractor / 20) : 0,
-      Supplier: averages.Supplier > 0 ? (averages.Supplier / 20) : 0,
-      Subcontractor: averages.Subcontractor > 0 ? (averages.Subcontractor / 20) : 0,
+      Contractor: averages.Contractor,
+      Supplier: averages.Supplier,
+      Subcontractor: averages.Subcontractor,
       counts
     };
   }, [allResponses]);
@@ -380,8 +380,8 @@ export function DashboardPage({
   const questionAverages = useMemo(() => {
     const list = questionPerformance(allResponses);
     return {
-      top: list[0] ? { text: list[0].question, average: (list[0].average / 20) } : null,
-      bottom: list[list.length - 1] ? { text: list[list.length - 1].question, average: (list[list.length - 1].average / 20) } : null
+      top: list[0] ? { text: list[0].question, average: list[0].average } : null,
+      bottom: list[list.length - 1] ? { text: list[list.length - 1].question, average: list[list.length - 1].average } : null
     };
   }, [allResponses]);
 
@@ -681,14 +681,14 @@ export function DashboardPage({
                               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md inline-block">
                                 {topPartner.type} Top Rank
                               </span>
-                              <h5 className="font-bold text-slate-800 dark:text-slate-100 text-sm mt-1.5 truncate max-w-[240px]">
+                              <h5 className="font-bold text-slate-800 dark:text-slate-100 text-xl mt-1.5 truncate max-w-[280px]">
                                 {topPartner.name}
                               </h5>
                               <p className="text-xs text-slate-400 mt-1 leading-snug">
                                 Acclaimed leader across {topPartner.count} employee feedback surveys.
                               </p>
                               <div className="mt-3 flex items-center gap-4 text-[11px] font-semibold text-slate-500">
-                                <span>Rating: {topPartner.average.toFixed(2)} / 5.0</span>
+                                <span>Rating: {Math.round(topPartner.scorePercentage)} / 100</span>
                                 <span>•</span>
                                 <span>{topPartner.count} reviews</span>
                               </div>
@@ -707,7 +707,7 @@ export function DashboardPage({
                         <div className="bg-slate-50/50 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-850">
                           <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Feedback</span>
                           <span className="text-2xl font-light text-slate-800 dark:text-white mt-1 block">
-                            {allResponses.length}
+                            {submissionCount(allResponses)}
                           </span>
                           <span className="text-[10px] text-blue-500 mt-1 block font-medium">Submissions log</span>
                         </div>
@@ -729,13 +729,13 @@ export function DashboardPage({
                           <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
                             <span>Contractors ({groupAverages.counts.Contractor} submissions)</span>
                             <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Contractor ? `${groupAverages.Contractor.toFixed(2)} / 5.0` : 'N/A'}
+                              {groupAverages.Contractor ? `${Math.round(groupAverages.Contractor)} / 100` : 'N/A'}
                             </span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-blue-500 rounded-full" 
-                              style={{ width: `${(groupAverages.Contractor / 5) * 100}%` }}
+                              style={{ width: `${groupAverages.Contractor}%` }}
                             />
                           </div>
                         </div>
@@ -745,13 +745,13 @@ export function DashboardPage({
                           <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
                             <span>Suppliers ({groupAverages.counts.Supplier} submissions)</span>
                             <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Supplier ? `${groupAverages.Supplier.toFixed(2)} / 5.0` : 'N/A'}
+                              {groupAverages.Supplier ? `${Math.round(groupAverages.Supplier)} / 100` : 'N/A'}
                             </span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-emerald-500 rounded-full" 
-                              style={{ width: `${(groupAverages.Supplier / 5) * 100}%` }}
+                              style={{ width: `${groupAverages.Supplier}%` }}
                             />
                           </div>
                         </div>
@@ -761,13 +761,13 @@ export function DashboardPage({
                           <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
                             <span>Subcontractors ({groupAverages.counts.Subcontractor} submissions)</span>
                             <span className="font-bold text-slate-800 dark:text-slate-200">
-                              {groupAverages.Subcontractor ? `${groupAverages.Subcontractor.toFixed(2)} / 5.0` : 'N/A'}
+                              {groupAverages.Subcontractor ? `${Math.round(groupAverages.Subcontractor)} / 100` : 'N/A'}
                             </span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-orange-500 rounded-full" 
-                              style={{ width: `${(groupAverages.Subcontractor / 5) * 100}%` }}
+                              style={{ width: `${groupAverages.Subcontractor}%` }}
                             />
                           </div>
                         </div>
@@ -782,7 +782,10 @@ export function DashboardPage({
                           </div>
                         ) : (
                           surveys.slice(0, 3).map((survey) => {
-                            const count = allResponses.filter(r => r.surveyId === survey.id).length;
+                            // Responses aren't tagged with the specific form's ID, so match on
+                            // survey type (as the rest of the app does) and count unique
+                            // respondent submissions rather than raw per-question answer rows.
+                            const count = submissionCount(allResponses.filter(r => r.surveyType === survey.surveyType));
                             return (
                               <div key={survey.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-850 text-xs">
                                 <div className="min-w-0 flex-1 pr-2">
@@ -790,7 +793,7 @@ export function DashboardPage({
                                   <p className="text-[10px] text-slate-400 mt-0.5">Due: {survey.deadlineDate || 'No close date'}</p>
                                 </div>
                                 <span className="shrink-0 px-2.5 py-1 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 font-bold text-blue-600 dark:text-blue-400 text-[10px]">
-                                  {count} submissions
+                                  {count} respondents
                                 </span>
                               </div>
                             );
@@ -812,7 +815,6 @@ export function DashboardPage({
                           </div>
                         ) : (
                           recentSubmissions.map((resp, sIdx) => {
-                            const avgVal = resp.score / 20;
                             return (
                               <div key={sIdx} className="flex items-center justify-between text-xs py-1.5 border-b border-dashed border-slate-100 dark:border-slate-800/60 last:border-0">
                                 <div className="min-w-0 flex-1 pr-2">
@@ -824,7 +826,7 @@ export function DashboardPage({
                                   </p>
                                 </div>
                                 <span className="shrink-0 font-bold text-slate-900 dark:text-white">
-                                  {avgVal.toFixed(1)} / 5.0
+                                  {Math.round(resp.score)} / 100
                                 </span>
                               </div>
                             );
@@ -843,7 +845,7 @@ export function DashboardPage({
                                 "{questionAverages.top.text}"
                               </p>
                               <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">
-                                Average: {questionAverages.top.average.toFixed(2)} / 5.0
+                                Average: {Math.round(questionAverages.top.average)} / 100
                               </span>
                             </div>
 
@@ -854,7 +856,7 @@ export function DashboardPage({
                                   "{questionAverages.bottom.text}"
                                 </p>
                                 <span className="text-[10px] font-bold text-rose-500 mt-1 block">
-                                  Average: {questionAverages.bottom.average.toFixed(2)} / 5.0
+                                  Average: {Math.round(questionAverages.bottom.average)} / 100
                                 </span>
                               </div>
                             )}
