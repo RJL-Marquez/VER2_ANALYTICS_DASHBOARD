@@ -22,12 +22,17 @@ import { AccountManagementPage } from './pages/AccountManagementPage';
 import { useSurveyData } from './hooks/useSurveyData';
 import { applyFilters, initialFilters } from './utils/analytics';
 import { FilterState, SurveyType, CustomForm } from './types/survey';
+import { PageModuleKey, getDefaultPermissions, hasPageAccess } from './utils/rbac';
 
 export interface AccountProfile {
   email: string;
   role: string;
   designation: string;
   department: string;
+  permissions?: {
+    pages: PageModuleKey[];
+    surveyTypes: SurveyType[];
+  };
 }
 
 const DEFAULT_ACCOUNTS: AccountProfile[] = [
@@ -257,7 +262,7 @@ export default function App() {
   const getUserProfile = (email: string | null) => {
     if (!email) return null;
     const normalized = email.trim().toLowerCase();
-    const matched = accounts.find((acc) => acc.email === normalized);
+    const matched = accounts.find((acc) => acc.email.trim().toLowerCase() === normalized);
     if (matched) return matched;
     return {
       email: normalized,
@@ -267,10 +272,114 @@ export default function App() {
     };
   };
 
-  const filteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
-  const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : allSurveyTypes;
-
   const profile = useMemo(() => getUserProfile(account), [account, accounts]);
+
+  // centralize user permissions mapping based on active profile and overrides
+  const userPermissions = useMemo(() => {
+    if (!profile) return { pages: [] as PageModuleKey[], surveyTypes: [] as SurveyType[] };
+    
+    // System Administrator gets full unrestricted access unless custom overridden
+    if (profile.role === 'Admin' && !profile.permissions) {
+      return {
+        pages: [
+          'dashboard', 'survey-forms', 'explorer', 'analytics', 'reports', 'present', 
+          'partner-companies', 'account-management', 'notifications', 'archive', 'simulator'
+        ] as PageModuleKey[],
+        surveyTypes: ['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]
+      };
+    }
+
+    const defaults = getDefaultPermissions(profile.designation, profile.department);
+    return {
+      pages: (profile.permissions?.pages ?? defaults.pages) as PageModuleKey[],
+      surveyTypes: (profile.permissions?.surveyTypes ?? defaults.surveyTypes) as SurveyType[]
+    };
+  }, [profile]);
+
+  const isAdmin = profile?.role === 'Admin' || userPermissions.pages.includes('account-management');
+
+  const canExport = useMemo(() => {
+    if (!profile) return false;
+    return profile.role === 'Admin' || profile.designation !== 'Rank & File';
+  }, [profile]);
+
+  // Centralized Data Isolation & Filtering based on user department/rank/permitted types
+  const userAccessibleResponses = useMemo(() => {
+    if (!profile) return [];
+    if (activePage === 'analytics') {
+      return responses; // Analytics remains company-wide for all users
+    }
+    
+    if (profile.role === 'Admin') {
+      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+    }
+
+    if (profile.designation === 'Executive' || profile.designation === 'Director') {
+      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+    }
+
+    if (profile.designation === 'Supervisory') {
+      // Supervisor: see team/department responses
+      return responses.filter(r => 
+        r.department === profile.department && 
+        userPermissions.surveyTypes.includes(r.surveyType)
+      );
+    }
+
+    if (profile.designation === 'Rank & File') {
+      // Rank & File: see own responses
+      return responses.filter(r => 
+        r.respondentEmail === profile.email && 
+        userPermissions.surveyTypes.includes(r.surveyType)
+      );
+    }
+
+    return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+  }, [responses, profile, userPermissions.surveyTypes, activePage]);
+
+  const userAccessibleAllResponses = useMemo(() => {
+    if (!profile) return [];
+    if (activePage === 'analytics') {
+      return responses;
+    }
+
+    if (profile.role === 'Admin' || profile.designation === 'Executive' || profile.designation === 'Director') {
+      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+    }
+
+    if (profile.designation === 'Supervisory') {
+      return responses.filter(r => 
+        r.department === profile.department && 
+        userPermissions.surveyTypes.includes(r.surveyType)
+      );
+    }
+
+    if (profile.designation === 'Rank & File') {
+      return responses.filter(r => 
+        r.respondentEmail === profile.email && 
+        userPermissions.surveyTypes.includes(r.surveyType)
+      );
+    }
+
+    return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+  }, [responses, profile, userPermissions.surveyTypes, activePage]);
+
+  const userAccessibleSurveys = useMemo(() => {
+    return surveys.filter(s => userPermissions.surveyTypes.includes(s.surveyType));
+  }, [surveys, userPermissions.surveyTypes]);
+
+  const userAccessiblePartnerCompanies = useMemo(() => {
+    return partnerCompanies.filter(c => userPermissions.surveyTypes.includes(c.type));
+  }, [partnerCompanies, userPermissions.surveyTypes]);
+
+  const filteredResponses = useMemo(() => applyFilters(userAccessibleResponses, filters), [userAccessibleResponses, filters]);
+  const analyticsFilteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
+  
+  const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : userPermissions.surveyTypes;
+
+  const visiblePages = useMemo(() => {
+    return adminPages.filter((page) => userPermissions.pages.includes(page.key as PageModuleKey));
+  }, [userPermissions.pages]);
 
   const activeTitle = useMemo(() => {
     if (activePage === 'dashboard') {
@@ -293,14 +402,15 @@ export default function App() {
     return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
   }, [activePage, selectedSurveyId, surveys, editingSurveyId, profile]);
 
-  const isAdmin = profile?.role === 'Admin';
-
-  const visiblePages = useMemo(() => {
-    if (isAdmin) return adminPages;
-    return adminPages
-      .filter((page) => page.key !== 'notifications' && page.key !== 'reports' && page.key !== 'explorer' && page.key !== 'present' && page.key !== 'archive' && page.key !== 'account-management')
-      .map(({ section: _section, ...page }) => page);
-  }, [isAdmin]);
+  // Safe routing guard redirecting users to permitted views
+  useEffect(() => {
+    if (!account) return;
+    const currentIsAllowed = hasPageAccess(userPermissions.pages, activePage, isAdmin);
+    if (!currentIsAllowed) {
+      const fallback = visiblePages[0]?.key || 'dashboard';
+      setActivePage(fallback as PageKey);
+    }
+  }, [activePage, userPermissions.pages, visiblePages, account, isAdmin]);
 
   const handleLogin = (email: string) => {
     setAccount(email);
@@ -331,20 +441,20 @@ export default function App() {
     dashboard: (
       <DashboardPage
         responses={filteredResponses}
-        allResponses={responses}
-        partnerCompanies={partnerCompanies}
+        allResponses={userAccessibleAllResponses}
+        partnerCompanies={userAccessiblePartnerCompanies}
         isLoading={isLoading}
         error={error}
         surveyTypeFilter={filters.surveyType}
-        surveys={surveys}
+        surveys={userAccessibleSurveys}
         isAdmin={isAdmin}
         userEmail={account || ''}
       />
     ),
     'partner-companies': (
       <PartnerCompaniesPage
-        partnerCompanies={partnerCompanies}
-        responses={responses}
+        partnerCompanies={userAccessiblePartnerCompanies}
+        responses={userAccessibleResponses}
         onAddCompany={addPartnerCompany}
         onRemoveCompany={removePartnerCompany}
         isAdmin={isAdmin}
@@ -360,9 +470,9 @@ export default function App() {
     ),
     'survey-forms': (
       <SurveyFormsPage
-        surveys={surveys}
-        responses={responses}
-        partnerCompanies={partnerCompanies}
+        surveys={userAccessibleSurveys}
+        responses={userAccessibleResponses}
+        partnerCompanies={userAccessiblePartnerCompanies}
         userEmail={account || ''}
         onUpdateSurvey={updateSurvey}
         onUpdateSurveysBulk={updateSurveysBulk}
@@ -381,17 +491,17 @@ export default function App() {
     ),
     analytics: (
       <AnalyticsPage
-        responses={filteredResponses}
+        responses={analyticsFilteredResponses}
         allResponses={responses}
         partnerCompanies={partnerCompanies}
-        activeSurveyTypes={activeSurveyTypes}
+        activeSurveyTypes={allSurveyTypes}
         filters={filters}
         setFilters={setFilters}
       />
     ),
-    present: <PresentPage responses={responses} partnerCompanies={partnerCompanies} />,
-    explorer: <SurveyExplorerPage responses={filteredResponses} surveys={surveys} />,
-    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} isAllCompanies={!filters.company} />,
+    present: <PresentPage responses={userAccessibleResponses} partnerCompanies={userAccessiblePartnerCompanies} />,
+    explorer: <SurveyExplorerPage responses={filteredResponses} surveys={userAccessibleSurveys} />,
+    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} canExport={canExport} isAllCompanies={!filters.company} />,
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
       <CreateSurveyPage
@@ -434,8 +544,8 @@ export default function App() {
       return (
         <SurveyDetailsPage
           survey={targetSurvey}
-          responses={responses}
-          partnerCompanies={partnerCompanies}
+          responses={userAccessibleResponses}
+          partnerCompanies={userAccessiblePartnerCompanies}
           userEmail={account || ''}
           onBack={() => setActivePage('dashboard')}
           onFillForm={(id) => {
@@ -457,18 +567,18 @@ export default function App() {
     'fill-form': (
       <SurveyFillerPage
         ref={surveyFillerRef}
-        surveys={surveys}
-        partnerCompanies={partnerCompanies}
+        surveys={userAccessibleSurveys}
+        partnerCompanies={userAccessiblePartnerCompanies}
         initialSurveyId={selectedSurveyId}
         userEmail={account || ''}
-        responses={responses}
+        responses={userAccessibleResponses}
         onSubmitted={handleSurveySubmit}
         onCancel={() => setActivePage('view-form')}
       />
     ),
     archive: (
       <ArchivePage
-        surveys={surveys}
+        surveys={userAccessibleSurveys}
         archivedResponses={archivedResponses}
         onUpdateSurvey={updateSurvey}
         onRestoreResponseGroup={restoreResponseGroup}
@@ -495,7 +605,7 @@ export default function App() {
 
     return (
       <>
-        {surveys.map((survey) => {
+        {userAccessibleSurveys.map((survey) => {
           const isViewing = activePage === 'view-form' && selectedSurveyId === survey.id;
           return (
             <button
@@ -598,10 +708,11 @@ export default function App() {
               <aside className="xl:w-80">
                 <FilterPanel
                   filters={filters}
-                  partnerCompanies={partnerCompanies}
+                  partnerCompanies={userAccessiblePartnerCompanies}
                   onChange={setFilters}
                   onReset={() => setFilters(initialFilters)}
                   isDashboard={false}
+                  allowedSurveyTypes={userPermissions.surveyTypes}
                 />
               </aside>
             )}

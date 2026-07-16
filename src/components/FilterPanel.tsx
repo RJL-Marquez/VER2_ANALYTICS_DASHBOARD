@@ -8,9 +8,10 @@ interface FilterPanelProps {
   onChange: (filters: FilterState) => void;
   onReset: () => void;
   isDashboard?: boolean;
+  allowedSurveyTypes?: SurveyType[];
 }
 
-const surveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const defaultSurveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
 const surveyTypeColors: Record<SurveyType, string> = {
   Contractor: '#2563eb',
   Supplier: '#10b981',
@@ -23,8 +24,13 @@ export function FilterPanel({
   onChange,
   onReset,
   isDashboard,
+  allowedSurveyTypes = defaultSurveyTypeOptions,
 }: FilterPanelProps) {
   const update = <Key extends keyof FilterState>(key: Key, value: FilterState[Key]) => onChange({ ...filters, [key]: value });
+
+  const surveyTypeOptions = useMemo(() => {
+    return defaultSurveyTypeOptions.filter(type => allowedSurveyTypes.includes(type));
+  }, [allowedSurveyTypes]);
 
   const toggleSurveyType = (type: SurveyType) => {
     const next = filters.surveyType.includes(type)
@@ -37,9 +43,9 @@ export function FilterPanel({
       if (selectedCompanyData) {
         // If the newly selected types are not empty AND the selected company's type is NOT in the selected types
         if (next.length > 0 && !next.includes(selectedCompanyData.type)) {
-           // Company doesn't match the new survey type filter, so clear the selected company
-           onChange({ ...filters, surveyType: next, company: '' });
-           return;
+            // Company doesn't match the new survey type filter, so clear the selected company
+            onChange({ ...filters, surveyType: next, company: '' });
+            return;
         }
       }
     }
@@ -47,9 +53,11 @@ export function FilterPanel({
   };
 
   const filteredCompanies = useMemo(() => {
-    if (filters.surveyType.length === 0) return partnerCompanies;
-    return partnerCompanies.filter(c => filters.surveyType.includes(c.type));
-  }, [partnerCompanies, filters.surveyType]);
+    // Filter first by allowed survey types
+    const allowedCompanies = partnerCompanies.filter(c => allowedSurveyTypes.includes(c.type));
+    if (filters.surveyType.length === 0) return allowedCompanies;
+    return allowedCompanies.filter(c => filters.surveyType.includes(c.type));
+  }, [partnerCompanies, filters.surveyType, allowedSurveyTypes]);
 
   return (
     <section className="panel sticky top-24">
@@ -85,10 +93,10 @@ export function FilterPanel({
                 update('surveyType', nextSurveyType);
               }}
             >
-              <option value="All">All Categories</option>
-              <option value="Contractor">Contractor</option>
-              <option value="Supplier">Supplier</option>
-              <option value="Subcontractor">Subcontractor</option>
+              {allowedSurveyTypes.length > 1 && <option value="All">All Categories</option>}
+              {surveyTypeOptions.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
             </select>
           </label>
         ) : (
@@ -118,7 +126,7 @@ export function FilterPanel({
               })}
             </div>
             {filters.surveyType.length === 0 && (
-              <p className="mt-1 text-xs font-normal text-slate-400 dark:text-slate-500">None selected — showing all types.</p>
+              <p className="mt-1 text-xs font-normal text-slate-400 dark:text-slate-500">None selected — showing all allowed types.</p>
             )}
           </div>
         )}

@@ -8,6 +8,7 @@ interface ReportsPageProps {
   responses: SurveyResponse[];
   isAdmin?: boolean;
   isAllCompanies?: boolean;
+  canExport?: boolean;
 }
 
 type ExportFormat = 'pdf' | 'csv' | 'excel';
@@ -18,7 +19,7 @@ function runExport(format: ExportFormat, reportTitle: string, tables: ExportTabl
   else exportTablesAsPDF(reportTitle, tables, filenameBase);
 }
 
-export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageProps) {
+export function ReportsPage({ responses, isAdmin, isAllCompanies, canExport = false }: ReportsPageProps) {
   const summary = getKpiSummary(responses);
   const allQuestionRows = questionPerformance(responses);
   const questionRows = allQuestionRows.slice(0, 5);
@@ -94,21 +95,21 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageP
           title="Summary Report"
           detail={`${summary.totalResponses} submitted evaluations, ${formatNumber(summary.averageRating)} average rating`}
           icon={FileBarChart}
-          isAdmin={isAdmin}
+          canExport={canExport}
           onExport={(format) => handleCardExport(format, 'summary')}
         />
         <ReportCard
           title="Companies Report"
           detail={`${companyPerformance.length} companies ranked by performance`}
           icon={Table2}
-          isAdmin={isAdmin}
+          canExport={canExport}
           onExport={(format) => handleCardExport(format, 'companies')}
         />
         <ReportCard
           title="Question Report"
           detail={`${allQuestionRows.length} ranked question groups`}
           icon={FileSpreadsheet}
-          isAdmin={isAdmin}
+          canExport={canExport}
           onExport={(format) => handleCardExport(format, 'question')}
         />
         {isAllCompanies && (
@@ -116,7 +117,7 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageP
             title="Survey Report"
             detail="Contractor, Supplier, and Subcontractor comparison"
             icon={Printer}
-            isAdmin={isAdmin}
+            canExport={canExport}
             onExport={(format) => handleCardExport(format, 'survey')}
           />
         )}
@@ -129,7 +130,7 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageP
             <p className="text-sm text-slate-500 dark:text-slate-400">Prototype report view for stakeholder briefings.</p>
           </div>
           <div className="flex gap-2">
-            {isAdmin ? (
+            {canExport ? (
               <>
                 <button className="primary-button" type="button" onClick={() => handleExecutiveExport('pdf')}>
                   <Download size={16} />
@@ -146,7 +147,7 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies }: ReportsPageP
               </>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30 px-3 py-2 rounded-lg">
-                ⚠️ Exporting restricted to Admin
+                ⚠️ Exporting restricted to Supervisor and above
               </span>
             )}
           </div>
@@ -184,13 +185,13 @@ function ReportCard({
   title,
   detail,
   icon: Icon,
-  isAdmin,
+  canExport,
   onExport,
 }: {
   title: string;
   detail: string;
   icon: typeof FileBarChart;
-  isAdmin?: boolean;
+  canExport?: boolean;
   onExport: (format: ExportFormat) => void;
 }) {
   return (
@@ -200,7 +201,7 @@ function ReportCard({
       </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{detail}</p>
-      {isAdmin ? (
+      {canExport ? (
         <ExportMenu onExport={onExport} />
       ) : (
         <p className="mt-4 text-[11px] font-bold text-slate-400 select-none">⚠️ Export restricted</p>

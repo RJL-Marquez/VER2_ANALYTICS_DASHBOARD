@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Shield, Search, Plus, UserCog, Mail, Briefcase, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Shield, Search, Plus, UserCog, Mail, Briefcase, Trash2, Edit2, AlertCircle, RotateCcw, Check, CheckSquare, Square } from 'lucide-react';
 import { AccountProfile } from '../App';
+import { PageModuleKey, getDefaultPermissions } from '../utils/rbac';
+import { SurveyType } from '../types/survey';
 
 interface AccountManagementPageProps {
   accounts: AccountProfile[];
@@ -12,6 +14,26 @@ interface AccountManagementPageProps {
 const DESIGNATION_OPTIONS = ['Rank & File', 'Supervisory', 'Managerial', 'Director', 'Executive'];
 const DEPARTMENT_OPTIONS = ['Accounts Payable - Trade', 'Business Solutions Manager', 'Executive Office', 'Logistics', 'Procurement Group', 'TASS'];
 
+const PAGE_MODULES: { key: PageModuleKey; label: string; description: string }[] = [
+  { key: 'dashboard', label: 'Dashboard', description: 'Personalized performance indicators and KPIs' },
+  { key: 'survey-forms', label: 'Survey Forms', description: 'View, fill, and publish feedback forms' },
+  { key: 'explorer', label: 'Survey Explorer', description: 'Analyze complete survey response records' },
+  { key: 'analytics', label: 'Analytics', description: 'Company-wide statistical charts and trends' },
+  { key: 'reports', label: 'Reports', description: 'Generate custom report cards and raw exports' },
+  { key: 'present', label: 'Present', description: 'Staggered slide deck presentation builder' },
+  { key: 'partner-companies', label: 'Partner Companies', description: 'Manage external contractor, supplier, and subcontractor rosters' },
+  { key: 'account-management', label: 'Account Management', description: 'Configure system roles, ranks, and user permissions' },
+  { key: 'notifications', label: 'Notification Logs', description: 'Audit trails of incoming survey responses' },
+  { key: 'archive', label: 'Archive Center', description: 'Browse and restore archived feedback submissions' },
+  { key: 'simulator', label: 'Database Simulator', description: 'Seed mock evaluations and reset system database' },
+];
+
+const SURVEY_TYPES: { key: SurveyType; label: string; description: string }[] = [
+  { key: 'Contractor', label: 'Contractor Satisfaction', description: 'Courier and logistics satisfaction reporting' },
+  { key: 'Supplier', label: 'Supplier Quality', description: 'Inventory supplier assessment and commercials' },
+  { key: 'Subcontractor', label: 'Subcontractor Performance', description: 'On-site subcontractor compliance and execution' },
+];
+
 export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, currentUserEmail }: AccountManagementPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -22,6 +44,10 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
   const [role, setRole] = useState('Employee');
   const [designation, setDesignation] = useState(DESIGNATION_OPTIONS[0]);
   const [department, setDepartment] = useState(DEPARTMENT_OPTIONS[0]);
+  
+  // Custom permissions overrides state in the form
+  const [selectedPages, setSelectedPages] = useState<PageModuleKey[]>([]);
+  const [selectedSurveyTypes, setSelectedSurveyTypes] = useState<SurveyType[]>([]);
 
   // The account currently signed in, used to prevent an admin from removing
   // their own account or another account that shares their access level.
@@ -45,12 +71,29 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
     );
   }, [accounts, searchTerm]);
 
+  // Whenever designation or department changes in form, automatically assign default permissions
+  // if we are NOT editing, or if we want to reset permissions in editing.
+  // We'll also allow manual overrides.
+  const applyDefaultPermissionsToForm = (currentDesignation: string, currentDepartment: string) => {
+    const defaults = getDefaultPermissions(currentDesignation, currentDepartment);
+    setSelectedPages(defaults.pages);
+    setSelectedSurveyTypes(defaults.surveyTypes);
+  };
+
   const handleOpenAdd = () => {
     setEmail('');
     setRole('Employee');
-    setDesignation(DESIGNATION_OPTIONS[0]);
-    setDepartment(DEPARTMENT_OPTIONS[0]);
+    const defaultDesignation = DESIGNATION_OPTIONS[0];
+    const defaultDepartment = DEPARTMENT_OPTIONS[0];
+    setDesignation(defaultDesignation);
+    setDepartment(defaultDepartment);
     setEditingEmail(null);
+    
+    // Auto-assign defaults for the form
+    const defaults = getDefaultPermissions(defaultDesignation, defaultDepartment);
+    setSelectedPages(defaults.pages);
+    setSelectedSurveyTypes(defaults.surveyTypes);
+    
     setIsAddOpen(true);
   };
 
@@ -60,6 +103,17 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
     setDesignation(acc.designation);
     setDepartment(acc.department);
     setEditingEmail(acc.email);
+    
+    // Load existing permissions if overridden, otherwise load defaults
+    if (acc.permissions) {
+      setSelectedPages(acc.permissions.pages as PageModuleKey[]);
+      setSelectedSurveyTypes(acc.permissions.surveyTypes as SurveyType[]);
+    } else {
+      const defaults = getDefaultPermissions(acc.designation, acc.department);
+      setSelectedPages(defaults.pages);
+      setSelectedSurveyTypes(defaults.surveyTypes);
+    }
+    
     setIsAddOpen(true);
   };
 
@@ -69,16 +123,43 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
     
     let updated = [...accounts];
     
+    // Determine default permissions for comparison
+    const defaults = getDefaultPermissions(designation, department);
+    
+    // Check if the current selections are different from default to decide whether to save custom permissions
+    const isCustomized = 
+      selectedPages.length !== defaults.pages.length ||
+      selectedSurveyTypes.length !== defaults.surveyTypes.length ||
+      !selectedPages.every(p => defaults.pages.includes(p)) ||
+      !selectedSurveyTypes.every(t => defaults.surveyTypes.includes(t));
+
+    const permissions = isCustomized ? {
+      pages: selectedPages,
+      surveyTypes: selectedSurveyTypes
+    } : undefined;
+
     if (editingEmail) {
       // Edit mode
-      updated = updated.map(a => a.email === editingEmail ? { email, role, designation, department } : a);
+      updated = updated.map(a => a.email === editingEmail ? { 
+        email, 
+        role, 
+        designation, 
+        department,
+        permissions
+      } : a);
     } else {
       // Add mode - check if exists
       if (updated.some(a => a.email.toLowerCase() === email.toLowerCase())) {
         alert('An account with this email already exists.');
         return;
       }
-      updated.push({ email, role, designation, department });
+      updated.push({ 
+        email, 
+        role, 
+        designation, 
+        department,
+        permissions
+      });
     }
     
     onUpdateAccounts(updated);
@@ -94,6 +175,31 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
     if (window.confirm(`Are you sure you want to remove ${targetEmail}?`)) {
       onUpdateAccounts(accounts.filter(a => a.email !== targetEmail));
     }
+  };
+
+  const handleResetAccess = (acc: AccountProfile) => {
+    // Restore back to default role- and department-based configuration by clearing permissions override
+    const updated = accounts.map(a => {
+      if (a.email.toLowerCase() === acc.email.toLowerCase()) {
+        const { permissions: _oldPermissions, ...rest } = a;
+        return rest;
+      }
+      return a;
+    });
+    onUpdateAccounts(updated);
+    alert(`Restored ${acc.email} permissions back to default role and department configuration.`);
+  };
+
+  const togglePageSelection = (key: PageModuleKey) => {
+    setSelectedPages(current => 
+      current.includes(key) ? current.filter(p => p !== key) : [...current, key]
+    );
+  };
+
+  const toggleSurveyTypeSelection = (key: SurveyType) => {
+    setSelectedSurveyTypes(current => 
+      current.includes(key) ? current.filter(t => t !== key) : [...current, key]
+    );
   };
 
   if (!isAdmin) {
@@ -122,7 +228,7 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
             <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white">Account Management</h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage system access, roles, and organizational details for all user accounts.
+            Manage system access, roles, organizational details, and custom permissions for all user accounts.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -163,6 +269,7 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
                 <th className="pb-3 font-medium">Role</th>
                 <th className="pb-3 font-medium">Designation</th>
                 <th className="pb-3 font-medium">Department</th>
+                <th className="pb-3 font-medium">Permissions Status</th>
                 <th className="pb-3 text-right pr-2 font-medium">Actions</th>
               </tr>
             </thead>
@@ -195,11 +302,32 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
                   <td className="py-3 text-slate-600 dark:text-slate-400">
                     {acc.department}
                   </td>
+                  <td className="py-3">
+                    {acc.permissions ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 px-2 py-0.5 text-xs font-semibold">
+                        Custom Overrides
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 px-2 py-0.5 text-xs font-semibold">
+                        Role Defaults
+                      </span>
+                    )}
+                  </td>
                   <td className="py-3 pr-2 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2">
+                      {acc.permissions && (
+                        <button
+                          onClick={() => handleResetAccess(acc)}
+                          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 mr-2"
+                          title="Reset Access back to defaults"
+                        >
+                          <RotateCcw size={12} />
+                          Reset Access
+                        </button>
+                      )}
                       <button
                         onClick={() => handleOpenEdit(acc)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
                         title="Edit Account"
                       >
                         <Edit2 size={16} />
@@ -207,7 +335,7 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
                       {canDeleteAccount(acc) && (
                         <button
                           onClick={() => handleDelete(acc.email)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors cursor-pointer animate-fade-in"
                           title="Delete Account"
                         >
                           <Trash2 size={16} />
@@ -219,7 +347,7 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
               ))}
               {filteredAccounts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <AlertCircle className="mb-2 h-8 w-8 text-slate-400" />
                       <p>No accounts found matching your search.</p>
@@ -235,69 +363,178 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
       {/* Add / Edit Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {editingEmail ? 'Edit Account Details' : 'Add New Account'}
+                {editingEmail ? 'Edit Account Details & Permissions' : 'Add New Account & Permissions'}
               </h3>
+              
+              <button
+                type="button"
+                onClick={() => applyDefaultPermissionsToForm(designation, department)}
+                className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:underline flex items-center gap-1 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50/20"
+                title="Reset overrides back to role defaults"
+              >
+                <RotateCcw size={12} />
+                Load Role Defaults
+              </button>
             </div>
             
-            <div className="p-5 overflow-y-auto">
-              <form id="account-form" onSubmit={handleSave} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                      type="email"
+            <div className="p-6 overflow-y-auto space-y-6">
+              <form id="account-form" onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Profile Information Block */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    Profile Information
+                  </h4>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        disabled={!!editingEmail}
+                        className="w-full pl-10 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm disabled:opacity-50"
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">System Role</label>
+                    <select
+                      value={role}
+                      onChange={e => setRole(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
+                    >
+                      <option value="Employee">Employee</option>
+                      <option value="Admin">Administrator</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Designation / Organizational Rank</label>
+                    <select
                       required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      disabled={!!editingEmail}
-                      className="w-full pl-10 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm disabled:opacity-50"
-                      placeholder="user@example.com"
-                    />
+                      value={designation}
+                      onChange={e => {
+                        const nextDesig = e.target.value;
+                        setDesignation(nextDesig);
+                        applyDefaultPermissionsToForm(nextDesig, department);
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
+                    >
+                      {DESIGNATION_OPTIONS.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Department</label>
+                    <select
+                      required
+                      value={department}
+                      onChange={e => {
+                        const nextDept = e.target.value;
+                        setDepartment(nextDept);
+                        applyDefaultPermissionsToForm(designation, nextDept);
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
+                    >
+                      {DEPARTMENT_OPTIONS.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">System Role</label>
-                  <select
-                    value={role}
-                    onChange={e => setRole(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="Admin">Administrator</option>
-                  </select>
+                {/* Data Access Block */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    Survey Data Access
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Determine which operational data the user has visibility over.
+                  </p>
+                  
+                  <div className="space-y-2">
+                    {SURVEY_TYPES.map(type => {
+                      const isChecked = selectedSurveyTypes.includes(type.key);
+                      return (
+                        <button
+                          key={type.key}
+                          type="button"
+                          onClick={() => toggleSurveyTypeSelection(type.key)}
+                          className={`flex items-start gap-3 w-full p-2.5 rounded-xl border text-left transition-all ${
+                            isChecked 
+                              ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20' 
+                              : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          <div className="pt-0.5">
+                            {isChecked ? (
+                              <div className="h-4.5 w-4.5 rounded flex items-center justify-center bg-blue-600 text-white">
+                                <Check size={12} strokeWidth={3} />
+                              </div>
+                            ) : (
+                              <div className="h-4.5 w-4.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{type.label}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{type.description}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Designation / Title</label>
-                  <select
-                    required
-                    value={designation}
-                    onChange={e => setDesignation(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
-                  >
-                    {DESIGNATION_OPTIONS.map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Department</label>
-                  <select
-                    required
-                    value={department}
-                    onChange={e => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"
-                  >
-                    {DEPARTMENT_OPTIONS.map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
+                {/* Module Permissions Checklist */}
+                <div className="md:col-span-2 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    Permitted Navigation Modules
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Explicitly grant or revoke access to system pages. Redundant navigation modules are completely hidden.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {PAGE_MODULES.map(module => {
+                      const isChecked = selectedPages.includes(module.key);
+                      return (
+                        <button
+                          key={module.key}
+                          type="button"
+                          onClick={() => togglePageSelection(module.key)}
+                          className={`flex items-start gap-3 p-2.5 rounded-xl border text-left transition-all ${
+                            isChecked 
+                              ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20' 
+                              : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          <div className="pt-0.5">
+                            {isChecked ? (
+                              <div className="h-4.5 w-4.5 rounded flex items-center justify-center bg-blue-600 text-white">
+                                <Check size={12} strokeWidth={3} />
+                              </div>
+                            ) : (
+                              <div className="h-4.5 w-4.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{module.label}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{module.description}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </form>
             </div>
@@ -313,9 +550,9 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
               <button
                 type="submit"
                 form="account-form"
-                className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition cursor-pointer"
+                className="px-4 py-2 text-sm font-bold text-white bg-[#0063a9] hover:bg-[#00528c] rounded-xl transition cursor-pointer shadow-md"
               >
-                {editingEmail ? 'Save Changes' : 'Add Account'}
+                {editingEmail ? 'Save Permissions' : 'Add Account'}
               </button>
             </div>
           </div>
