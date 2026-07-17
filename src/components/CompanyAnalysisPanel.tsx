@@ -31,7 +31,32 @@ const surveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 // Distinct, high-contrast colors for the primary company and the
 // comparison series (peer average or another company).
 const PRIMARY_COLOR = '#2563eb'; // blue
-const COMPARE_COLOR = '#f97316'; // orange - far enough from blue to read clearly on both chart types
+const COMPARE_COLOR = '#0d9488'; // teal - reads clearly against blue on both chart types without an alarming/warning tone
+
+/**
+ * Chooses a y-axis / radius-axis domain that "zooms in" when every value in
+ * view is comfortably high, so small real differences aren't flattened out
+ * by a mostly-empty 0-100 scale. Falls back to the full 0-100 range whenever
+ * any value dips below 50, so low scores are never visually exaggerated.
+ */
+function computeAxisDomain(data: Record<string, unknown>[], keys: string[]): [number, number] {
+  const values: number[] = [];
+  data.forEach((row) => {
+    keys.forEach((key) => {
+      const value = row[key];
+      if (typeof value === 'number') values.push(value);
+    });
+  });
+  if (!values.length) return [0, 100];
+
+  const min = Math.min(...values);
+  if (min < 50) return [0, 100];
+
+  // Round down to the nearest 10, then back off one more gridline so the
+  // lowest bar/point still has visible headroom above the axis floor.
+  const start = Math.max(0, Math.min(90, Math.floor(min / 10) * 10 - 10));
+  return [start, 100];
+}
 
 export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
   const isMobile = useIsMobile();
@@ -96,6 +121,11 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
       };
     });
   }, [activeComposite, compareComposite, peerAverages, compareLabel]);
+
+  const sectionAxisDomain = useMemo(() => {
+    if (!activeComposite) return [0, 100] as [number, number];
+    return computeAxisDomain(chartData, [activeComposite.company, compareLabel]);
+  }, [chartData, activeComposite, compareLabel]);
 
   const primaryTrend = useMemo(() => {
     if (!selectedCompany) return [];
@@ -340,9 +370,16 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
           {/* Section breakdown - enlarged, full width, with a radar/bar switch */}
           <div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
-              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {activeComposite.company} — section breakdown vs {compareLabel.toLowerCase()}
-              </h4>
+              <div>
+                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  {activeComposite.company} — section breakdown vs {compareLabel.toLowerCase()}
+                </h4>
+                {sectionAxisDomain[0] > 0 && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                    Scale starts at {sectionAxisDomain[0]} to highlight differences among high scores.
+                  </p>
+                )}
+              </div>
               <div className="flex shrink-0 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <button
                   type="button"
@@ -382,7 +419,7 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
                   >
                     <PolarGrid />
                     <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 10 : 13 }} />
-                    <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <PolarRadiusAxis domain={sectionAxisDomain} tick={{ fontSize: 11 }} />
                     <Radar
                       name={activeComposite.company}
                       dataKey={activeComposite.company}
@@ -411,7 +448,7 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
                       textAnchor={isMobile ? 'end' : 'middle'}
                       height={isMobile ? 48 : 28}
                     />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                    <YAxis domain={sectionAxisDomain} tick={{ fontSize: 12 }} />
                     <Tooltip />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey={activeComposite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
