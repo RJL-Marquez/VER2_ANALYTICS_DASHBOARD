@@ -15,7 +15,8 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartCard } from '../components/ChartCard';
-import { CompanyPerformancePanel } from '../components/CompanyPerformancePanel';
+import { CompanyLeaderboardPanel } from '../components/CompanyLeaderboardPanel';
+import { CompanyAnalysisPanel } from '../components/CompanyAnalysisPanel';
 import { StateMessage } from '../components/StateMessage';
 import { StatCard } from '../components/StatCard';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -571,7 +572,9 @@ export function AnalyticsPage({
         </div>
       )}
 
-      <CompanyPerformancePanel responses={comparableResponses} filters={filters} setFilters={setFilters} />
+      <CompanyLeaderboardPanel responses={comparableResponses} />
+
+      <CompanyAnalysisPanel responses={comparableResponses} />
 
       <section className="panel">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
