@@ -1,8 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, GitCompareArrows, RadarIcon, BarChart3 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   PolarAngleAxis,
@@ -25,6 +28,11 @@ interface CompanyAnalysisPanelProps {
 
 const surveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
+// Distinct, high-contrast colors for the primary company and the
+// comparison series (peer average or another company).
+const PRIMARY_COLOR = '#2563eb'; // blue
+const COMPARE_COLOR = '#f97316'; // orange - far enough from blue to read clearly on both chart types
+
 export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
   const isMobile = useIsMobile();
   const [surveyType, setSurveyType] = useState<SurveyType>('Courier');
@@ -32,6 +40,14 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
   const [query, setQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Comparison company (replaces "Peer average" on both charts when set)
+  const [compareCompany, setCompareCompany] = useState<string | null>(null);
+  const [compareQuery, setCompareQuery] = useState('');
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const compareInputRef = useRef<HTMLInputElement>(null);
+
+  const [chartView, setChartView] = useState<'radar' | 'bar'>('radar');
 
   const leaderboard = useMemo(() => getLeaderboard(responses, surveyType), [responses, surveyType]);
   const peerAverages = useMemo(() => getSectionPeerAverages(responses, surveyType), [responses, surveyType]);
@@ -44,19 +60,42 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
     return companyOptions.filter((name) => name.toLowerCase().includes(needle));
   }, [companyOptions, query]);
 
-  const activeComposite = leaderboard.find((c) => c.company === selectedCompany) ?? null;
+  // Comparison options: same category, excludes the currently selected company
+  const compareOptions = useMemo(
+    () => companyOptions.filter((name) => name !== selectedCompany),
+    [companyOptions, selectedCompany]
+  );
 
-  const radarData = useMemo(() => {
+  const filteredCompareOptions = useMemo(() => {
+    const needle = compareQuery.trim().toLowerCase();
+    if (!needle) return compareOptions;
+    return compareOptions.filter((name) => name.toLowerCase().includes(needle));
+  }, [compareOptions, compareQuery]);
+
+  const activeComposite = leaderboard.find((c) => c.company === selectedCompany) ?? null;
+  const compareComposite = leaderboard.find((c) => c.company === compareCompany) ?? null;
+
+  // Label for the second series - either the chosen comparison company or "Peer average"
+  const compareLabel = compareComposite ? compareComposite.company : 'Peer average';
+
+  const chartData = useMemo(() => {
     if (!activeComposite) return [];
     return activeComposite.sections.map((section) => {
-      const peer = peerAverages.find((p) => p.section === section.section);
+      let compareValue: number;
+      if (compareComposite) {
+        const compareSection = compareComposite.sections.find((s) => s.section === section.section);
+        compareValue = compareSection?.percent ?? 0;
+      } else {
+        const peer = peerAverages.find((p) => p.section === section.section);
+        compareValue = peer?.average ?? 0;
+      }
       return {
         section: section.section,
         [activeComposite.company]: section.percent,
-        'Peer average': peer?.average ?? 0,
+        [compareLabel]: compareValue,
       };
     });
-  }, [activeComposite, peerAverages]);
+  }, [activeComposite, compareComposite, peerAverages, compareLabel]);
 
   const trendData = useMemo(() => {
     if (!selectedCompany) return [];
@@ -67,6 +106,11 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
     setSelectedCompany(company);
     setQuery(company);
     setIsSearchOpen(false);
+    // A company can't be compared to itself
+    if (compareCompany === company) {
+      setCompareCompany(null);
+      setCompareQuery('');
+    }
   };
 
   const handleClearSelection = () => {
@@ -74,6 +118,19 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
     setQuery('');
     inputRef.current?.focus();
     setIsSearchOpen(true);
+  };
+
+  const handleSelectCompareCompany = (company: string) => {
+    setCompareCompany(company);
+    setCompareQuery(company);
+    setIsCompareOpen(false);
+  };
+
+  const handleClearCompareSelection = () => {
+    setCompareCompany(null);
+    setCompareQuery('');
+    compareInputRef.current?.focus();
+    setIsCompareOpen(true);
   };
 
   if (!responses.length) return null;
@@ -100,6 +157,9 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
                   setSelectedCompany(null);
                   setQuery('');
                   setIsSearchOpen(false);
+                  setCompareCompany(null);
+                  setCompareQuery('');
+                  setIsCompareOpen(false);
                 }}
               >
                 {surveyTypeDisplayLabel[type]}
@@ -108,74 +168,146 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
           </div>
         </div>
 
-        {/* Company search / combobox */}
-        <div className="relative w-full md:max-w-sm">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={isSearchOpen ? query : (selectedCompany || query)}
-              onFocus={() => {
-                setIsSearchOpen(true);
-                if (selectedCompany) setQuery('');
-              }}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setIsSearchOpen(true);
-                if (selectedCompany) setSelectedCompany(null);
-              }}
-              placeholder={`Search ${surveyTypeDisplayLabel[surveyType].toLowerCase()} companies...`}
-              className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-[#0063a9] dark:focus:border-blue-500 transition-colors"
-            />
-            {(selectedCompany || query) && (
-              <button
-                type="button"
-                onClick={handleClearSelection}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                aria-label="Clear selection"
-              >
-                <X size={15} />
-              </button>
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Company search / combobox */}
+          <div className="relative w-full md:max-w-sm">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={isSearchOpen ? query : (selectedCompany || query)}
+                onFocus={() => {
+                  setIsSearchOpen(true);
+                  if (selectedCompany) setQuery('');
+                }}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setIsSearchOpen(true);
+                  if (selectedCompany) setSelectedCompany(null);
+                }}
+                placeholder={`Search ${surveyTypeDisplayLabel[surveyType].toLowerCase()} companies...`}
+                className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-[#0063a9] dark:focus:border-blue-500 transition-colors"
+              />
+              {(selectedCompany || query) && (
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label="Clear selection"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            {isSearchOpen && (
+              <div className="absolute z-20 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg py-1">
+                {filteredOptions.length === 0 ? (
+                  <p className="px-3 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
+                    No matching companies.
+                  </p>
+                ) : (
+                  filteredOptions.map((company) => (
+                    <button
+                      key={company}
+                      type="button"
+                      onMouseDown={(e) => {
+                        // onMouseDown fires before the input's onBlur, so selection registers
+                        // before we ever close the dropdown.
+                        e.preventDefault();
+                        handleSelectCompany(company);
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                        company === selectedCompany
+                          ? 'bg-blue-50 text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300 font-semibold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
+                      }`}
+                    >
+                      <span className="truncate">{company}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Click-away backdrop to close the dropdown */}
+            {isSearchOpen && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsSearchOpen(false)}
+              />
             )}
           </div>
 
-          {isSearchOpen && (
-            <div className="absolute z-20 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg py-1">
-              {filteredOptions.length === 0 ? (
-                <p className="px-3 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
-                  No matching companies.
-                </p>
-              ) : (
-                filteredOptions.map((company) => (
+          {/* Comparison company search / combobox - only useful once a primary company is picked */}
+          {activeComposite && (
+            <div className="relative w-full md:max-w-sm">
+              <div className="relative">
+                <GitCompareArrows size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  ref={compareInputRef}
+                  type="text"
+                  value={isCompareOpen ? compareQuery : (compareCompany || compareQuery)}
+                  onFocus={() => {
+                    setIsCompareOpen(true);
+                    if (compareCompany) setCompareQuery('');
+                  }}
+                  onChange={(e) => {
+                    setCompareQuery(e.target.value);
+                    setIsCompareOpen(true);
+                    if (compareCompany) setCompareCompany(null);
+                  }}
+                  placeholder={`Compare with another ${surveyTypeDisplayLabel[surveyType].toLowerCase()}...`}
+                  className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
+                />
+                {(compareCompany || compareQuery) && (
                   <button
-                    key={company}
                     type="button"
-                    onMouseDown={(e) => {
-                      // onMouseDown fires before the input's onBlur, so selection registers
-                      // before we ever close the dropdown.
-                      e.preventDefault();
-                      handleSelectCompany(company);
-                    }}
-                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                      company === selectedCompany
-                        ? 'bg-blue-50 text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300 font-semibold'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
-                    }`}
+                    onClick={handleClearCompareSelection}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    aria-label="Clear comparison selection"
                   >
-                    <span className="truncate">{company}</span>
+                    <X size={15} />
                   </button>
-                ))
+                )}
+              </div>
+
+              {isCompareOpen && (
+                <div className="absolute z-20 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg py-1">
+                  {filteredCompareOptions.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
+                      No matching companies.
+                    </p>
+                  ) : (
+                    filteredCompareOptions.map((company) => (
+                      <button
+                        key={company}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectCompareCompany(company);
+                        }}
+                        className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                          company === compareCompany
+                            ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300 font-semibold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        }`}
+                      >
+                        <span className="truncate">{company}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {isCompareOpen && (
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsCompareOpen(false)}
+                />
               )}
             </div>
-          )}
-
-          {/* Click-away backdrop to close the dropdown */}
-          {isSearchOpen && (
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setIsSearchOpen(false)}
-            />
           )}
         </div>
       </div>
@@ -183,29 +315,83 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
       {activeComposite ? (
         <div className="grid gap-5 xl:grid-cols-2 mt-2">
           <div>
-            <h4 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              {activeComposite.company} — section breakdown vs peer average
-            </h4>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {activeComposite.company} — section breakdown vs {compareLabel.toLowerCase()}
+              </h4>
+              <div className="segmented-control flex shrink-0 rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setChartView('radar')}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    chartView === 'radar'
+                      ? 'bg-[#0063a9] text-white'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                  aria-label="Show radar chart"
+                >
+                  <RadarIcon size={13} /> Radar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartView('bar')}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    chartView === 'bar'
+                      ? 'bg-[#0063a9] text-white'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                  aria-label="Show bar chart"
+                >
+                  <BarChart3 size={13} /> Bar
+                </button>
+              </div>
+            </div>
             <div className="h-64 w-full overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart
-                  data={radarData}
-                  outerRadius={isMobile ? '55%' : '75%'}
-                  margin={isMobile ? { top: 8, right: 28, bottom: 8, left: 28 } : undefined}
-                >
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 9 : 11 }} />
-                  <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                  <Radar
-                    name={activeComposite.company}
-                    dataKey={activeComposite.company}
-                    stroke="#2563eb"
-                    fill="#2563eb"
-                    fillOpacity={0.35}
-                  />
-                  <Radar name="Peer average" dataKey="Peer average" stroke="#94a3b8" fill="#94a3b8" fillOpacity={0.15} />
-                  <Tooltip />
-                </RadarChart>
+                {chartView === 'radar' ? (
+                  <RadarChart
+                    data={chartData}
+                    outerRadius={isMobile ? '55%' : '75%'}
+                    margin={isMobile ? { top: 8, right: 28, bottom: 8, left: 28 } : undefined}
+                  >
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 9 : 11 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                    <Radar
+                      name={activeComposite.company}
+                      dataKey={activeComposite.company}
+                      stroke={PRIMARY_COLOR}
+                      fill={PRIMARY_COLOR}
+                      fillOpacity={0.35}
+                    />
+                    <Radar
+                      name={compareLabel}
+                      dataKey={compareLabel}
+                      stroke={COMPARE_COLOR}
+                      fill={COMPARE_COLOR}
+                      fillOpacity={0.3}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Tooltip />
+                  </RadarChart>
+                ) : (
+                  <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 8, left: -12 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="section"
+                      tick={{ fontSize: isMobile ? 9 : 10 }}
+                      interval={0}
+                      angle={isMobile ? -25 : 0}
+                      textAnchor={isMobile ? 'end' : 'middle'}
+                      height={isMobile ? 40 : 24}
+                    />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey={activeComposite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey={compareLabel} fill={COMPARE_COLOR} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>
@@ -219,7 +405,7 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="score" stroke={PRIMARY_COLOR} strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
