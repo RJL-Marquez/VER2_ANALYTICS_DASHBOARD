@@ -206,3 +206,23 @@ export function getCompanyTrend(responses: SurveyResponse[], company: string, su
     return { month, score: composite?.compositeScore ?? 0, responses: submissionScores(monthResponses).length };
   });
 }
+
+/**
+ * Average composite score by month across every company of a survey type
+ * (optionally excluding one), so a company's trend line can be read
+ * against a peer baseline over the same timeline.
+ */
+export function getPeerAverageTrend(responses: SurveyResponse[], surveyType: SurveyType, excludeCompany?: string) {
+  const filtered = responses.filter((r) => r.surveyType === surveyType && r.company !== excludeCompany);
+  const months = [...new Set(filtered.map((r) => r.submissionDate.slice(0, 7)))].sort();
+
+  return months.map((month) => {
+    const monthResponses = filtered.filter((r) => r.submissionDate.slice(0, 7) === month);
+    const companies = [...new Set(monthResponses.map((r) => r.company))];
+    const scores = companies
+      .map((company) => computeCompanyComposite(company, surveyType, monthResponses)?.compositeScore)
+      .filter((s): s is number => typeof s === 'number');
+    const average = scores.length ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) : 0;
+    return { month, score: average };
+  });
+}

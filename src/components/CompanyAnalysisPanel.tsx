@@ -20,7 +20,7 @@ import {
 } from 'recharts';
 import { SurveyResponse, SurveyType } from '../types/survey';
 import { surveyTypeDisplayLabel } from '../data/questionWeights';
-import { getCompanyTrend, getLeaderboard, getSectionPeerAverages } from '../utils/scoring';
+import { getCompanyTrend, getLeaderboard, getPeerAverageTrend, getSectionPeerAverages } from '../utils/scoring';
 
 interface CompanyAnalysisPanelProps {
   responses: SurveyResponse[];
@@ -41,7 +41,7 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Comparison company (replaces "Peer average" on both charts when set)
+  // Comparison company (replaces "Peer average" on both the section chart and the trend chart when set)
   const [compareCompany, setCompareCompany] = useState<string | null>(null);
   const [compareQuery, setCompareQuery] = useState('');
   const [isCompareOpen, setIsCompareOpen] = useState(false);
@@ -97,10 +97,34 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
     });
   }, [activeComposite, compareComposite, peerAverages, compareLabel]);
 
-  const trendData = useMemo(() => {
+  const primaryTrend = useMemo(() => {
     if (!selectedCompany) return [];
     return getCompanyTrend(responses, selectedCompany, surveyType);
   }, [responses, selectedCompany, surveyType]);
+
+  // Comparison trend: the chosen company's own trajectory, or the peer average trajectory
+  // (excluding the primary company so it doesn't average against itself)
+  const compareTrend = useMemo(() => {
+    if (!selectedCompany) return [];
+    if (compareComposite) {
+      return getCompanyTrend(responses, compareComposite.company, surveyType);
+    }
+    return getPeerAverageTrend(responses, surveyType, selectedCompany);
+  }, [responses, selectedCompany, compareComposite, surveyType]);
+
+  const trendData = useMemo(() => {
+    if (!activeComposite) return [];
+    const months = [...new Set([...primaryTrend.map((t) => t.month), ...compareTrend.map((t) => t.month)])].sort();
+    return months.map((month) => {
+      const primary = primaryTrend.find((t) => t.month === month);
+      const compare = compareTrend.find((t) => t.month === month);
+      return {
+        month,
+        [activeComposite.company]: primary?.score ?? null,
+        [compareLabel]: compare?.score ?? null,
+      };
+    });
+  }, [activeComposite, primaryTrend, compareTrend, compareLabel]);
 
   const handleSelectCompany = (company: string) => {
     setSelectedCompany(company);
@@ -168,9 +192,10 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
+        {/* Both search boxes are centered and shown side by side, visible before any selection is made */}
+        <div className="flex flex-col md:flex-row gap-4 justify-center items-stretch md:items-start w-full">
           {/* Company search / combobox */}
-          <div className="relative w-full md:max-w-sm">
+          <div className="relative w-full md:w-[22rem] md:max-w-sm">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
@@ -240,123 +265,124 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
             )}
           </div>
 
-          {/* Comparison company search / combobox - only useful once a primary company is picked */}
-          {activeComposite && (
-            <div className="relative w-full md:max-w-sm">
-              <div className="relative">
-                <GitCompareArrows size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <input
-                  ref={compareInputRef}
-                  type="text"
-                  value={isCompareOpen ? compareQuery : (compareCompany || compareQuery)}
-                  onFocus={() => {
-                    setIsCompareOpen(true);
-                    if (compareCompany) setCompareQuery('');
-                  }}
-                  onChange={(e) => {
-                    setCompareQuery(e.target.value);
-                    setIsCompareOpen(true);
-                    if (compareCompany) setCompareCompany(null);
-                  }}
-                  placeholder={`Compare with another ${surveyTypeDisplayLabel[surveyType].toLowerCase()}...`}
-                  className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
-                />
-                {(compareCompany || compareQuery) && (
-                  <button
-                    type="button"
-                    onClick={handleClearCompareSelection}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                    aria-label="Clear comparison selection"
-                  >
-                    <X size={15} />
-                  </button>
-                )}
-              </div>
-
-              {isCompareOpen && (
-                <div className="absolute z-20 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg py-1">
-                  {filteredCompareOptions.length === 0 ? (
-                    <p className="px-3 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
-                      No matching companies.
-                    </p>
-                  ) : (
-                    filteredCompareOptions.map((company) => (
-                      <button
-                        key={company}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleSelectCompareCompany(company);
-                        }}
-                        className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                          company === compareCompany
-                            ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300 font-semibold'
-                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <span className="truncate">{company}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {isCompareOpen && (
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsCompareOpen(false)}
-                />
+          {/* Comparison company search / combobox - always visible, styled distinctly from the primary search */}
+          <div className="relative w-full md:w-[22rem] md:max-w-sm">
+            <div className="relative">
+              <GitCompareArrows size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                ref={compareInputRef}
+                type="text"
+                value={isCompareOpen ? compareQuery : (compareCompany || compareQuery)}
+                onFocus={() => {
+                  setIsCompareOpen(true);
+                  if (compareCompany) setCompareQuery('');
+                }}
+                onChange={(e) => {
+                  setCompareQuery(e.target.value);
+                  setIsCompareOpen(true);
+                  if (compareCompany) setCompareCompany(null);
+                }}
+                placeholder={`Compare with another ${surveyTypeDisplayLabel[surveyType].toLowerCase()}...`}
+                className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-orange-500 dark:focus:border-orange-400 transition-colors"
+              />
+              {(compareCompany || compareQuery) && (
+                <button
+                  type="button"
+                  onClick={handleClearCompareSelection}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label="Clear comparison selection"
+                >
+                  <X size={15} />
+                </button>
               )}
             </div>
-          )}
+
+            {isCompareOpen && (
+              <div className="absolute z-20 mt-1.5 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg py-1">
+                {filteredCompareOptions.length === 0 ? (
+                  <p className="px-3 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
+                    No matching companies.
+                  </p>
+                ) : (
+                  filteredCompareOptions.map((company) => (
+                    <button
+                      key={company}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectCompareCompany(company);
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                        company === compareCompany
+                          ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300 font-semibold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
+                      }`}
+                    >
+                      <span className="truncate">{company}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {isCompareOpen && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsCompareOpen(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
 
       {activeComposite ? (
-        <div className="grid gap-5 xl:grid-cols-2 mt-2">
+        <div className="flex flex-col gap-6 mt-2">
+          {/* Section breakdown - enlarged, full width, with a radar/bar switch */}
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
               <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                 {activeComposite.company} — section breakdown vs {compareLabel.toLowerCase()}
               </h4>
-              <div className="segmented-control flex shrink-0 rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="flex shrink-0 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setChartView('radar')}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors ${
                     chartView === 'radar'
                       ? 'bg-[#0063a9] text-white'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+                      : 'bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                   aria-label="Show radar chart"
+                  aria-pressed={chartView === 'radar'}
                 >
                   <RadarIcon size={13} /> Radar
                 </button>
                 <button
                   type="button"
                   onClick={() => setChartView('bar')}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors border-l border-slate-200 dark:border-slate-700 ${
                     chartView === 'bar'
                       ? 'bg-[#0063a9] text-white'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+                      : 'bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
                   }`}
                   aria-label="Show bar chart"
+                  aria-pressed={chartView === 'bar'}
                 >
                   <BarChart3 size={13} /> Bar
                 </button>
               </div>
             </div>
-            <div className="h-64 w-full overflow-hidden">
+            <div className="h-[26rem] md:h-[32rem] w-full overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 {chartView === 'radar' ? (
                   <RadarChart
                     data={chartData}
-                    outerRadius={isMobile ? '55%' : '75%'}
-                    margin={isMobile ? { top: 8, right: 28, bottom: 8, left: 28 } : undefined}
+                    outerRadius={isMobile ? '65%' : '80%'}
+                    margin={isMobile ? { top: 8, right: 28, bottom: 8, left: 28 } : { top: 10, right: 40, bottom: 10, left: 40 }}
                   >
                     <PolarGrid />
-                    <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 9 : 11 }} />
-                    <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                    <PolarAngleAxis dataKey="section" tick={{ fontSize: isMobile ? 10 : 13 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                     <Radar
                       name={activeComposite.company}
                       dataKey={activeComposite.company}
@@ -371,23 +397,23 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
                       fill={COMPARE_COLOR}
                       fillOpacity={0.3}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Tooltip />
                   </RadarChart>
                 ) : (
-                  <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 8, left: -12 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 20, bottom: 10, left: -8 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
                       dataKey="section"
-                      tick={{ fontSize: isMobile ? 9 : 10 }}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
                       interval={0}
                       angle={isMobile ? -25 : 0}
                       textAnchor={isMobile ? 'end' : 'middle'}
-                      height={isMobile ? 40 : 24}
+                      height={isMobile ? 48 : 28}
                     />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey={activeComposite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
                     <Bar dataKey={compareLabel} fill={COMPARE_COLOR} radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -396,16 +422,36 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
             </div>
           </div>
 
+          {/* Score trend - now below the section chart, also reflects the chosen comparison */}
           <div className="flex flex-col">
-            <h4 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">Score trend</h4>
-            <div className="h-40">
+            <h4 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              Score trend vs {compareLabel.toLowerCase()}
+            </h4>
+            <div className="h-56 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke={PRIMARY_COLOR} strokeWidth={2} dot={{ r: 3 }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line
+                    type="monotone"
+                    dataKey={activeComposite.company}
+                    stroke={PRIMARY_COLOR}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={compareLabel}
+                    stroke={COMPARE_COLOR}
+                    strokeWidth={2}
+                    strokeDasharray="5 4"
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
