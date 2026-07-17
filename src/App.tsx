@@ -300,6 +300,35 @@ export default function App() {
 
   const isAdmin = profile?.role === 'Admin' || userPermissions.pages.includes('account-management');
 
+  // A survey's own "Department / Role Access" checkboxes (set via Survey Forms > Modify)
+  // are the source of truth for who can see & answer that specific form. If a survey has
+  // been explicitly shared with someone's department + rank, that alone should be enough
+  // to unlock it for them - they shouldn't also need a separate category checkbox flipped
+  // in Account Management. This computes which survey categories have been unlocked for
+  // the current user purely through form-level access grants.
+  const formGrantedSurveyTypes = useMemo(() => {
+    const set = new Set<SurveyType>();
+    if (!profile || profile.role === 'Admin') return set;
+    surveys.forEach((survey) => {
+      if (survey.status === 'Archived') return;
+      const departmentAccess = survey.accessDepartments;
+      const roleAccess = survey.accessRoles;
+      const allowsDepartment = !departmentAccess?.length || departmentAccess.includes(profile.department);
+      const allowsRole = !roleAccess?.length || roleAccess.includes(profile.designation as any);
+      if (allowsDepartment && allowsRole) set.add(survey.surveyType);
+    });
+    return set;
+  }, [surveys, profile]);
+
+  // Effective survey type access = whatever Account Management grants, PLUS whatever
+  // any individual survey's own access settings grant. This is a union (additive) so it
+  // never revokes what Account Management already allows - it only extends access when
+  // an admin explicitly shares a specific form with a department/role.
+  const effectiveSurveyTypes = useMemo<SurveyType[]>(() => {
+    const set = new Set<SurveyType>([...userPermissions.surveyTypes, ...formGrantedSurveyTypes]);
+    return Array.from(set);
+  }, [userPermissions.surveyTypes, formGrantedSurveyTypes]);
+
   const canExport = useMemo(() => {
     if (!profile) return false;
     return profile.role === 'Admin' || profile.designation !== 'Rank & File';
@@ -313,18 +342,18 @@ export default function App() {
     }
     
     if (profile.role === 'Admin') {
-      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+      return responses.filter(r => effectiveSurveyTypes.includes(r.surveyType));
     }
 
     if (profile.designation === 'Executive' || profile.designation === 'Director') {
-      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+      return responses.filter(r => effectiveSurveyTypes.includes(r.surveyType));
     }
 
     if (profile.designation === 'Supervisory') {
       // Supervisor: see team/department responses
       return responses.filter(r => 
         r.department === profile.department && 
-        userPermissions.surveyTypes.includes(r.surveyType)
+        effectiveSurveyTypes.includes(r.surveyType)
       );
     }
 
@@ -332,12 +361,12 @@ export default function App() {
       // Rank & File: see own responses
       return responses.filter(r => 
         r.respondentEmail === profile.email && 
-        userPermissions.surveyTypes.includes(r.surveyType)
+        effectiveSurveyTypes.includes(r.surveyType)
       );
     }
 
-    return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
-  }, [responses, profile, userPermissions.surveyTypes, activePage]);
+    return responses.filter(r => effectiveSurveyTypes.includes(r.surveyType));
+  }, [responses, profile, effectiveSurveyTypes, activePage]);
 
   const userAccessibleAllResponses = useMemo(() => {
     if (!profile) return [];
@@ -346,30 +375,30 @@ export default function App() {
     }
 
     if (profile.role === 'Admin' || profile.designation === 'Executive' || profile.designation === 'Director') {
-      return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
+      return responses.filter(r => effectiveSurveyTypes.includes(r.surveyType));
     }
 
     if (profile.designation === 'Supervisory') {
       return responses.filter(r => 
         r.department === profile.department && 
-        userPermissions.surveyTypes.includes(r.surveyType)
+        effectiveSurveyTypes.includes(r.surveyType)
       );
     }
 
     if (profile.designation === 'Rank & File') {
       return responses.filter(r => 
         r.respondentEmail === profile.email && 
-        userPermissions.surveyTypes.includes(r.surveyType)
+        effectiveSurveyTypes.includes(r.surveyType)
       );
     }
 
-    return responses.filter(r => userPermissions.surveyTypes.includes(r.surveyType));
-  }, [responses, profile, userPermissions.surveyTypes, activePage]);
+    return responses.filter(r => effectiveSurveyTypes.includes(r.surveyType));
+  }, [responses, profile, effectiveSurveyTypes, activePage]);
 
   const userAccessibleSurveys = useMemo(() => {
     return surveys.filter((survey) => {
-      if (!userPermissions.surveyTypes.includes(survey.surveyType)) return false;
       if (!profile || profile.role === 'Admin') return true;
+      if (!effectiveSurveyTypes.includes(survey.surveyType)) return false;
 
       const departmentAccess = survey.accessDepartments;
       const roleAccess = survey.accessRoles;
@@ -377,16 +406,17 @@ export default function App() {
       const allowsRole = !roleAccess?.length || roleAccess.includes(profile.designation as any);
       return allowsDepartment && allowsRole;
     });
-  }, [surveys, userPermissions.surveyTypes, profile]);
+  }, [surveys, effectiveSurveyTypes, profile]);
 
   const userAccessiblePartnerCompanies = useMemo(() => {
-    return partnerCompanies.filter(c => userPermissions.surveyTypes.includes(c.type));
-  }, [partnerCompanies, userPermissions.surveyTypes]);
+    return partnerCompanies.filter(c => effectiveSurveyTypes.includes(c.type));
+  }, [partnerCompanies, effectiveSurveyTypes]);
 
   const filteredResponses = useMemo(() => applyFilters(userAccessibleResponses, filters), [userAccessibleResponses, filters]);
   const analyticsFilteredResponses = useMemo(() => applyFilters(responses, filters), [responses, filters]);
   
-  const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : userPermissions.surveyTypes;
+  const activeSurveyTypes = filters.surveyType.length ? filters.surveyType : effectiveSurveyTypes;
+
 
   const visiblePages = useMemo(() => {
     return adminPages.filter((page) => userPermissions.pages.includes(page.key as PageModuleKey));

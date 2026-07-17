@@ -1024,6 +1024,9 @@ export function SurveyFormsPage({
                       </label>
                     )}
                   </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    This is the actual visibility control for this form. Checking a department/role here grants them access to this specific survey (and its companies) even if their account-wide category permission hasn't been changed.
+                  </p>
 
                   <div className={`grid gap-4 md:grid-cols-2 ${!overrideAccess ? 'opacity-60' : ''}`}>
                     <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">

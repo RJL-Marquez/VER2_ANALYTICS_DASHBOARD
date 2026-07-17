@@ -461,6 +461,9 @@ export function AccountManagementPage({ accounts, onUpdateAccounts, isAdmin, cur
                   <p className="text-xs text-slate-500">
                     Determine which operational data the user has visibility over.
                   </p>
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-lg px-2.5 py-2">
+                    Note: checking a category here grants broad visibility, but a specific form is only visible to the user once you also allow their department/role on that form (Survey Forms → Modify → Access). Sharing a form directly with a department/role there will automatically unlock the matching category here too.
+                  </p>
                   
                   <div className="space-y-2">
                     {SURVEY_TYPES.map(type => {
