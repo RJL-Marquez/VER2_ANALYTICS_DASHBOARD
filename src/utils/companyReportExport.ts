@@ -3,15 +3,20 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import {
   AlignmentType,
+  BorderStyle,
   Document,
-  HeadingLevel,
+  Footer,
+  Header,
   ImageRun,
+  PageNumber,
   Packer,
   Paragraph,
   Table,
   TableCell,
   TableRow,
+  TabStopType,
   TextRun,
+  VerticalAlign,
   WidthType,
 } from 'docx';
 import { SurveyType } from '../types/survey';
@@ -49,6 +54,13 @@ export interface CompanyReportData {
 }
 
 const BRAND = [0, 99, 169] as const;
+const BRAND_HEX = '0063A9';
+const INK_HEX = '1E293B';
+const MUTED_HEX = '64748B';
+const RULE_HEX = 'E2E8F0';
+
+const LOGO_URL = '/microgenesis_logo.png';
+const LOGO_ASPECT = 498 / 1921; // height / width, from the source asset
 
 /** Renders one DOM node (a chart wrapper) to a PNG data URL for embedding in PDF/DOCX exports. */
 export async function captureChartImage(node: HTMLElement | null): Promise<string | null> {
@@ -70,122 +82,201 @@ function dataUrlDimensions(dataUrl: string): Promise<{ width: number; height: nu
   });
 }
 
+/** Fetches the Microgenesis wordmark from /public and returns it as a data URL for embedding. */
+async function fetchLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(LOGO_URL);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('logo read failed'));
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* PDF export                                                          */
 /* ------------------------------------------------------------------ */
 
 export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const marginLeft = 40;
+  const marginLeft = 48;
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
   const contentWidth = pageWidth - marginLeft * 2;
-  let cursorY = 56;
+  const logoDataUrl = await fetchLogoDataUrl();
+
+  /* ---------------- Cover page ---------------- */
+  if (logoDataUrl) {
+    const coverLogoWidth = 190;
+    const coverLogoHeight = coverLogoWidth * LOGO_ASPECT;
+    doc.addImage(logoDataUrl, 'PNG', (pageWidth - coverLogoWidth) / 2, 168, coverLogoWidth, coverLogoHeight);
+  }
+
+  doc.setDrawColor(...BRAND);
+  doc.setLineWidth(1.1);
+  doc.line(pageWidth / 2 - 70, 258, pageWidth / 2 + 70, 258);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(21);
+  doc.setTextColor(30, 30, 30);
+  doc.text('Company Performance Report', pageWidth / 2, 312, { align: 'center' });
+
+  doc.setFontSize(14);
+  doc.setTextColor(...BRAND);
+  doc.text(data.company, pageWidth / 2, 338, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(100);
+  doc.text(`${data.surveyType} Evaluation  \u00b7  Generated ${data.generatedOn}`, pageWidth / 2, 358, { align: 'center' });
+
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.75);
+  doc.line(pageWidth / 2 - 90, 400, pageWidth / 2 + 90, 400);
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(140);
+  doc.text('Prepared for internal review by the', pageWidth / 2, pageHeight - 96, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Microgenesis Supplier Management System', pageWidth / 2, pageHeight - 82, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.text('This document is confidential and intended solely for the named recipient.', pageWidth / 2, pageHeight - 62, {
+    align: 'center',
+  });
+
+  doc.addPage();
+
+  const HEADER_BOTTOM = 74;
+  let cursorY = HEADER_BOTTOM + 22;
+
+  const drawHeader = () => {
+    if (logoDataUrl) {
+      const hw = 84;
+      const hh = hw * LOGO_ASPECT;
+      doc.addImage(logoDataUrl, 'PNG', marginLeft, 22, hw, hh);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 30, 30);
+    doc.text(data.company, pageWidth - marginLeft, 36, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text('Company Performance Report', pageWidth - marginLeft, 48, { align: 'right' });
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.75);
+    doc.line(marginLeft, HEADER_BOTTOM, pageWidth - marginLeft, HEADER_BOTTOM);
+  };
 
   const ensureSpace = (needed: number) => {
-    if (cursorY + needed > doc.internal.pageSize.height - 50) {
+    if (cursorY + needed > pageHeight - 56) {
       doc.addPage();
-      cursorY = 56;
+      drawHeader();
+      cursorY = HEADER_BOTTOM + 22;
     }
   };
 
-  // Title block
-  doc.setFontSize(20);
-  doc.setTextColor(...BRAND);
+  drawHeader();
+
   doc.setFont('helvetica', 'bold');
-  doc.text('Company Performance Report', marginLeft, cursorY);
-  cursorY += 24;
-
-  doc.setFontSize(15);
+  doc.setFontSize(13);
   doc.setTextColor(20, 20, 20);
-  doc.text(data.company, marginLeft, cursorY);
-  cursorY += 18;
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100);
-  doc.text(`${data.surveyType} · Generated ${data.generatedOn}`, marginLeft, cursorY);
-  cursorY += 26;
+  doc.text('Executive Summary', marginLeft, cursorY);
+  cursorY += 16;
 
   // Score summary strip
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(marginLeft, cursorY, contentWidth, 56, 6, 6, 'S');
-  doc.setFontSize(9);
+  doc.roundedRect(marginLeft, cursorY, contentWidth, 48, 5, 5, 'S');
+  doc.setFontSize(7.5);
   doc.setTextColor(100);
-  doc.text('COMPOSITE SCORE', marginLeft + 14, cursorY + 20);
-  doc.text('RATING BAND', marginLeft + 190, cursorY + 20);
-  doc.text('EVALUATIONS', marginLeft + 340, cursorY + 20);
-  doc.setFontSize(14);
+  doc.text('COMPOSITE SCORE', marginLeft + 12, cursorY + 17);
+  doc.text('RATING BAND', marginLeft + 190, cursorY + 17);
+  doc.text('EVALUATIONS', marginLeft + 340, cursorY + 17);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...BRAND);
-  doc.text(`${data.composite.compositeScore.toFixed(1)} / 100`, marginLeft + 14, cursorY + 40);
+  doc.text(`${data.composite.compositeScore.toFixed(1)} / 100`, marginLeft + 12, cursorY + 35);
   doc.setTextColor(20, 20, 20);
-  doc.text(data.composite.band.label, marginLeft + 190, cursorY + 40);
-  doc.text(String(data.composite.evaluationCount), marginLeft + 340, cursorY + 40);
+  doc.text(data.composite.band.label, marginLeft + 190, cursorY + 35);
+  doc.text(String(data.composite.evaluationCount), marginLeft + 340, cursorY + 35);
   doc.setFont('helvetica', 'normal');
-  cursorY += 80;
+  cursorY += 72;
 
   const addImageSection = async (title: string, dataUrl: string | null | undefined) => {
     if (!dataUrl) return;
     const { width, height } = await dataUrlDimensions(dataUrl);
-    const drawWidth = contentWidth;
+    const drawWidth = contentWidth * 0.68;
     const drawHeight = (height / width) * drawWidth;
-    ensureSpace(drawHeight + 40);
-    doc.setFontSize(12);
+    ensureSpace(drawHeight + 34);
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text(title, marginLeft, cursorY);
-    cursorY += 14;
-    doc.addImage(dataUrl, 'PNG', marginLeft, cursorY, drawWidth, drawHeight);
-    cursorY += drawHeight + 24;
+    cursorY += 12;
+    const x = marginLeft + (contentWidth - drawWidth) / 2;
+    doc.addImage(dataUrl, 'PNG', x, cursorY, drawWidth, drawHeight);
+    cursorY += drawHeight + 22;
   };
 
-  if (data.graphs.bar) await addImageSection('Section Scores — Bar Graph', data.chartImages.bar);
-  if (data.graphs.radar) await addImageSection('Section Scores — Radar Graph', data.chartImages.radar);
+  if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar);
+  if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar);
   if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend);
 
   if (data.graphs.perQuestion) {
-    ensureSpace(60);
-    doc.setFontSize(12);
+    ensureSpace(56);
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text('Per-Question Average Rating', marginLeft, cursorY);
-    cursorY += 10;
+    cursorY += 8;
     autoTable(doc, {
       startY: cursorY,
       head: [['Question', 'Average Rating', 'Responses']],
       body: data.questionRows.map((row) => [row.question, `${row.average.toFixed(1)}`, String(row.responses)]),
-      margin: { left: marginLeft, right: marginLeft },
-      styles: { fontSize: 9, cellPadding: 6 },
-      headStyles: { fillColor: BRAND as unknown as [number, number, number], textColor: 255, fontStyle: 'bold' },
+      margin: { left: marginLeft, right: marginLeft, top: HEADER_BOTTOM + 16 },
+      styles: { fontSize: 8, cellPadding: 5 },
+      headStyles: { fillColor: BRAND as unknown as [number, number, number], textColor: 255, fontStyle: 'bold', fontSize: 8 },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       theme: 'striped',
+      didDrawPage: () => drawHeader(),
     });
-    cursorY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 26;
+    cursorY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 22;
   }
 
   if (data.includeComments) {
-    ensureSpace(70);
-    doc.setFontSize(12);
+    ensureSpace(62);
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text('Stakeholder Comments', marginLeft, cursorY);
-    cursorY += 18;
-    doc.setFontSize(10);
+    cursorY += 16;
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120);
-    doc.text('No comments have been submitted yet — free-text feedback is not yet collected on this questionnaire.', marginLeft, cursorY, {
+    doc.text('No comments have been submitted yet \u2014 free-text feedback is not yet collected on this questionnaire.', marginLeft, cursorY, {
       maxWidth: contentWidth,
     });
-    cursorY += 30;
+    cursorY += 26;
   }
 
-  // Footer on every page
+  // Footer on every content page (cover page excluded)
   const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
+  for (let i = 2; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(marginLeft, pageHeight - 34, pageWidth - marginLeft, pageHeight - 34);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(150);
-    doc.text(`Page ${i} of ${pageCount} — Microgenesis Supplier Management System`, marginLeft, doc.internal.pageSize.height - 20);
+    doc.text('Microgenesis Supplier Management System \u2014 Confidential', marginLeft, pageHeight - 20);
+    doc.text(`Page ${i - 1} of ${pageCount - 1}`, pageWidth - marginLeft, pageHeight - 20, { align: 'right' });
   }
 
   const filenameSafe = data.company.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
@@ -207,12 +298,15 @@ function dataUrlToUint8Array(dataUrl: string): Uint8Array {
 async function imageParagraph(dataUrl: string | null | undefined, title: string): Promise<Paragraph[]> {
   if (!dataUrl) return [];
   const { width, height } = await dataUrlDimensions(dataUrl);
-  const maxWidth = 560;
+  const maxWidth = 380; // scaled down from a full-bleed 560 for a more formal, report-like proportion
   const drawWidth = Math.min(maxWidth, width);
   const drawHeight = (height / width) * drawWidth;
 
   return [
-    new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 120 } }),
+    new Paragraph({
+      children: [new TextRun({ text: title, bold: true, size: 21, color: INK_HEX })],
+      spacing: { before: 260, after: 100 },
+    }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [
@@ -227,45 +321,114 @@ async function imageParagraph(dataUrl: string | null | undefined, title: string)
 }
 
 export async function exportCompanyReportAsDocx(data: CompanyReportData) {
-  const children: Paragraph[] = [];
+  const logoDataUrl = await fetchLogoDataUrl();
+  const logoBytes = logoDataUrl ? dataUrlToUint8Array(logoDataUrl) : null;
 
-  children.push(
-    new Paragraph({ text: 'Company Performance Report', heading: HeadingLevel.TITLE, spacing: { after: 120 } }),
-    new Paragraph({ text: data.company, heading: HeadingLevel.HEADING_1, spacing: { after: 80 } }),
+  /* ---------------- Cover page (its own section, no header/footer) ---------------- */
+  const coverChildren: Paragraph[] = [
+    new Paragraph({ spacing: { before: 2400 }, children: [] }),
+    ...(logoBytes
+      ? [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new ImageRun({
+                type: 'png',
+                data: logoBytes,
+                transformation: { width: 230, height: 230 * LOGO_ASPECT },
+              }),
+            ],
+          }),
+        ]
+      : []),
     new Paragraph({
+      alignment: AlignmentType.CENTER,
+      border: { bottom: { color: BRAND_HEX, space: 8, style: BorderStyle.SINGLE, size: 10 } },
+      spacing: { before: 500, after: 500 },
+      children: [new TextRun({ text: ' ', size: 2 })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 160 },
+      children: [new TextRun({ text: 'Company Performance Report', bold: true, size: 40, color: INK_HEX })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 120 },
+      children: [new TextRun({ text: data.company, bold: true, size: 30, color: BRAND_HEX })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 2000 },
       children: [
-        new TextRun({ text: `${data.surveyType} · Generated ${data.generatedOn}`, color: '64748B', size: 20 }),
+        new TextRun({ text: `${data.surveyType} Evaluation  \u00b7  Generated ${data.generatedOn}`, size: 20, color: MUTED_HEX }),
       ],
-      spacing: { after: 200 },
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [new TextRun({ text: 'Prepared for internal review by the', size: 16, color: MUTED_HEX })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+      children: [new TextRun({ text: 'Microgenesis Supplier Management System', bold: true, size: 17, color: INK_HEX })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: 'This document is confidential and intended solely for the named recipient.',
+          italics: true,
+          size: 15,
+          color: MUTED_HEX,
+        }),
+      ],
+    }),
+  ];
+
+  /* ---------------- Body content ---------------- */
+  const bodyBlocks: (Paragraph | Table)[] = [];
+
+  bodyBlocks.push(
+    new Paragraph({
+      children: [new TextRun({ text: 'Executive Summary', bold: true, size: 26, color: INK_HEX })],
+      spacing: { after: 160 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: 'Composite Score: ', bold: true }),
-        new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100    ` }),
-        new TextRun({ text: 'Rating Band: ', bold: true }),
-        new TextRun({ text: `${data.composite.band.label}    ` }),
-        new TextRun({ text: 'Evaluations: ', bold: true }),
-        new TextRun({ text: String(data.composite.evaluationCount) }),
+        new TextRun({ text: 'Composite Score:  ', bold: true, size: 19 }),
+        new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100    `, size: 19 }),
+        new TextRun({ text: 'Rating Band:  ', bold: true, size: 19 }),
+        new TextRun({ text: `${data.composite.band.label}    `, size: 19 }),
+        new TextRun({ text: 'Evaluations:  ', bold: true, size: 19 }),
+        new TextRun({ text: String(data.composite.evaluationCount), size: 19 }),
       ],
-      spacing: { after: 200 },
+      border: { bottom: { color: RULE_HEX, space: 8, style: BorderStyle.SINGLE, size: 6 } },
+      spacing: { after: 220 },
     }),
   );
 
-  if (data.graphs.bar) children.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores — Bar Graph')));
-  if (data.graphs.radar) children.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores — Radar Graph')));
-  if (data.graphs.trend) children.push(...(await imageParagraph(data.chartImages.trend, 'Score Trend')));
-
-  const bodyBlocks: (Paragraph | Table)[] = [...children];
+  if (data.graphs.bar) bodyBlocks.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores \u2014 Bar Graph')));
+  if (data.graphs.radar) bodyBlocks.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores \u2014 Radar Graph')));
+  if (data.graphs.trend) bodyBlocks.push(...(await imageParagraph(data.chartImages.trend, 'Score Trend')));
 
   if (data.graphs.perQuestion) {
-    bodyBlocks.push(new Paragraph({ text: 'Per-Question Average Rating', heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 120 } }));
+    bodyBlocks.push(
+      new Paragraph({
+        children: [new TextRun({ text: 'Per-Question Average Rating', bold: true, size: 21, color: INK_HEX })],
+        spacing: { before: 280, after: 110 },
+      }),
+    );
     const headerRow = new TableRow({
       tableHeader: true,
       children: ['Question', 'Average Rating', 'Responses'].map(
         (label) =>
           new TableCell({
-            shading: { fill: '0063A9' },
-            children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, color: 'FFFFFF' })] })],
+            shading: { fill: BRAND_HEX },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 100, right: 100 },
+            children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, color: 'FFFFFF', size: 16 })] })],
           }),
       ),
     });
@@ -275,15 +438,18 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
           children: [
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
-              children: [new Paragraph(row.question)],
+              margins: { top: 50, bottom: 50, left: 100, right: 100 },
+              children: [new Paragraph({ children: [new TextRun({ text: row.question, size: 16 })] })],
             }),
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
-              children: [new Paragraph(row.average.toFixed(1))],
+              margins: { top: 50, bottom: 50, left: 100, right: 100 },
+              children: [new Paragraph({ children: [new TextRun({ text: row.average.toFixed(1), size: 16 })] })],
             }),
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
-              children: [new Paragraph(String(row.responses))],
+              margins: { top: 50, bottom: 50, left: 100, right: 100 },
+              children: [new Paragraph({ children: [new TextRun({ text: String(row.responses), size: 16 })] })],
             }),
           ],
         }),
@@ -298,21 +464,61 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
 
   if (data.includeComments) {
     bodyBlocks.push(
-      new Paragraph({ text: 'Stakeholder Comments', heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 120 } }),
+      new Paragraph({
+        children: [new TextRun({ text: 'Stakeholder Comments', bold: true, size: 21, color: INK_HEX })],
+        spacing: { before: 280, after: 110 },
+      }),
       new Paragraph({
         children: [
           new TextRun({
-            text: 'No comments have been submitted yet — free-text feedback is not yet collected on this questionnaire.',
+            text: 'No comments have been submitted yet \u2014 free-text feedback is not yet collected on this questionnaire.',
             italics: true,
-            color: '64748B',
+            size: 17,
+            color: MUTED_HEX,
           }),
         ],
       }),
     );
   }
 
+  /* ---------------- Running header / footer for content pages ---------------- */
+  const header = new Header({
+    children: [
+      new Paragraph({
+        tabStops: [{ type: TabStopType.RIGHT, position: 9600 }],
+        border: { bottom: { color: RULE_HEX, space: 6, style: BorderStyle.SINGLE, size: 6 } },
+        children: [
+          ...(logoBytes
+            ? [new ImageRun({ type: 'png', data: logoBytes, transformation: { width: 96, height: 96 * LOGO_ASPECT } })]
+            : []),
+          new TextRun({ text: '\t' }),
+          new TextRun({ text: `${data.company}\n`, bold: true, size: 15, color: INK_HEX }),
+          new TextRun({ text: 'Company Performance Report', size: 13, color: MUTED_HEX }),
+        ],
+      }),
+    ],
+  });
+
+  const footer = new Footer({
+    children: [
+      new Paragraph({
+        border: { top: { color: RULE_HEX, space: 6, style: BorderStyle.SINGLE, size: 6 } },
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({ text: 'Microgenesis Supplier Management System \u2014 Confidential   \u00b7   Page ', size: 14, color: '94A3B8' }),
+          new TextRun({ children: [PageNumber.CURRENT], size: 14, color: '94A3B8' }),
+          new TextRun({ text: ' of ', size: 14, color: '94A3B8' }),
+          new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 14, color: '94A3B8' }),
+        ],
+      }),
+    ],
+  });
+
   const doc = new Document({
-    sections: [{ properties: {}, children: bodyBlocks }],
+    sections: [
+      { properties: {}, children: coverChildren },
+      { properties: {}, headers: { default: header }, footers: { default: footer }, children: bodyBlocks },
+    ],
   });
 
   const blob = await Packer.toBlob(doc);
