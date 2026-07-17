@@ -329,7 +329,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
                 {graphs.trend && (
                   <div>
                     <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Score Trend</h4>
-                    <div ref={trendRef} className="h-64 w-full bg-white dark:bg-slate-900">
+                    <div ref={trendRef} className="h-32 w-full bg-white dark:bg-slate-900">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={trendChartData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />

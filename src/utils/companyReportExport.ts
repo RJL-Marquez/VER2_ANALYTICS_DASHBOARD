@@ -228,7 +228,7 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   // Trend: wider and shorter, spanning most of the content width so the x-axis has room to breathe.
   if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar, 0.46);
   if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar, 0.46);
-  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend, 0.85);
+  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend, 0.8);
 
   if (data.graphs.perQuestion) {
     ensureSpace(56);
