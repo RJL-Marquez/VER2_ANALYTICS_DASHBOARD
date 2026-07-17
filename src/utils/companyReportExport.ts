@@ -208,25 +208,27 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   doc.setFont('helvetica', 'normal');
   cursorY += 72;
 
-  const addImageSection = async (title: string, dataUrl: string | null | undefined) => {
+  const addImageSection = async (title: string, dataUrl: string | null | undefined, widthScale: number) => {
     if (!dataUrl) return;
     const { width, height } = await dataUrlDimensions(dataUrl);
-    const drawWidth = contentWidth * 0.68;
+    const drawWidth = contentWidth * widthScale;
     const drawHeight = (height / width) * drawWidth;
-    ensureSpace(drawHeight + 34);
-    doc.setFontSize(10.5);
+    ensureSpace(drawHeight + 30);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text(title, marginLeft, cursorY);
-    cursorY += 12;
+    cursorY += 11;
     const x = marginLeft + (contentWidth - drawWidth) / 2;
     doc.addImage(dataUrl, 'PNG', x, cursorY, drawWidth, drawHeight);
-    cursorY += drawHeight + 22;
+    cursorY += drawHeight + 18;
   };
 
-  if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar);
-  if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar);
-  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend);
+  // Bar/radar: compact, roughly half the content width so both sit comfortably on one A4 page.
+  // Trend: wider and shorter, spanning most of the content width so the x-axis has room to breathe.
+  if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar, 0.46);
+  if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar, 0.46);
+  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend, 0.85);
 
   if (data.graphs.perQuestion) {
     ensureSpace(56);
@@ -295,17 +297,16 @@ function dataUrlToUint8Array(dataUrl: string): Uint8Array {
   return bytes;
 }
 
-async function imageParagraph(dataUrl: string | null | undefined, title: string): Promise<Paragraph[]> {
+async function imageParagraph(dataUrl: string | null | undefined, title: string, maxWidth: number): Promise<Paragraph[]> {
   if (!dataUrl) return [];
   const { width, height } = await dataUrlDimensions(dataUrl);
-  const maxWidth = 380; // scaled down from a full-bleed 560 for a more formal, report-like proportion
   const drawWidth = Math.min(maxWidth, width);
   const drawHeight = (height / width) * drawWidth;
 
   return [
     new Paragraph({
-      children: [new TextRun({ text: title, bold: true, size: 21, color: INK_HEX })],
-      spacing: { before: 260, after: 100 },
+      children: [new TextRun({ text: title, bold: true, size: 19, color: INK_HEX })],
+      spacing: { before: 240, after: 90 },
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -409,9 +410,11 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
     }),
   );
 
-  if (data.graphs.bar) bodyBlocks.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores \u2014 Bar Graph')));
-  if (data.graphs.radar) bodyBlocks.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores \u2014 Radar Graph')));
-  if (data.graphs.trend) bodyBlocks.push(...(await imageParagraph(data.chartImages.trend, 'Score Trend')));
+  // Bar/radar: compact (~45% of the ~624px content width) so both fit cleanly on one page.
+  // Trend: wider (~80%) with a short, wide aspect so the x-axis has room, mirroring the dashboard view.
+  if (data.graphs.bar) bodyBlocks.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores \u2014 Bar Graph', 280)));
+  if (data.graphs.radar) bodyBlocks.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores \u2014 Radar Graph', 280)));
+  if (data.graphs.trend) bodyBlocks.push(...(await imageParagraph(data.chartImages.trend, 'Score Trend', 500)));
 
   if (data.graphs.perQuestion) {
     bodyBlocks.push(
