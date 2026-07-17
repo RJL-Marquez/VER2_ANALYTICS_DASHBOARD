@@ -21,7 +21,7 @@ const PAGE_MODULES: { key: PageModuleKey; label: string; description: string }[]
   { key: 'analytics', label: 'Analytics', description: 'Company-wide statistical charts and trends' },
   { key: 'reports', label: 'Reports', description: 'Generate custom report cards and raw exports' },
   { key: 'present', label: 'Present', description: 'Staggered slide deck presentation builder' },
-  { key: 'partner-companies', label: 'Partner Companies', description: 'Manage external contractor, supplier, and subcontractor rosters' },
+  { key: 'partner-companies', label: 'Partner Companies', description: 'Manage external courier, supplier, and subcontractor rosters' },
   { key: 'account-management', label: 'Account Management', description: 'Configure system roles, ranks, and user permissions' },
   { key: 'notifications', label: 'Notification Logs', description: 'Audit trails of incoming survey responses' },
   { key: 'archive', label: 'Archive Center', description: 'Browse and restore archived feedback submissions' },
@@ -29,7 +29,7 @@ const PAGE_MODULES: { key: PageModuleKey; label: string; description: string }[]
 ];
 
 const SURVEY_TYPES: { key: SurveyType; label: string; description: string }[] = [
-  { key: 'Contractor', label: 'Contractor Satisfaction', description: 'Courier and logistics satisfaction reporting' },
+  { key: 'Courier', label: 'Courier Satisfaction', description: 'Courier and logistics satisfaction reporting' },
   { key: 'Supplier', label: 'Supplier Quality', description: 'Inventory supplier assessment and commercials' },
   { key: 'Subcontractor', label: 'Subcontractor Performance', description: 'On-site subcontractor compliance and execution' },
 ];

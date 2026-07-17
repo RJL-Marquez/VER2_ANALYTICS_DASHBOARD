@@ -24,11 +24,11 @@ interface CompanyPerformancePanelProps {
   setFilters: (filters: FilterState) => void;
 }
 
-const surveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const surveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
 export function CompanyPerformancePanel({ responses, filters, setFilters }: CompanyPerformancePanelProps) {
   const isMobile = useIsMobile();
-  const [surveyType, setSurveyType] = useState<SurveyType>('Contractor');
+  const [surveyType, setSurveyType] = useState<SurveyType>('Courier');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
 
   const leaderboard = useMemo(() => getLeaderboard(responses, surveyType), [responses, surveyType]);

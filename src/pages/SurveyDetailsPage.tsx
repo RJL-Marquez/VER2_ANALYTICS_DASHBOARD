@@ -234,7 +234,7 @@ export function SurveyDetailsPage({ survey, responses, partnerCompanies = [], us
         {/* Right column - Performance / Stats */}
         <div className="space-y-6">
           <div className="panel space-y-4">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Survey Analytics Overview</h4>
+            <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">Supplier Management System Overview</h4>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-slate-50 p-4 text-center dark:bg-slate-900/50">

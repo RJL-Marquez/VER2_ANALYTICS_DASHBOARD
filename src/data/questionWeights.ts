@@ -5,7 +5,7 @@ import { SurveyType } from '../types/survey';
  * (Form 20-002 Form 2/3/4). These are what makes a company's composite
  * score match the actual paper rubric instead of a generic 0-4 average.
  *
- * - Contractor (Courier form, Form 4 Rev. A): 5 sections, 100 points total.
+ * - Courier (Courier form, Form 4 Rev. A): 5 sections, 100 points total.
  * - Supplier (Form 2 Rev. B): 5 sections of 20 points each, 100 points total.
  * - Subcontractor (Form 3 Rev. A): every question is scored 0/1/2/N-A on the
  *   same discrete scale, so "maxPoints" is 2 for all of them. There's no
@@ -22,7 +22,7 @@ export interface QuestionWeight {
 }
 
 export const questionWeights: Record<SurveyType, QuestionWeight[]> = {
-  Contractor: [
+  Courier: [
     { questionId: 'Q01', section: 'Reliability/Delivery', maxPoints: 15 },
     { questionId: 'Q02', section: 'Reliability/Delivery', maxPoints: 15 },
     { questionId: 'Q08', section: 'Cost', maxPoints: 7 },
@@ -97,7 +97,7 @@ const UNIFIED_BANDS: ScoreBand[] = [
 ];
 
 export const ratingBands: Record<SurveyType, ScoreBand[]> = {
-  Contractor: UNIFIED_BANDS,
+  Courier: UNIFIED_BANDS,
   Supplier: UNIFIED_BANDS,
   Subcontractor: UNIFIED_BANDS,
 };
@@ -108,13 +108,13 @@ export function getBand(surveyType: SurveyType, percentScore: number): ScoreBand
 }
 
 export const surveyTypeDisplayLabel: Record<SurveyType, string> = {
-  Contractor: 'Courier',
+  Courier: 'Courier',
   Supplier: 'Supplier',
   Subcontractor: 'Subcontractor',
 };
 
 export const ID_MAPPING: Record<string, string> = {
-  // Contractor (Courier)
+  // Courier (Courier)
   'Q-CON-04': 'Q01',
   'Q-CON-05': 'Q02',
   'Q-CON-07': 'Q08',

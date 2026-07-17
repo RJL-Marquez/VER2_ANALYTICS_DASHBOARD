@@ -17,9 +17,10 @@ interface ShellProps<T extends string> {
   action: ReactNode;
   children: ReactNode;
   renderDropdown?: (key: T) => ReactNode;
+  pageHeading?: string;
 }
 
-export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children, renderDropdown }: ShellProps<T>) {
+export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children, renderDropdown, pageHeading }: ShellProps<T>) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [expandedKey, setExpandedKey] = useState<T | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -64,9 +65,8 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
 
           {/* Title Area */}
           <div className="hidden sm:block pl-6">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-blue-200 block leading-none">Microsoft Forms</span>
-            <h1 className="text-base font-bold leading-tight flex items-center gap-1.5 mt-0.5 text-white">
-              <span>Survey Analytics</span>
+            <h1 className="text-base font-bold leading-tight flex items-center gap-1.5 text-white">
+              <span>Supplier Management System</span>
               <span className="text-blue-300/60">/</span>
               <span className="text-blue-100 font-medium">{title}</span>
             </h1>
@@ -217,8 +217,8 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
           <div className="px-4 py-6 lg:px-8">
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">Centralized stakeholder satisfaction reporting</p>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+                <p className="text-xs font-medium uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">SUPPLIER MANAGEMENT PERFORMANCE EVALUATION SURVEY ANALYTICS</p>
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{pageHeading || title}</h2>
               </div>
               <div id="shell-header-action"></div>
             </div>

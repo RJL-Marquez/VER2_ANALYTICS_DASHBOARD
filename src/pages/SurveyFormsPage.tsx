@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ClipboardList, Plus, Search, Eye, FormInput, X, Check, Award, Building2, CalendarClock } from 'lucide-react';
-import { CustomForm, SurveyType, PartnerCompany } from '../types/survey';
+import { CustomForm, SurveyType, PartnerCompany, SurveyAccessRole } from '../types/survey';
 import { StateMessage } from '../components/StateMessage';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
 
@@ -18,19 +18,30 @@ interface SurveyFormsPageProps {
   isAdmin?: boolean;
 }
 
-const surveyTypeOptions: Array<'All' | SurveyType> = ['All', 'Contractor', 'Supplier', 'Subcontractor'];
+const surveyTypeOptions: Array<'All' | SurveyType> = ['All', 'Courier', 'Supplier', 'Subcontractor'];
 
 const surveyTypeColors: Record<SurveyType, string> = {
-  Contractor: '#2563eb',
+  Courier: '#2563eb',
   Supplier: '#10b981',
   Subcontractor: '#f97316',
 };
 
 const surveyTypeBadges: Record<SurveyType, string> = {
-  Contractor: 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20',
+  Courier: 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20',
   Supplier: 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/20',
   Subcontractor: 'bg-orange-50 text-orange-700 border border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/20',
 };
+
+const departmentOptions = [
+  'Accounts Payable - Trade',
+  'Business Solutions Manager',
+  'Executive Office',
+  'Logistics',
+  'Procurement Group',
+  'TASS'
+];
+
+const roleOptions: SurveyAccessRole[] = ['Rank & File', 'Supervisory', 'Managerial', 'Director', 'Executive'];
 
 function ddmmToYyyymmdd(ddmm: string): string {
   if (!ddmm) return '';
@@ -81,6 +92,9 @@ export function SurveyFormsPage({
   const [newDeadlineDate, setNewDeadlineDate] = useState('');
   const [overrideStatus, setOverrideStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<'Running' | 'Paused' | 'Completed' | 'Archived'>('Running');
+  const [overrideAccess, setOverrideAccess] = useState(false);
+  const [accessDepartments, setAccessDepartments] = useState<string[]>(departmentOptions);
+  const [accessRoles, setAccessRoles] = useState<SurveyAccessRole[]>(roleOptions);
 
   // Custom passcode and warning modals
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
@@ -106,7 +120,7 @@ export function SurveyFormsPage({
   // Group pending partner companies
   const groupedPendingCompanies = useMemo(() => {
     const pending: Record<SurveyType, PartnerCompany[]> = {
-      Contractor: [],
+      Courier: [],
       Supplier: [],
       Subcontractor: [],
     };
@@ -125,7 +139,7 @@ export function SurveyFormsPage({
 
   const totalCompanies = partnerCompanies.length;
   const pendingCount =
-    groupedPendingCompanies.Contractor.length +
+    groupedPendingCompanies.Courier.length +
     groupedPendingCompanies.Supplier.length +
     groupedPendingCompanies.Subcontractor.length;
   const evaluatedCount = totalCompanies - pendingCount;
@@ -133,7 +147,7 @@ export function SurveyFormsPage({
 
   // Per-category totals and completed counts, used to show a per-survey completion status for non-admins.
   const companyTotalsByType = useMemo(() => {
-    const totals: Record<SurveyType, number> = { Contractor: 0, Supplier: 0, Subcontractor: 0 };
+    const totals: Record<SurveyType, number> = { Courier: 0, Supplier: 0, Subcontractor: 0 };
     partnerCompanies.forEach((company) => {
       totals[company.type] = (totals[company.type] || 0) + 1;
     });
@@ -141,8 +155,8 @@ export function SurveyFormsPage({
   }, [partnerCompanies]);
 
   const companyCompletedByType = useMemo(() => {
-    const completed: Record<SurveyType, number> = { Contractor: 0, Supplier: 0, Subcontractor: 0 };
-    (['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]).forEach((type) => {
+    const completed: Record<SurveyType, number> = { Courier: 0, Supplier: 0, Subcontractor: 0 };
+    (['Courier', 'Supplier', 'Subcontractor'] as SurveyType[]).forEach((type) => {
       completed[type] = (companyTotalsByType[type] || 0) - (groupedPendingCompanies[type]?.length || 0);
     });
     return completed;
@@ -200,11 +214,68 @@ export function SurveyFormsPage({
     }
   };
 
+  const resetModifyState = () => {
+    setIsModifyOpen(false);
+    setOverrideDeadline(false);
+    setOverrideStatus(false);
+    setOverrideAccess(false);
+    setNewDeadlineDate('');
+    setNewStatus('Running');
+    setAccessDepartments(departmentOptions);
+    setAccessRoles(roleOptions);
+  };
+
+  const openBulkModify = () => {
+    setOverrideDeadline(false);
+    setOverrideStatus(false);
+    setOverrideAccess(false);
+    setNewDeadlineDate('');
+    setNewStatus('Running');
+    setAccessDepartments(departmentOptions);
+    setAccessRoles(roleOptions);
+    setIsModifyOpen(true);
+  };
+
+  const openSingleModify = (survey: CustomForm) => {
+    setSelectedSurveyIds(new Set([survey.id]));
+    setIsSelectMode(false);
+    setNewStatus(survey.status === 'Paused' ? 'Paused' : survey.status === 'Completed' ? 'Completed' : 'Running');
+    setNewDeadlineDate(ddmmToYyyymmdd(survey.deadlineDate || ''));
+    setAccessDepartments(survey.accessDepartments?.length ? survey.accessDepartments : departmentOptions);
+    setAccessRoles(survey.accessRoles?.length ? survey.accessRoles : roleOptions);
+    setOverrideStatus(true);
+    setOverrideDeadline(true);
+    setOverrideAccess(true);
+    setIsModifyOpen(true);
+  };
+
+  const toggleDepartmentAccess = (department: string) => {
+    setOverrideAccess(true);
+    setAccessDepartments((current) =>
+      current.includes(department)
+        ? current.filter((item) => item !== department)
+        : [...current, department]
+    );
+  };
+
+  const toggleRoleAccess = (role: SurveyAccessRole) => {
+    setOverrideAccess(true);
+    setAccessRoles((current) =>
+      current.includes(role)
+        ? current.filter((item) => item !== role)
+        : [...current, role]
+    );
+  };
+
   const handleBulkSaveChanges = () => {
     if (!onUpdateSurveysBulk && !onUpdateSurvey) return;
     if (selectedSurveyIds.size === 0) return;
-    if (!overrideDeadline && !overrideStatus) {
-      alert("Please select at least one property to override (check the box next to Deadline Date or Form Status).");
+    if (!overrideDeadline && !overrideStatus && !overrideAccess) {
+      alert("Please select at least one property to update.");
+      return;
+    }
+    if (overrideAccess && (accessDepartments.length === 0 || accessRoles.length === 0)) {
+      alert("Please select at least one department and one role that can answer the survey.");
       return;
     }
 
@@ -217,6 +288,10 @@ export function SurveyFormsPage({
         }
         if (overrideStatus) {
           updated.status = newStatus;
+        }
+        if (overrideAccess) {
+          updated.accessDepartments = accessDepartments;
+          updated.accessRoles = accessRoles;
         }
         updatedSurveysList.push(updated);
       }
@@ -231,9 +306,7 @@ export function SurveyFormsPage({
     // Reset select state and exit
     setIsSelectMode(false);
     setSelectedSurveyIds(new Set());
-    setIsModifyOpen(false);
-    setOverrideDeadline(false);
-    setOverrideStatus(false);
+    resetModifyState();
   };
 
   const handleProceedArchive = () => {
@@ -549,14 +622,7 @@ export function SurveyFormsPage({
                               <span>Manage</span>
                             </button>
                             <button
-                              onClick={() => {
-                                setSelectedSurveyIds(new Set([survey.id]));
-                                setNewStatus(survey.status === 'Paused' ? 'Paused' : survey.status === 'Completed' ? 'Completed' : 'Running');
-                                setNewDeadlineDate(ddmmToYyyymmdd(survey.deadlineDate || ''));
-                                setOverrideStatus(true);
-                                setOverrideDeadline(true);
-                                setIsModifyOpen(true);
-                              }}
+                              onClick={() => openSingleModify(survey)}
                               className="inline-flex items-center justify-center gap-2 w-36 rounded-lg bg-[#0063a9] text-white hover:bg-[#00528c] dark:bg-blue-600 dark:hover:bg-blue-700 px-4 py-2 text-sm font-bold transition cursor-pointer"
                               type="button"
                               title="Modify Survey"
@@ -679,16 +745,16 @@ export function SurveyFormsPage({
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-800 dark:text-white">All Completed!</h4>
                     <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                      Thank you! You have evaluated all Contractor, Supplier, and Subcontractor companies.
+                      Thank you! You have evaluated all Courier, Supplier, and Subcontractor companies.
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {(['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]).map((type) => {
+                  {(['Courier', 'Supplier', 'Subcontractor'] as SurveyType[]).map((type) => {
                     const pendingList = groupedPendingCompanies[type] || [];
                     const typeColors = {
-                      Contractor: 'text-blue-600 bg-blue-50 border-blue-100 dark:text-blue-400 dark:bg-blue-950/20 dark:border-blue-900/30',
+                      Courier: 'text-blue-600 bg-blue-50 border-blue-100 dark:text-blue-400 dark:bg-blue-950/20 dark:border-blue-900/30',
                       Supplier: 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/20 dark:border-emerald-900/30',
                       Subcontractor: 'text-orange-600 bg-orange-50 border-orange-100 dark:text-orange-400 dark:bg-orange-950/20 dark:border-orange-900/30',
                     };
@@ -745,10 +811,10 @@ export function SurveyFormsPage({
 
 
       {/* Bulk Modify Footer Selection Bar & Modal Popup */}
-      {isAdmin && isSelectMode && (
+      {isAdmin && (isSelectMode || isModifyOpen) && (
         <>
           {/* Bottom Sticky Selection Bar (only when modal is NOT open) */}
-          {!isModifyOpen && (
+          {isSelectMode && !isModifyOpen && (
             <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] p-4 transition-all duration-300 animate-in slide-in-from-bottom">
               <div className="max-w-5xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -774,7 +840,7 @@ export function SurveyFormsPage({
                         alert("Please select at least one survey form to modify.");
                         return;
                       }
-                      setIsModifyOpen(true);
+                      openBulkModify();
                     }}
                     disabled={selectedSurveyIds.size === 0}
                     className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition cursor-pointer ${
@@ -797,24 +863,24 @@ export function SurveyFormsPage({
               {/* Darkened Backdrop */}
               <div 
                 className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
-                onClick={() => setIsModifyOpen(false)}
+                onClick={resetModifyState}
               />
 
               {/* Centered Modal Container */}
-              <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-5 animate-in zoom-in-95 duration-200">
+              <div className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-5 animate-in zoom-in-95 duration-200">
                 
                 {/* Modal Title Banner */}
                 <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-950 dark:text-white">
-                      Bulk Modify Settings
+                      {isSelectMode ? 'Bulk Modify Settings' : 'Modify Settings'}
                     </h3>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      Applying to {selectedSurveyIds.size} selected survey forms
+                      Applying to {selectedSurveyIds.size} selected survey {selectedSurveyIds.size === 1 ? 'form' : 'forms'}
                     </p>
                   </div>
                   <button
-                    onClick={() => setIsModifyOpen(false)}
+                    onClick={resetModifyState}
                     className="p-1 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                     title="Close"
                   >
@@ -904,12 +970,98 @@ export function SurveyFormsPage({
                   </div>
                 </div>
 
+                {/* Section 3: Survey Access */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
+                      Survey Access
+                    </label>
+                    {isSelectMode && (
+                      <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={overrideAccess}
+                          onChange={(event) => setOverrideAccess(event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                        />
+                        <span>Update access</span>
+                      </label>
+                    )}
+                  </div>
+
+                  <div className={`grid gap-4 md:grid-cols-2 ${!overrideAccess ? 'opacity-60' : ''}`}>
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Departments</span>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            disabled={!overrideAccess}
+                            checked={accessDepartments.length === departmentOptions.length}
+                            onChange={(event) => {
+                              setOverrideAccess(true);
+                              setAccessDepartments(event.target.checked ? departmentOptions : []);
+                            }}
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                          />
+                          <span>All</span>
+                        </label>
+                      </div>
+                      <div className="space-y-1.5">
+                        {departmentOptions.map((department) => (
+                          <label key={department} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              disabled={!overrideAccess}
+                              checked={accessDepartments.includes(department)}
+                              onChange={() => toggleDepartmentAccess(department)}
+                              className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                            />
+                            <span>{department}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Roles</span>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            disabled={!overrideAccess}
+                            checked={accessRoles.length === roleOptions.length}
+                            onChange={(event) => {
+                              setOverrideAccess(true);
+                              setAccessRoles(event.target.checked ? roleOptions : []);
+                            }}
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                          />
+                          <span>All</span>
+                        </label>
+                      </div>
+                      <div className="space-y-1.5">
+                        {roleOptions.map((role) => (
+                          <label key={role} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              disabled={!overrideAccess}
+                              checked={accessRoles.includes(role)}
+                              onChange={() => toggleRoleAccess(role)}
+                              className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                            />
+                            <span>{role}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Modal Footer Buttons */}
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
                   <button
-                    onClick={() => {
-                      setIsModifyOpen(false);
-                    }}
+                    onClick={resetModifyState}
                     className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
                     type="button"
                   >

@@ -2,7 +2,7 @@ import { FilterState, KpiSummary, Rating, SurveyResponse, SurveyType } from '../
 import { getQuestionMaxPoints, isScoredQuestion } from '../data/questionWeights';
 
 const SURVEY_TOTAL_POINTS: Record<SurveyType, number> = {
-  Contractor: 100,
+  Courier: 100,
   Supplier: 100,
   Subcontractor: 32,
 };
@@ -207,7 +207,7 @@ function averageByQuestion(responses: SurveyResponse[]) {
       }
 
       const average = validRatings.reduce((sum, rating) => sum + rating, 0) / validRatings.length;
-      const surveyType = scoredQuestionResponses[0]?.surveyType ?? 'Contractor';
+      const surveyType = scoredQuestionResponses[0]?.surveyType ?? 'Courier';
       const maxPoints = getQuestionMaxPoints(surveyType, scoredQuestionResponses[0]?.questionId ?? '');
 
       return {
@@ -290,7 +290,7 @@ export function ratingDistribution(responses: SurveyResponse[]) {
   }));
 }
 
-export function averageBySurveyType(responses: SurveyResponse[], types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']) {
+export function averageBySurveyType(responses: SurveyResponse[], types: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor']) {
   return types.map((surveyType) => ({
     surveyType,
     average: Number(formatNumber(averageRating(responses.filter((response) => response.surveyType === surveyType)))),
@@ -324,7 +324,7 @@ export function questionPerformance(responses: SurveyResponse[]) {
     }));
 }
 
-export function responseVolume(responses: SurveyResponse[], types: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor']) {
+export function responseVolume(responses: SurveyResponse[], types: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor']) {
   return types.map((surveyType) => ({
     surveyType,
     responses: submissionCount(responses.filter((response) => response.surveyType === surveyType)),

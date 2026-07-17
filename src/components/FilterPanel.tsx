@@ -11,9 +11,9 @@ interface FilterPanelProps {
   allowedSurveyTypes?: SurveyType[];
 }
 
-const defaultSurveyTypeOptions: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const defaultSurveyTypeOptions: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 const surveyTypeColors: Record<SurveyType, string> = {
-  Contractor: '#2563eb',
+  Courier: '#2563eb',
   Supplier: '#10b981',
   Subcontractor: '#f97316',
 };

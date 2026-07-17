@@ -158,7 +158,7 @@ export function exportTablesAsPDF(reportTitle: string, tables: ExportTable[], fi
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
-      `Page ${i} of ${pageCount} - Microgenesis Survey Analytics`,
+      `Page ${i} of ${pageCount} - Microgenesis Supplier Management System`,
       marginLeft,
       doc.internal.pageSize.height - 20
     );

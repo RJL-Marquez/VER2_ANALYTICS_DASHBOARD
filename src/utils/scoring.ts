@@ -36,7 +36,7 @@ function weightMap(surveyType: SurveyType) {
 
 function getMaxRatingForResponse(questionId: string): number {
   try {
-    const saved = localStorage.getItem('survey_analytics_surveys_v5');
+    const saved = localStorage.getItem('survey_analytics_surveys_v6');
     if (saved) {
       const parsed = JSON.parse(saved);
       const baseId = questionId.split('-')[0];
@@ -54,7 +54,7 @@ function getMaxRatingForResponse(questionId: string): number {
 /**
  * Rolls every response for one company + survey type into a single
  * composite score, matching the total score one respondent gave on the
- * form. Contractor and Supplier are already 100-point forms; Subcontractor
+ * form. Courier and Supplier are already 100-point forms; Subcontractor
  * is converted from 32 points to the same 100-point scale.
  */
 export function computeCompanyComposite(

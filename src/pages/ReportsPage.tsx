@@ -115,7 +115,7 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies, canExport = fa
         {isAllCompanies && (
           <ReportCard
             title="Survey Report"
-            detail="Contractor, Supplier, and Subcontractor comparison"
+            detail="Courier, Supplier, and Subcontractor comparison"
             icon={Printer}
             canExport={canExport}
             onExport={(format) => handleCardExport(format, 'survey')}

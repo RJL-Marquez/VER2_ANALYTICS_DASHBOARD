@@ -49,7 +49,7 @@ interface SlideDeckProps {
 }
 
 const surveyTypeColors: Record<string, string> = {
-  Contractor: '#2563eb',
+  Courier: '#2563eb',
   Supplier: '#10b981',
   Subcontractor: '#f97316',
 };
@@ -122,7 +122,7 @@ function TitleSlide({ slide }: { slide: Extract<Slide, { kind: 'title' }> }) {
             referrerPolicy="no-referrer"
           />
           <span className="hidden text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100/80 sm:inline">
-            Survey Analytics
+            Supplier Management System
           </span>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-wide text-blue-50 backdrop-blur-sm sm:text-xs">
@@ -446,7 +446,7 @@ function ComparisonSlide({ slide, responses = [] }: { slide: Extract<Slide, { ki
   };
 
   const topCompaniesData = useMemo(() => {
-    const activeTypes = activeSurveyTypes.length ? activeSurveyTypes : (['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]);
+    const activeTypes = activeSurveyTypes.length ? activeSurveyTypes : (['Courier', 'Supplier', 'Subcontractor'] as SurveyType[]);
     const companiesInActiveTypes = [...new Set(responses
       .filter((r) => activeTypes.includes(r.surveyType))
       .map((r) => r.company)
@@ -622,7 +622,7 @@ function ComparisonSlide({ slide, responses = [] }: { slide: Extract<Slide, { ki
             <p className="text-[10px] text-slate-400 leading-relaxed">
               * Normalized composite index scores (0 to 100). Colors indicate stakeholder types:
               <span className="inline-flex items-center gap-1.5 ml-1.5">
-                <span className="h-2 w-2 rounded-full bg-blue-600" /> Contractor
+                <span className="h-2 w-2 rounded-full bg-blue-600" /> Courier
               </span>
               <span className="inline-flex items-center gap-1.5 ml-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" /> Supplier

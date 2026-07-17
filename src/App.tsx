@@ -185,10 +185,12 @@ const adminPages = [
   { key: 'simulator' as const, label: 'Database Simulator', icon: Database, section: 'System' },
 ];
 
-const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const allSurveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
 export default function App() {
-  const [account, setAccount] = useState<string | null>(null);
+  const [account, setAccount] = useState<string | null>(() => {
+    return localStorage.getItem('user_account') || null;
+  });
 
   // Accounts Management State
   const [accounts, setAccounts] = useState<AccountProfile[]>(() => {
@@ -285,7 +287,7 @@ export default function App() {
           'dashboard', 'survey-forms', 'explorer', 'analytics', 'reports', 'present', 
           'partner-companies', 'account-management', 'notifications', 'archive', 'simulator'
         ] as PageModuleKey[],
-        surveyTypes: ['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]
+        surveyTypes: ['Courier', 'Supplier', 'Subcontractor'] as SurveyType[]
       };
     }
 
@@ -365,8 +367,17 @@ export default function App() {
   }, [responses, profile, userPermissions.surveyTypes, activePage]);
 
   const userAccessibleSurveys = useMemo(() => {
-    return surveys.filter(s => userPermissions.surveyTypes.includes(s.surveyType));
-  }, [surveys, userPermissions.surveyTypes]);
+    return surveys.filter((survey) => {
+      if (!userPermissions.surveyTypes.includes(survey.surveyType)) return false;
+      if (!profile || profile.role === 'Admin') return true;
+
+      const departmentAccess = survey.accessDepartments;
+      const roleAccess = survey.accessRoles;
+      const allowsDepartment = !departmentAccess?.length || departmentAccess.includes(profile.department);
+      const allowsRole = !roleAccess?.length || roleAccess.includes(profile.designation as any);
+      return allowsDepartment && allowsRole;
+    });
+  }, [surveys, userPermissions.surveyTypes, profile]);
 
   const userAccessiblePartnerCompanies = useMemo(() => {
     return partnerCompanies.filter(c => userPermissions.surveyTypes.includes(c.type));
@@ -383,13 +394,7 @@ export default function App() {
 
   const activeTitle = useMemo(() => {
     if (activePage === 'dashboard') {
-      const namePart = profile?.email ? profile.email.split('@')[0] : 'User';
-      const capitalizedName = namePart
-        .split('.')
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-      return `Welcome Back, ${capitalizedName || 'User'}!`;
+      return 'Dashboard';
     }
     if (activePage === 'partner-companies') return 'Administrative Partner Registry';
     if (activePage === 'account-management') return 'Account Management';
@@ -401,6 +406,19 @@ export default function App() {
     if (activePage === 'fill-form') return 'Fill Out Stakeholder Survey';
     return adminPages.find((page) => page.key === activePage)?.label ?? 'Dashboard';
   }, [activePage, selectedSurveyId, surveys, editingSurveyId, profile]);
+
+  const pageHeading = useMemo(() => {
+    if (activePage === 'dashboard') {
+      const namePart = profile?.email ? profile.email.split('@')[0] : 'User';
+      const capitalizedName = namePart
+        .split('.')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+      return `Welcome Back, ${capitalizedName || 'User'}!`;
+    }
+    return activeTitle;
+  }, [activePage, activeTitle, profile]);
 
   // Safe routing guard redirecting users to permitted views
   useEffect(() => {
@@ -414,6 +432,7 @@ export default function App() {
 
   const handleLogin = (email: string) => {
     setAccount(email);
+    localStorage.setItem('user_account', email);
     setActivePage('dashboard');
   };
 
@@ -571,6 +590,8 @@ export default function App() {
         partnerCompanies={userAccessiblePartnerCompanies}
         initialSurveyId={selectedSurveyId}
         userEmail={account || ''}
+        defaultDepartment={profile?.department}
+        defaultRespondentType={profile?.designation}
         responses={userAccessibleResponses}
         onSubmitted={handleSurveySubmit}
         onCancel={() => setActivePage('view-form')}
@@ -662,6 +683,7 @@ export default function App() {
           });
         }}
         title={activeTitle}
+        pageHeading={pageHeading}
         renderDropdown={renderSidebarDropdown}
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
@@ -693,7 +715,10 @@ export default function App() {
                 designation={profile?.designation}
                 department={profile?.department}
                 role={profile?.role}
-                onLogout={() => setAccount(null)}
+                onLogout={() => {
+                  setAccount(null);
+                  localStorage.removeItem('user_account');
+                }}
               />
             </div>
           </div>

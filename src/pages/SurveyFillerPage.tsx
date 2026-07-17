@@ -25,6 +25,8 @@ interface SurveyFillerPageProps {
   partnerCompanies: PartnerCompany[];
   initialSurveyId?: string | null;
   userEmail: string;
+  defaultDepartment?: string;
+  defaultRespondentType?: string;
   responses: any[];
   onSubmitted: (
     surveyId: string,
@@ -55,7 +57,7 @@ const RESPONDENT_TYPES = [
 ];
 
 export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageProps>(function SurveyFillerPage(
-  { surveys, partnerCompanies = [], initialSurveyId, userEmail, responses, onSubmitted, onCancel },
+  { surveys, partnerCompanies = [], initialSurveyId, userEmail, defaultDepartment, defaultRespondentType, responses, onSubmitted, onCancel },
   ref
 ) {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>(initialSurveyId || (surveys[0]?.id ?? ''));
@@ -74,8 +76,8 @@ export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageP
 
   // Respondent metadata
   const [company, setCompany] = useState('');
-  const [department, setDepartment] = useState(DEPARTMENTS[0]);
-  const [respondentType, setRespondentType] = useState(RESPONDENT_TYPES[0]);
+  const [department, setDepartment] = useState(defaultDepartment || DEPARTMENTS[0]);
+  const [respondentType, setRespondentType] = useState(defaultRespondentType || RESPONDENT_TYPES[0]);
   const [address, setAddress] = useState('');
   const [periodCovered, setPeriodCovered] = useState('1st Half');
 
@@ -87,6 +89,30 @@ export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageP
   const [copyPreviousAnswers, setCopyPreviousAnswers] = useState(true);
 
   const activeSurvey = surveys.find((s) => s.id === selectedSurveyId);
+  const availableDepartments = useMemo(() => {
+    return activeSurvey?.accessDepartments?.length ? activeSurvey.accessDepartments : DEPARTMENTS;
+  }, [activeSurvey]);
+  const availableRespondentTypes = useMemo(() => {
+    return activeSurvey?.accessRoles?.length ? activeSurvey.accessRoles : RESPONDENT_TYPES;
+  }, [activeSurvey]);
+
+  useEffect(() => {
+    const preferredDepartment = defaultDepartment && availableDepartments.includes(defaultDepartment)
+      ? defaultDepartment
+      : availableDepartments[0];
+    if (preferredDepartment && !availableDepartments.includes(department)) {
+      setDepartment(preferredDepartment);
+    }
+  }, [availableDepartments, defaultDepartment, department]);
+
+  useEffect(() => {
+    const preferredType = defaultRespondentType && availableRespondentTypes.includes(defaultRespondentType as any)
+      ? defaultRespondentType
+      : availableRespondentTypes[0];
+    if (preferredType && !availableRespondentTypes.includes(respondentType as any)) {
+      setRespondentType(preferredType);
+    }
+  }, [availableRespondentTypes, defaultRespondentType, respondentType]);
 
   // Filter registered partner companies that match the selected survey type
   // and exclude those already evaluated by this specific user
@@ -720,7 +746,7 @@ export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageP
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                     >
-                      {DEPARTMENTS.map((dept) => (
+                      {availableDepartments.map((dept) => (
                         <option key={dept} value={dept}>
                           {dept}
                         </option>
@@ -736,7 +762,7 @@ export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageP
                       value={respondentType}
                       onChange={(e) => setRespondentType(e.target.value)}
                     >
-                      {RESPONDENT_TYPES.map((role) => (
+                      {availableRespondentTypes.map((role) => (
                         <option key={role} value={role}>
                           {role}
                         </option>
@@ -787,7 +813,7 @@ export const SurveyFillerPage = forwardRef<SurveyFillerHandle, SurveyFillerPageP
                   />
                 </div>
 
-                {activeSurvey && (activeSurvey.surveyType === 'Contractor' || activeSurvey.surveyType === 'Supplier') && (
+                {activeSurvey && (activeSurvey.surveyType === 'Courier' || activeSurvey.surveyType === 'Supplier') && (
                   <div>
                     <label htmlFor="filler-period" className="field-label">Period Covered</label>
                     <select

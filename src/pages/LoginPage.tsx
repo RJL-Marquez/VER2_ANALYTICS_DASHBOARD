@@ -218,7 +218,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <div className="relative w-full md:w-1/2 flex flex-col rounded-2xl border border-white/10 bg-white/95 backdrop-blur-sm shadow-2xl p-6 sm:p-8 dark:bg-slate-900/95">
           <div className="mb-6">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#0063a9] dark:text-blue-300">Microsoft Forms</p>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">Survey Analytics</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">Supplier Management System</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Sign in to view stakeholder satisfaction reporting.</p>
           </div>
 

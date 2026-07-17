@@ -43,7 +43,7 @@ interface AnalyticsPageProps {
 }
 
 const surveyTypeColors: Record<SurveyType, string> = {
-  Contractor: '#2563eb',
+  Courier: '#2563eb',
   Supplier: '#10b981',
   Subcontractor: '#f97316',
 };
@@ -58,7 +58,7 @@ const categoryColors: Record<string, {
   borderClass: string;
   label: string;
 }> = {
-  Contractor: {
+  Courier: {
     text: 'text-blue-600 dark:text-blue-400',
     bg: 'bg-blue-50/40 dark:bg-blue-950/10',
     border: 'border-blue-100 dark:border-blue-900/30',
@@ -66,7 +66,7 @@ const categoryColors: Record<string, {
     badgeBg: 'bg-blue-100 text-blue-850 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800',
     borderT: 'border-t-blue-500',
     borderClass: 'border-blue-500',
-    label: 'Contractor',
+    label: 'Courier',
   },
   Supplier: {
     text: 'text-emerald-600 dark:text-emerald-400',
@@ -280,7 +280,7 @@ export function AnalyticsPage({
     ? 'Lowest Rated Company' 
     : `Lowest Rated ${activeCategory}`;
 
-  const [selectedChampionType, setSelectedChampionType] = useState<'Overall' | 'Contractor' | 'Supplier' | 'Subcontractor'>('Overall');
+  const [selectedChampionType, setSelectedChampionType] = useState<'Overall' | 'Courier' | 'Supplier' | 'Subcontractor'>('Overall');
 
   // Sync category state with page category filter changes
   useEffect(() => {
@@ -295,13 +295,13 @@ export function AnalyticsPage({
     return companyAverages[0] || { name: 'No Registered Partners', average: 0, scorePercentage: 0, type: 'N/A', count: 0 };
   }, [companyAverages]);
 
-  const topContractor = useMemo(() => companyAverages.find((c) => c.type === 'Contractor'), [companyAverages]);
+  const topContractor = useMemo(() => companyAverages.find((c) => c.type === 'Courier'), [companyAverages]);
   const topSupplier = useMemo(() => companyAverages.find((c) => c.type === 'Supplier'), [companyAverages]);
   const topSubcontractor = useMemo(() => companyAverages.find((c) => c.type === 'Subcontractor'), [companyAverages]);
 
   const displayedCompany = useMemo(() => {
     if (selectedChampionType === 'Overall') return topCompany;
-    if (selectedChampionType === 'Contractor') return topContractor || { name: 'No Registered Contractors', average: 0, scorePercentage: 0, type: 'Contractor', count: 0 };
+    if (selectedChampionType === 'Courier') return topContractor || { name: 'No Registered Couriers', average: 0, scorePercentage: 0, type: 'Courier', count: 0 };
     if (selectedChampionType === 'Supplier') return topSupplier || { name: 'No Registered Suppliers', average: 0, scorePercentage: 0, type: 'Supplier', count: 0 };
     if (selectedChampionType === 'Subcontractor') return topSubcontractor || { name: 'No Registered Subcontractors', average: 0, scorePercentage: 0, type: 'Subcontractor', count: 0 };
     return topCompany;
@@ -316,7 +316,7 @@ export function AnalyticsPage({
   };
 
   const topCompaniesData = useMemo(() => {
-    const activeTypes = activeSurveyTypes.length ? activeSurveyTypes : (['Contractor', 'Supplier', 'Subcontractor'] as SurveyType[]);
+    const activeTypes = activeSurveyTypes.length ? activeSurveyTypes : (['Courier', 'Supplier', 'Subcontractor'] as SurveyType[]);
     const companiesInActiveTypes = [...new Set(comparableResponses
       .filter((r) => activeTypes.includes(r.surveyType))
       .map((r) => r.company)
@@ -380,7 +380,7 @@ export function AnalyticsPage({
     setFilters({ ...filters, surveyType: newTypes });
   };
 
-  const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+  const allSurveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
   return (
     <div className="space-y-5">
@@ -476,16 +476,16 @@ export function AnalyticsPage({
       {/* Category Champions Section (Interactive toggle, ONLY shown on "All" view) */}
       {activeCategory === 'All' && (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          {/* Contractor Champion Card */}
+          {/* Courier Champion Card */}
           <div
-            onClick={() => setSelectedChampionType(selectedChampionType === 'Contractor' ? 'Overall' : 'Contractor')}
+            onClick={() => setSelectedChampionType(selectedChampionType === 'Courier' ? 'Overall' : 'Courier')}
             className={`panel p-4 flex flex-col justify-between border-t-4 border-blue-500 bg-blue-50/5 dark:bg-slate-900/10 cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${
-              selectedChampionType === 'Contractor' ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
+              selectedChampionType === 'Courier' ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-950' : 'opacity-80 hover:opacity-100'
             }`}
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Top Contractor</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Top Courier</span>
                 <Award className="text-blue-500 shrink-0" size={16} />
               </div>
               {topContractor ? (

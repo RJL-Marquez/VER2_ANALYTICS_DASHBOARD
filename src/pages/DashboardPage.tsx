@@ -80,7 +80,7 @@ const ALL_WIDGET_CATALOG: { type: WidgetType; title: string; desc: string; defau
   { 
     type: 'group-comparison', 
     title: 'Stakeholder Group Comparison', 
-    desc: 'A comparative review of satisfaction score metrics across Contractors, Suppliers, and Subcontractors.', 
+    desc: 'A comparative review of satisfaction score metrics across Couriers, Suppliers, and Subcontractors.', 
     defaultSpan: 1,
     category: 'Analytics'
   },
@@ -117,13 +117,13 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
 
 // Helper colors
 const categoryColors: Record<string, string> = {
-  Contractor: 'bg-blue-500',
+  Courier: 'bg-blue-500',
   Supplier: 'bg-emerald-500',
   Subcontractor: 'bg-orange-500'
 };
 
 const badgeColors: Record<string, string> = {
-  Contractor: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800',
+  Courier: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800',
   Supplier: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800',
   Subcontractor: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200 border border-orange-200 dark:border-orange-800'
 };
@@ -281,7 +281,7 @@ export function DashboardPage({
     }
   };
   const todoStats = useMemo(() => {
-    const categories: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+    const categories: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
     return categories.map(cat => {
       const total = partnerCompanies.filter(c => c.type === cat).length;
       
@@ -353,23 +353,23 @@ export function DashboardPage({
 
   // 2. Stakeholder Groups Comparison Averages
   const groupAverages = useMemo(() => {
-    const counts = { Contractor: 0, Supplier: 0, Subcontractor: 0 };
-    const averages = { Contractor: 0, Supplier: 0, Subcontractor: 0 };
+    const counts = { Courier: 0, Supplier: 0, Subcontractor: 0 };
+    const averages = { Courier: 0, Supplier: 0, Subcontractor: 0 };
 
-    const contractorResponses = allResponses.filter(r => r.surveyType === 'Contractor');
+    const contractorResponses = allResponses.filter(r => r.surveyType === 'Courier');
     const supplierResponses = allResponses.filter(r => r.surveyType === 'Supplier');
     const subcontractorResponses = allResponses.filter(r => r.surveyType === 'Subcontractor');
 
-    counts.Contractor = submissionCount(contractorResponses);
+    counts.Courier = submissionCount(contractorResponses);
     counts.Supplier = submissionCount(supplierResponses);
     counts.Subcontractor = submissionCount(subcontractorResponses);
 
-    averages.Contractor = averageRating(contractorResponses);
+    averages.Courier = averageRating(contractorResponses);
     averages.Supplier = averageRating(supplierResponses);
     averages.Subcontractor = averageRating(subcontractorResponses);
 
     return {
-      Contractor: averages.Contractor,
+      Courier: averages.Courier,
       Supplier: averages.Supplier,
       Subcontractor: averages.Subcontractor,
       counts
@@ -474,12 +474,12 @@ export function DashboardPage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {todoStats.map(({ category, total, answered, pct }) => {
               // Color mapping
-              const strokeColor = category === 'Contractor' 
+              const strokeColor = category === 'Courier' 
                 ? 'stroke-blue-500' 
                 : category === 'Supplier' 
                   ? 'stroke-emerald-500' 
                   : 'stroke-orange-500';
-              const textColor = category === 'Contractor'
+              const textColor = category === 'Courier'
                 ? 'text-blue-600 dark:text-blue-400'
                 : category === 'Supplier'
                   ? 'text-emerald-600 dark:text-emerald-400'
@@ -725,7 +725,7 @@ export function DashboardPage({
                       // so a raw 0-100 width makes every bar look almost identical and full.
                       // Rescale against a floor just below the lowest group score so the
                       // relative differences between groups are actually visible.
-                      const groupValues = [groupAverages.Contractor, groupAverages.Supplier, groupAverages.Subcontractor]
+                      const groupValues = [groupAverages.Courier, groupAverages.Supplier, groupAverages.Subcontractor]
                         .filter((v): v is number => typeof v === 'number' && !isNaN(v));
                       const minGroupValue = groupValues.length ? Math.min(...groupValues) : 0;
                       const barFloor = Math.max(0, Math.floor(minGroupValue / 10) * 10 - 10);
@@ -736,18 +736,18 @@ export function DashboardPage({
 
                       return (
                         <div className="space-y-6 w-full">
-                          {/* Contractor Group Row */}
+                          {/* Courier Group Row */}
                           <div className="space-y-1.5">
                             <div className="flex justify-between text-sm font-medium text-slate-600 dark:text-slate-400">
-                              <span>Contractors ({groupAverages.counts.Contractor} submissions)</span>
+                              <span>Couriers ({groupAverages.counts.Courier} submissions)</span>
                               <span className="font-bold text-slate-800 dark:text-slate-200">
-                                {groupAverages.Contractor ? `${Math.round(groupAverages.Contractor)} / 100` : 'N/A'}
+                                {groupAverages.Courier ? `${Math.round(groupAverages.Courier)} / 100` : 'N/A'}
                               </span>
                             </div>
                             <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                style={{ width: `${normalizedWidth(groupAverages.Contractor)}%` }}
+                                style={{ width: `${normalizedWidth(groupAverages.Courier)}%` }}
                               />
                             </div>
                           </div>

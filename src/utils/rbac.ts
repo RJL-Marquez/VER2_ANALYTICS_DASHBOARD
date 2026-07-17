@@ -36,15 +36,15 @@ export function getDefaultPermissions(designation: string, department: string): 
     dept === 'Business Solutions Manager' || 
     dept === 'Accounts Payable - Trade'
   ) {
-    surveyTypes = ['Contractor', 'Supplier', 'Subcontractor'];
+    surveyTypes = ['Courier', 'Supplier', 'Subcontractor'];
   } else if (dept === 'Procurement Group') {
     surveyTypes = ['Supplier'];
   } else if (dept === 'Logistics') {
-    surveyTypes = ['Contractor'];
+    surveyTypes = ['Courier'];
   } else if (dept === 'TASS') {
     surveyTypes = ['Subcontractor'];
   } else {
-    surveyTypes = ['Contractor', 'Supplier', 'Subcontractor'];
+    surveyTypes = ['Courier', 'Supplier', 'Subcontractor'];
   }
 
   // 2. Page Modules based on Rank/Designation

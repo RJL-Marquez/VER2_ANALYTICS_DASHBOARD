@@ -101,7 +101,7 @@ export function generateMockResponses(
     surveysToUse = customSurveys;
   } else {
     try {
-      const saved = localStorage.getItem('survey_analytics_surveys_v5');
+      const saved = localStorage.getItem('survey_analytics_surveys_v6');
       if (saved) surveysToUse = JSON.parse(saved);
     } catch (_) {}
   }
@@ -110,7 +110,7 @@ export function generateMockResponses(
     companiesToUse = customCompanies;
   } else {
     try {
-      const saved = localStorage.getItem('survey_analytics_partner_companies_v5');
+      const saved = localStorage.getItem('survey_analytics_partner_companies_v6');
       if (saved) companiesToUse = JSON.parse(saved);
     } catch (_) {}
   }

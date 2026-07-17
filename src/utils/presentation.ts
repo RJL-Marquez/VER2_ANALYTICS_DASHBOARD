@@ -183,7 +183,7 @@ export type Slide =
     }
   | { kind: 'closing'; takeaways: string[] };
 
-const ALL_SURVEY_TYPES: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const ALL_SURVEY_TYPES: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
 /**
  * Same "who's on top" logic the Dashboard uses, generalized so the deck
@@ -193,7 +193,7 @@ const ALL_SURVEY_TYPES: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor
  * by each submission's normalized 0-100 composite score (via
  * `submissionScores`, which accounts for each survey type's own point
  * scale) — NOT by a raw average of individual question ratings. Averaging
- * raw ratings ignores that Contractor/Supplier/Subcontractor forms use
+ * raw ratings ignores that Courier/Supplier/Subcontractor forms use
  * different scales, so it silently produced the wrong "top performer" and
  * displayed scores like "1.90 / 100.00" that didn't match the Dashboard.
  */

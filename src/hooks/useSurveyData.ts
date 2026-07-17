@@ -6,6 +6,44 @@ import { generateMockResponses, generateAllMockResponses, generateSingleMockResp
 
 const NOTIFICATION_HISTORY_LIMIT = 200;
 const INITIAL_NOTIFICATION_SEED = 15;
+const ALL_DEPARTMENTS = [
+  'Accounts Payable - Trade',
+  'Business Solutions Manager',
+  'Executive Office',
+  'Logistics',
+  'Procurement Group',
+  'TASS'
+];
+const ALL_SURVEY_ACCESS_ROLES = ['Rank & File', 'Supervisory', 'Managerial', 'Director', 'Executive'] as const;
+
+function normalizeSurveyType(value: unknown): SurveyType {
+  if (value === 'Contractor') return 'Courier';
+  if (value === 'Courier' || value === 'Supplier' || value === 'Subcontractor') return value;
+  return 'Courier';
+}
+
+function normalizeCustomForm(form: CustomForm): CustomForm {
+  return {
+    ...form,
+    surveyType: normalizeSurveyType(form.surveyType),
+    accessDepartments: form.accessDepartments?.length ? form.accessDepartments : ALL_DEPARTMENTS,
+    accessRoles: form.accessRoles?.length ? form.accessRoles : [...ALL_SURVEY_ACCESS_ROLES],
+  };
+}
+
+function normalizePartnerCompany(company: PartnerCompany): PartnerCompany {
+  return {
+    ...company,
+    type: normalizeSurveyType(company.type),
+  };
+}
+
+function normalizeSurveyResponse(response: SurveyResponse): SurveyResponse {
+  return {
+    ...response,
+    surveyType: normalizeSurveyType(response.surveyType),
+  };
+}
 
 function toNotification(rows: SurveyResponse[]): ResponseNotification | null {
   const first = rows[0];
@@ -112,9 +150,10 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
 
         // 1. Handle Surveys (Forms)
         let loadedSurveys: CustomForm[] = [];
-        const savedSurveys = localStorage.getItem('survey_analytics_surveys_v5');
+        const savedSurveys = localStorage.getItem('survey_analytics_surveys_v6');
         if (savedSurveys) {
-          loadedSurveys = JSON.parse(savedSurveys);
+          loadedSurveys = JSON.parse(savedSurveys).map(normalizeCustomForm);
+          localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(loadedSurveys));
         } else {
           // Create 3 standard default surveys based on initial static questions
           const contractorQuestions = [
@@ -601,7 +640,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     "subQuestions": [
       {
         "id": "a",
-        "label": "Except for circumstances beyond the contractor's control, tasks and deliverables were completed on time or ahead of the schedule in the contact.",
+        "label": "Except for circumstances beyond the subcontractor's control, tasks and deliverables were completed on time or ahead of the schedule in the contact.",
         "description": "Always = 2, <2wks late = 1, >2wks late = 0, Not Applicable = N/A",
         "validationRange": {
           "min": 0,
@@ -845,12 +884,14 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
 
           loadedSurveys = [
             {
-              id: 'default-contractor',
-              title: 'Contractor Satisfaction Survey',
-              surveyType: 'Contractor',
-              description: 'Standard satisfaction reporting for external courier and logistics contractors.',
+              id: 'default-courier',
+              title: 'Courier Satisfaction Survey',
+              surveyType: 'Courier',
+              description: 'Standard satisfaction reporting for external courier and logistics.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
+              accessDepartments: ALL_DEPARTMENTS,
+              accessRoles: [...ALL_SURVEY_ACCESS_ROLES],
               questions: contractorQuestions as any,
             },
             {
@@ -860,6 +901,8 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
               description: 'Product quality and commercial terms assessment for inventory suppliers.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
+              accessDepartments: ALL_DEPARTMENTS,
+              accessRoles: [...ALL_SURVEY_ACCESS_ROLES],
               questions: supplierQuestions as any,
             },
             {
@@ -869,28 +912,31 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
               description: 'On-site execution, compliance, and schedule feedback for active subcontractors.',
               createdAt: new Date('2025-01-01T08:00:00Z').toISOString(),
               deadlineDate: '31/12/2026',
+              accessDepartments: ALL_DEPARTMENTS,
+              accessRoles: [...ALL_SURVEY_ACCESS_ROLES],
               questions: subcontractorQuestions as any,
             },
           ];
-          localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(loadedSurveys));
+          localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(loadedSurveys));
         }
 
         // 2. Handle Partner Companies
         let loadedCompanies: PartnerCompany[] = [];
-        const savedCompanies = localStorage.getItem('survey_analytics_partner_companies_v5');
+        const savedCompanies = localStorage.getItem('survey_analytics_partner_companies_v6');
         if (savedCompanies) {
-          loadedCompanies = JSON.parse(savedCompanies);
+          loadedCompanies = JSON.parse(savedCompanies).map(normalizePartnerCompany);
+          localStorage.setItem('survey_analytics_partner_companies_v6', JSON.stringify(loadedCompanies));
         } else {
           loadedCompanies = [
-            // Courier (Contractor)
-            { id: 'pc-1', name: 'Airspeed International Corp', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-2', name: 'Alphacon Logistics International Corp', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-3', name: 'Cloverxpress Freight Inc', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-4', name: 'Lite Xpress International Inc', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-5', name: 'Lucky Charm Express Movers Inc', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-6', name: 'Road2go Trucking Services OPC', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-7', name: 'RZ1 Freight Express Corporation', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
-            { id: 'pc-8', name: 'Yello X Supply Chain Solutions', type: 'Contractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            // Courier
+            { id: 'pc-1', name: 'Airspeed International Corp', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-2', name: 'Alphacon Logistics International Corp', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-3', name: 'Cloverxpress Freight Inc', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-4', name: 'Lite Xpress International Inc', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-5', name: 'Lucky Charm Express Movers Inc', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-6', name: 'Road2go Trucking Services OPC', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-7', name: 'RZ1 Freight Express Corporation', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
+            { id: 'pc-8', name: 'Yello X Supply Chain Solutions', type: 'Courier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
             // Subcontractor
             { id: 'pc-9', name: 'Aimvest Electrical Services', type: 'Subcontractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
             { id: 'pc-10', name: 'Cara Electrical and Network Solutions Inc', type: 'Subcontractor', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
@@ -927,25 +973,27 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
             { id: 'pc-40', name: 'Sencolink Technologies Inc', type: 'Supplier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
             { id: 'pc-41', name: 'PAX8 Philippines Inc', type: 'Supplier', createdAt: new Date('2025-01-01T08:00:00Z').toISOString() },
           ];
-          localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(loadedCompanies));
+          localStorage.setItem('survey_analytics_partner_companies_v6', JSON.stringify(loadedCompanies));
         }
 
         // 3. Handle Responses
-        if (localStorage.getItem('survey_analytics_v5_cleared_by_agent_final') !== 'true') {
+        if (localStorage.getItem('survey_analytics_v6_cleared_by_agent_final') !== 'true') {
           localStorage.removeItem('survey_analytics_responses');
           localStorage.removeItem('survey_analytics_responses_v4');
           localStorage.removeItem('survey_analytics_responses_v5');
+          localStorage.removeItem('survey_analytics_responses_v6');
           localStorage.removeItem('survey_analytics_full_dataset_active');
-          localStorage.setItem('survey_analytics_v5_cleared_by_agent_final', 'true');
+          localStorage.setItem('survey_analytics_v6_cleared_by_agent_final', 'true');
         }
 
         let loadedResponses: SurveyResponse[] = [];
-        const savedResponses = localStorage.getItem('survey_analytics_responses_v5');
+        const savedResponses = localStorage.getItem('survey_analytics_responses_v6');
         if (savedResponses) {
-          loadedResponses = JSON.parse(savedResponses);
+          loadedResponses = JSON.parse(savedResponses).map(normalizeSurveyResponse);
+          localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(loadedResponses));
         } else {
           loadedResponses = [];
-          localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
+          localStorage.setItem('survey_analytics_responses_v6', JSON.stringify([]));
           localStorage.setItem('survey_analytics_full_dataset_active', 'false');
         }
 
@@ -980,33 +1028,34 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     const id = `survey-${Date.now()}`;
     const createdAt = new Date().toISOString();
     const surveyWithId: CustomForm = {
-      ...newForm,
+      ...normalizeCustomForm(newForm as CustomForm),
       id,
       createdAt,
     };
 
     const updatedSurveys = [surveyWithId, ...surveys];
     setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
+    localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(updatedSurveys));
     return surveyWithId;
   };
 
   // Update an existing survey form
   const updateSurvey = (updatedForm: CustomForm) => {
+    const normalizedForm = normalizeCustomForm(updatedForm);
     setSurveys((currentSurveys) => {
-      const updated = currentSurveys.map((s) => s.id === updatedForm.id ? updatedForm : s);
-      localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updated));
+      const updated = currentSurveys.map((s) => s.id === normalizedForm.id ? normalizedForm : s);
+      localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(updated));
       return updated;
     });
-    return updatedForm;
+    return normalizedForm;
   };
 
   // Bulk update multiple survey forms simultaneously to prevent React state batching overwrites
   const updateSurveysBulk = (updatedSurveysList: CustomForm[]) => {
-    const map = new Map(updatedSurveysList.map((s) => [s.id, s]));
+    const map = new Map(updatedSurveysList.map((s) => [s.id, normalizeCustomForm(s)]));
     setSurveys((currentSurveys) => {
       const updated = currentSurveys.map((s) => map.has(s.id) ? map.get(s.id)! : s);
-      localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updated));
+      localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(updated));
       return updated;
     });
   };
@@ -1015,7 +1064,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
   const deleteSurvey = (surveyId: string) => {
     const updatedSurveys = surveys.filter((s) => s.id !== surveyId);
     setSurveys(updatedSurveys);
-    localStorage.setItem('survey_analytics_surveys_v5', JSON.stringify(updatedSurveys));
+    localStorage.setItem('survey_analytics_surveys_v6', JSON.stringify(updatedSurveys));
 
     // Also optionally clean up custom responses submitted specifically to this survey?
     // Let's filter out responses that match the deleted survey's questions and aren't default ones.
@@ -1058,7 +1107,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
 
     const updatedResponses = [...responses, ...newResponses];
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
 
     // Add notification
     const notification = toNotification(newResponses);
@@ -1081,7 +1130,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     };
     const updated = [...partnerCompanies, newCompany];
     setPartnerCompanies(updated);
-    localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(updated));
+    localStorage.setItem('survey_analytics_partner_companies_v6', JSON.stringify(updated));
     return newCompany;
   };
 
@@ -1089,7 +1138,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
   const removePartnerCompany = (id: string) => {
     const updated = partnerCompanies.filter((c) => c.id !== id);
     setPartnerCompanies(updated);
-    localStorage.setItem('survey_analytics_partner_companies_v5', JSON.stringify(updated));
+    localStorage.setItem('survey_analytics_partner_companies_v6', JSON.stringify(updated));
   };
 
   // Reset to initial mock data state
@@ -1097,11 +1146,14 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     localStorage.removeItem('survey_analytics_surveys');
     localStorage.removeItem('survey_analytics_surveys_v4');
     localStorage.removeItem('survey_analytics_surveys_v5');
+    localStorage.removeItem('survey_analytics_surveys_v6');
     localStorage.removeItem('survey_analytics_responses');
     localStorage.removeItem('survey_analytics_responses_v4');
     localStorage.removeItem('survey_analytics_responses_v5');
+    localStorage.removeItem('survey_analytics_responses_v6');
     localStorage.removeItem('survey_analytics_partner_companies_v4');
     localStorage.removeItem('survey_analytics_partner_companies_v5');
+    localStorage.removeItem('survey_analytics_partner_companies_v6');
     localStorage.removeItem('survey_analytics_full_dataset_active');
     window.location.reload();
   };
@@ -1128,7 +1180,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     if (mode === 'complete') {
       const fullRows = generateAllMockResponses(surveys, partnerCompanies, NON_ADMIN_USERS);
       setResponses(fullRows);
-      localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(fullRows));
+      localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(fullRows));
 
       const groupedNotifs = groupResponsesToNotifications(fullRows);
       setNotifications(groupedNotifs.slice(0, NOTIFICATION_HISTORY_LIMIT));
@@ -1147,7 +1199,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
 
     const updated = [...responses, ...newRows];
     setResponses(updated);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updated));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updated));
     setIsFullDatasetActive(false);
     localStorage.setItem('survey_analytics_full_dataset_active', 'false');
 
@@ -1162,7 +1214,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     setResponses([]);
     setNotifications([]);
     setUnreadCount(0);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify([]));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify([]));
     setIsFullDatasetActive(false);
     localStorage.setItem('survey_analytics_full_dataset_active', 'false');
     window.location.reload();
@@ -1176,7 +1228,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
       
     const filtered = responses.filter(r => !isSimulated(r.responseId));
     setResponses(filtered);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(filtered));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(filtered));
     setIsFullDatasetActive(false);
     localStorage.setItem('survey_analytics_full_dataset_active', 'false');
 
@@ -1226,7 +1278,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     });
 
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
   };
 
   const restoreResponseGroup = (responseId: string) => {
@@ -1238,7 +1290,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     });
 
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
   };
 
   const restoreResponsesForSurvey = (surveyId: string) => {
@@ -1260,7 +1312,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     });
 
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
   };
 
   const deleteArchivedResponseGroups = (groupIds: { archivedAt: string; surveyId: string }[]) => {
@@ -1270,7 +1322,7 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
       return !match;
     });
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
   };
 
   const restoreArchivedResponseGroups = (groupIds: { archivedAt: string; surveyId: string }[]) => {
@@ -1283,12 +1335,12 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
       return r;
     });
     setResponses(updatedResponses);
-    localStorage.setItem('survey_analytics_responses_v5', JSON.stringify(updatedResponses));
+    localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(updatedResponses));
   };
 
-  // Derive unique active survey types (Contractor, Supplier, Subcontractor)
+  // Derive unique active survey types (Courier, Supplier, Subcontractor)
   const surveyTypes = useMemo<SurveyType[]>(() => {
-    return ['Contractor', 'Supplier', 'Subcontractor'];
+    return ['Courier', 'Supplier', 'Subcontractor'];
   }, []);
 
   // Derive list of all questions across all surveys
@@ -1350,4 +1402,3 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
     resetSimulation,
   };
 }
-

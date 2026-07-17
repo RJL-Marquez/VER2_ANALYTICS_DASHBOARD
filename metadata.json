@@ -1,5 +1,5 @@
 {
-  "name": "Survey Analytics Dashboard",
+  "name": "Supplier Management Performance Evaluation Survey Analytics",
   "description": "Microsoft Forms surveys analytics dashboard for Contractor, Supplier, and Subcontractor satisfaction reporting.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

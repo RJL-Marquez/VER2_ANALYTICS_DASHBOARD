@@ -31,7 +31,7 @@ interface QuestionInput {
 
 export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyPageProps) {
   const [title, setTitle] = useState(surveyToEdit ? surveyToEdit.title : '');
-  const [surveyType, setSurveyType] = useState<SurveyType>(surveyToEdit ? surveyToEdit.surveyType : 'Contractor');
+  const [surveyType, setSurveyType] = useState<SurveyType>(surveyToEdit ? surveyToEdit.surveyType : 'Courier');
   const [description, setDescription] = useState(surveyToEdit ? surveyToEdit.description : '');
   const [maxRating, setMaxRating] = useState(surveyToEdit ? (surveyToEdit.maxRating ?? 100) : 100);
   const [deadlineDate, setDeadlineDate] = useState(surveyToEdit ? (surveyToEdit.deadlineDate ?? '') : '');
@@ -79,7 +79,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
 
   const handlePrefillTemplate = () => {
     let template: QuestionInput[] = [];
-    if (surveyType === 'Contractor') {
+    if (surveyType === 'Courier') {
       template = [
         { question: 'Does the courier deliver goods on the agreed date?', questionCategory: 'Delivery' },
         { question: 'Are the logistics rates competitive and transparent?', questionCategory: 'Commercial' },
@@ -210,7 +210,7 @@ export function CreateSurveyPage({ onBack, onSave, surveyToEdit }: CreateSurveyP
                 value={surveyType}
                 onChange={(e) => setSurveyType(e.target.value as SurveyType)}
               >
-                <option value="Contractor">Contractor (Courier/Logistics)</option>
+                <option value="Courier">Courier (Courier/Logistics)</option>
                 <option value="Supplier">Supplier (Goods/Materials)</option>
                 <option value="Subcontractor">Subcontractor (On-Site/Execution)</option>
               </select>

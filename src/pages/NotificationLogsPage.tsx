@@ -9,10 +9,10 @@ interface NotificationLogsPageProps {
   unreadCount: number;
 }
 
-const surveyTypeOptions: Array<'All' | SurveyType> = ['All', 'Contractor', 'Supplier', 'Subcontractor'];
+const surveyTypeOptions: Array<'All' | SurveyType> = ['All', 'Courier', 'Supplier', 'Subcontractor'];
 
 const surveyTypeColors: Record<SurveyType, string> = {
-  Contractor: '#2563eb',
+  Courier: '#2563eb',
   Supplier: '#0f9f6e',
   Subcontractor: '#7c3aed',
 };

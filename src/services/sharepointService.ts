@@ -18,7 +18,7 @@ class MockSharePointService implements SurveyDataSource {
   }
 
   async getSurveyTypes(): Promise<SurveyType[]> {
-    return ['Contractor', 'Supplier', 'Subcontractor'];
+    return ['Courier', 'Supplier', 'Subcontractor'];
   }
 
   async getQuestions(): Promise<QuestionDefinition[]> {

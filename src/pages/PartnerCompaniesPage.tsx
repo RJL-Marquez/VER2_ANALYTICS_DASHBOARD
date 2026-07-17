@@ -47,7 +47,7 @@ export function PartnerCompaniesPage({
   
   // Registration Form State
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<SurveyType>('Contractor');
+  const [newType, setNewType] = useState<SurveyType>('Courier');
   const [newAffiliation, setNewAffiliation] = useState('');
   
   // Feedback Messages
@@ -221,7 +221,7 @@ export function PartnerCompaniesPage({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Tabs */}
         <div className="flex flex-nowrap overflow-x-auto rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-950 sm:max-w-md w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
-          {(['All', 'Contractor', 'Supplier', 'Subcontractor'] as const).map((tab) => (
+          {(['All', 'Courier', 'Supplier', 'Subcontractor'] as const).map((tab) => (
             <button
               key={tab}
               className={`shrink-0 whitespace-nowrap rounded-md py-2 px-4 text-xs font-bold transition-all duration-150 cursor-pointer ${
@@ -338,7 +338,7 @@ export function PartnerCompaniesPage({
                     <td className="px-5 py-2.5 font-semibold text-slate-800 dark:text-slate-100">{c.name}</td>
                     <td className="px-5 py-2.5">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                        c.type === 'Contractor'
+                        c.type === 'Courier'
                           ? 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20'
                           : c.type === 'Supplier'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/20'
@@ -369,7 +369,7 @@ export function PartnerCompaniesPage({
                         </h4>
                         
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                          c.type === 'Contractor' 
+                          c.type === 'Courier' 
                             ? 'bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/20' 
                             : c.type === 'Supplier'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/20'
@@ -521,7 +521,7 @@ export function PartnerCompaniesPage({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register Partner Company</h3>
-                <p className="text-xs text-slate-500">Add a new contractor, supplier, or subcontractor to the master registry</p>
+                <p className="text-xs text-slate-500">Add a new courier, supplier, or subcontractor to the master registry</p>
               </div>
             </div>
 
@@ -549,7 +549,7 @@ export function PartnerCompaniesPage({
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as SurveyType)}
                   >
-                    <option value="Contractor">Contractor (Courier, Logistics, etc.)</option>
+                    <option value="Courier">Courier (Courier, Logistics, etc.)</option>
                     <option value="Supplier">Supplier (Material, Assets, etc.)</option>
                     <option value="Subcontractor">Subcontractor (On-site Labor, MEP, etc.)</option>
                   </select>

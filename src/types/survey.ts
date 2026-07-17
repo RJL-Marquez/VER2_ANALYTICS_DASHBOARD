@@ -1,5 +1,6 @@
-export type SurveyType = 'Contractor' | 'Supplier' | 'Subcontractor';
+export type SurveyType = 'Courier' | 'Supplier' | 'Subcontractor';
 export type Rating = number | 'N/A';
+export type SurveyAccessRole = 'Rank & File' | 'Supervisory' | 'Managerial' | 'Director' | 'Executive';
 
 export interface PartnerCompany {
   id: string;
@@ -76,6 +77,8 @@ export interface CustomForm {
   createdAt: string;
   deadlineDate?: string;
   status?: 'Running' | 'Paused' | 'Completed' | 'Archived';
+  accessDepartments?: string[];
+  accessRoles?: SurveyAccessRole[];
   maxRating?: number;
   questions: {
     questionId: string;
@@ -89,4 +92,3 @@ export interface CustomForm {
     section?: string;
   }[];
 }
-

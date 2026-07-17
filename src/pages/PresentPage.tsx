@@ -28,7 +28,7 @@ interface PresentPageProps {
   partnerCompanies: PartnerCompany[];
 }
 
-const allSurveyTypes: SurveyType[] = ['Contractor', 'Supplier', 'Subcontractor'];
+const allSurveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 
 const categoryIcons: Record<PresentationCategoryId, typeof BarChart3> = {
   comparison: BarChart3,
