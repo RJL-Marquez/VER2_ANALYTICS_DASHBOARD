@@ -117,6 +117,25 @@ export function SurveyFormsPage({
     return set;
   }, [responses, userEmail]);
 
+  // A category only "counts" toward this user's evaluation progress if they actually
+  // have a real, non-archived survey form assigned/accessible to them for it. Having
+  // broad access to a survey type (e.g. via an Account Management checkmark) isn't
+  // enough on its own if no form has actually been configured/shared for that type -
+  // otherwise the progress card shows companies the user has no way to evaluate yet.
+  const assignedSurveyTypes = useMemo(() => {
+    const set = new Set<SurveyType>();
+    surveys.forEach((survey) => {
+      if (survey.status !== 'Archived') set.add(survey.surveyType);
+    });
+    return set;
+  }, [surveys]);
+
+  // Companies the user can actually be asked to evaluate right now
+  const evaluableCompanies = useMemo(
+    () => partnerCompanies.filter((c) => assignedSurveyTypes.has(c.type)),
+    [partnerCompanies, assignedSurveyTypes]
+  );
+
   // Group pending partner companies
   const groupedPendingCompanies = useMemo(() => {
     const pending: Record<SurveyType, PartnerCompany[]> = {
@@ -125,7 +144,7 @@ export function SurveyFormsPage({
       Subcontractor: [],
     };
 
-    partnerCompanies.forEach((company) => {
+    evaluableCompanies.forEach((company) => {
       const isEvaluated = userEvaluations.has(company.name.trim().toLowerCase());
       if (!isEvaluated) {
         if (pending[company.type]) {
@@ -135,9 +154,9 @@ export function SurveyFormsPage({
     });
 
     return pending;
-  }, [partnerCompanies, userEvaluations]);
+  }, [evaluableCompanies, userEvaluations]);
 
-  const totalCompanies = partnerCompanies.length;
+  const totalCompanies = evaluableCompanies.length;
   const pendingCount =
     groupedPendingCompanies.Courier.length +
     groupedPendingCompanies.Supplier.length +
@@ -148,11 +167,11 @@ export function SurveyFormsPage({
   // Per-category totals and completed counts, used to show a per-survey completion status for non-admins.
   const companyTotalsByType = useMemo(() => {
     const totals: Record<SurveyType, number> = { Courier: 0, Supplier: 0, Subcontractor: 0 };
-    partnerCompanies.forEach((company) => {
+    evaluableCompanies.forEach((company) => {
       totals[company.type] = (totals[company.type] || 0) + 1;
     });
     return totals;
-  }, [partnerCompanies]);
+  }, [evaluableCompanies]);
 
   const companyCompletedByType = useMemo(() => {
     const completed: Record<SurveyType, number> = { Courier: 0, Supplier: 0, Subcontractor: 0 };
@@ -166,6 +185,11 @@ export function SurveyFormsPage({
     if (!deadlineDate) return 'No deadline set';
     return deadlineDate;
   };
+
+  const activeTemplatesCount = useMemo(
+    () => surveys.filter((survey) => survey.status !== 'Archived').length,
+    [surveys]
+  );
 
   const filteredSurveys = useMemo(() => {
     return surveys.filter((survey) => {
@@ -371,7 +395,7 @@ export function SurveyFormsPage({
         <div className="panel p-5 flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Total Active Templates</span>
-            <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{surveys.length}</h3>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{activeTemplatesCount}</h3>
             <p className="text-xs text-slate-400 dark:text-slate-500">Configured forms for Microgenesis evaluations</p>
           </div>
           <div className="rounded-lg bg-blue-50 p-3.5 text-[#0063a9] dark:bg-blue-950/40 dark:text-blue-300">
@@ -380,6 +404,17 @@ export function SurveyFormsPage({
         </div>
 
         {!isAdmin ? (
+          totalCompanies === 0 ? (
+            <div className="panel p-5 flex items-center justify-between border-dashed border-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/25 dark:bg-transparent">
+              <div className="space-y-1 flex-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Your Evaluation Progress</span>
+                <h3 className="text-base font-extrabold text-slate-500 dark:text-slate-400">No Task Yet</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  No survey forms have been assigned to you yet.
+                </p>
+              </div>
+            </div>
+          ) : (
           <button
             onClick={() => setIsModalOpen(true)}
             className="panel p-5 flex items-center justify-between hover:border-[#0063a9] dark:hover:border-blue-500/50 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition cursor-pointer group text-left w-full border border-slate-100 dark:border-slate-800"
@@ -422,6 +457,7 @@ export function SurveyFormsPage({
               </span>
             </div>
           </button>
+          )
         ) : (
           <div className="panel p-5 flex items-center justify-between border-dashed border-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/25 dark:bg-transparent">
             <div className="space-y-1 flex-1">

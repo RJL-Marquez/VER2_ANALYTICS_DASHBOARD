@@ -280,9 +280,18 @@ export function DashboardPage({
       saveLayout(DEFAULT_LAYOUT);
     }
   };
+  const assignedSurveyTypes = useMemo(() => {
+    const set = new Set<SurveyType>();
+    surveys.forEach((survey: any) => {
+      if (survey.status !== 'Archived') set.add(survey.surveyType);
+    });
+    return set;
+  }, [surveys]);
+
   const todoStats = useMemo(() => {
     const categories: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
     return categories.map(cat => {
+      const hasAssignedForm = assignedSurveyTypes.has(cat);
       const total = partnerCompanies.filter(c => c.type === cat).length;
       
       // Get unique companies of this category that the current user has evaluated
@@ -299,10 +308,11 @@ export function DashboardPage({
         category: cat,
         total,
         answered,
-        pct
+        pct,
+        hasAssignedForm
       };
     });
-  }, [allResponses, partnerCompanies, userEmail]);
+  }, [allResponses, partnerCompanies, userEmail, assignedSurveyTypes]);
 
   // ----------------------------------------------------
   // COMPUTED STATS FOR WIDGETS
@@ -472,7 +482,7 @@ export function DashboardPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {todoStats.map(({ category, total, answered, pct }) => {
+            {todoStats.map(({ category, total, answered, pct, hasAssignedForm }) => {
               // Color mapping
               const strokeColor = category === 'Courier' 
                 ? 'stroke-blue-500' 
@@ -486,8 +496,30 @@ export function DashboardPage({
                   : 'text-orange-600 dark:text-orange-400';
 
               // Half-circle (semicircle) gauge geometry.
-              // pathLength=100 lets us express progress directly as a 0-100 dash offset.
+              // Path starts at the left (10,90) and sweeps clockwise over the top to the
+              // right (190,90). pathLength=100 lets us express progress directly as a 0-100
+              // dash offset, so the colored arc always begins filling from the left (0%)
+              // and grows rightward/clockwise as pct increases toward 100%.
               const gaugePath = 'M10 90 A90 90 0 0 1 190 90';
+
+              if (!hasAssignedForm) {
+                return (
+                  <div key={category} className="flex flex-col items-center justify-center p-7 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800/80 bg-slate-50/20 dark:bg-slate-950/20 shadow-2xs min-h-[220px]">
+                    <span className="p-3 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 mb-3">
+                      <ClipboardList size={22} />
+                    </span>
+                    <p className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
+                      {category}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-400 dark:text-slate-500 text-center">
+                      No Task Yet
+                    </p>
+                    <p className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-600 text-center">
+                      No {category.toLowerCase()} survey form has been assigned to you.
+                    </p>
+                  </div>
+                );
+              }
 
               return (
                 <div key={category} className="flex flex-col items-center p-7 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/20 dark:bg-slate-950/20 shadow-2xs">
