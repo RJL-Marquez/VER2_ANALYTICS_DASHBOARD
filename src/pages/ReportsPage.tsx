@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, FileBarChart, FileSpreadsheet, FileText, Printer, Table2 } from 'lucide-react';
-import { SurveyResponse } from '../types/survey';
+import { ChevronDown, ChevronRight, Download, FileBarChart, FileSpreadsheet, FileText, Printer, Table2 } from 'lucide-react';
+import { PartnerCompany, SurveyResponse } from '../types/survey';
 import { averageBySurveyType, formatNumber, getCompanyPerformance, getKpiSummary, questionPerformance } from '../utils/analytics';
 import { ExportTable, exportTablesAsCSV, exportTablesAsExcel, exportTablesAsPDF } from '../utils/exporters';
+import { CompanyReportBuilderPage } from './CompanyReportBuilderPage';
 
 interface ReportsPageProps {
   responses: SurveyResponse[];
+  partnerCompanies?: PartnerCompany[];
   isAdmin?: boolean;
   isAllCompanies?: boolean;
   canExport?: boolean;
@@ -19,7 +21,8 @@ function runExport(format: ExportFormat, reportTitle: string, tables: ExportTabl
   else exportTablesAsPDF(reportTitle, tables, filenameBase);
 }
 
-export function ReportsPage({ responses, isAdmin, isAllCompanies, canExport = false }: ReportsPageProps) {
+export function ReportsPage({ responses, partnerCompanies = [], isAdmin, isAllCompanies, canExport = false }: ReportsPageProps) {
+  const [showCompanyBuilder, setShowCompanyBuilder] = useState(false);
   const summary = getKpiSummary(responses);
   const allQuestionRows = questionPerformance(responses);
   const questionRows = allQuestionRows.slice(0, 5);
@@ -88,6 +91,17 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies, canExport = fa
     else if (isAllCompanies) runExport(format, 'Survey Report', [surveyReportTable], 'survey_report');
   };
 
+  if (showCompanyBuilder) {
+    return (
+      <CompanyReportBuilderPage
+        responses={responses}
+        partnerCompanies={partnerCompanies}
+        canExport={canExport}
+        onBack={() => setShowCompanyBuilder(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       <section className={`grid gap-4 ${isAllCompanies ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
@@ -104,6 +118,7 @@ export function ReportsPage({ responses, isAdmin, isAllCompanies, canExport = fa
           icon={Table2}
           canExport={canExport}
           onExport={(format) => handleCardExport(format, 'companies')}
+          onOpenBuilder={() => setShowCompanyBuilder(true)}
         />
         <ReportCard
           title="Question Report"
@@ -187,13 +202,42 @@ function ReportCard({
   icon: Icon,
   canExport,
   onExport,
+  onOpenBuilder,
 }: {
   title: string;
   detail: string;
   icon: typeof FileBarChart;
   canExport?: boolean;
   onExport: (format: ExportFormat) => void;
+  onOpenBuilder?: () => void;
 }) {
+  // The Companies Report card is clickable end-to-end: it opens the report
+  // builder sub-tab (category → company → graphs → preview → export)
+  // instead of the plain "pick a format and download" menu the other cards use.
+  if (onOpenBuilder) {
+    return (
+      <article
+        role="button"
+        tabIndex={0}
+        onClick={onOpenBuilder}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') onOpenBuilder();
+        }}
+        className="panel cursor-pointer transition-colors hover:border-[#0063a9]/40 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+      >
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-azure dark:bg-blue-950/60">
+          <Icon size={20} />
+        </div>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{detail}</p>
+        <span className="ghost-button mt-4 inline-flex">
+          Build report
+          <ChevronRight size={14} />
+        </span>
+      </article>
+    );
+  }
+
   return (
     <article className="panel">
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-azure dark:bg-blue-950/60">

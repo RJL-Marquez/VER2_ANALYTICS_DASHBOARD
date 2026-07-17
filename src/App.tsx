@@ -550,7 +550,15 @@ export default function App() {
     ),
     present: <PresentPage responses={userAccessibleResponses} partnerCompanies={userAccessiblePartnerCompanies} />,
     explorer: <SurveyExplorerPage responses={filteredResponses} surveys={userAccessibleSurveys} />,
-    reports: <ReportsPage responses={filteredResponses} isAdmin={isAdmin} canExport={canExport} isAllCompanies={!filters.company} />,
+    reports: (
+      <ReportsPage
+        responses={filteredResponses}
+        partnerCompanies={userAccessiblePartnerCompanies}
+        isAdmin={isAdmin}
+        canExport={canExport}
+        isAllCompanies={!filters.company}
+      />
+    ),
     notifications: <NotificationLogsPage notifications={notifications} unreadCount={unreadCount} />,
     'create-form': (
       <CreateSurveyPage
