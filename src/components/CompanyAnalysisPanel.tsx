@@ -31,7 +31,7 @@ const surveyTypes: SurveyType[] = ['Courier', 'Supplier', 'Subcontractor'];
 // Distinct, high-contrast colors for the primary company and the
 // comparison series (peer average or another company).
 const PRIMARY_COLOR = '#2563eb'; // blue
-const COMPARE_COLOR = '#0d9488'; // teal - reads clearly against blue on both chart types without an alarming/warning tone
+const COMPARE_COLOR = '#b91c1c'; // muted deep red - distinct from blue, not the alarm-toned bright red
 
 /**
  * Chooses a y-axis / radius-axis domain that "zooms in" when every value in
@@ -56,6 +56,15 @@ function computeAxisDomain(data: Record<string, unknown>[], keys: string[]): [nu
   // lowest bar/point still has visible headroom above the axis floor.
   const start = Math.max(0, Math.min(90, Math.floor(min / 10) * 10 - 10));
   return [start, 100];
+}
+
+/** Turns a "YYYY-MM" bucket into a compact "Mon 'YY" label for the trend chart's x-axis. */
+function formatMonthLabel(month: string): string {
+  const [year, m] = month.split('-');
+  if (!m) return month; // already year-only (e.g. yearly view)
+  const date = new Date(Number(year), Number(m) - 1, 1);
+  if (Number.isNaN(date.getTime())) return month;
+  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 
 export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
@@ -150,11 +159,46 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
       const compare = compareTrend.find((t) => t.month === month);
       return {
         month,
+        label: formatMonthLabel(month),
         [activeComposite.company]: primary?.score ?? null,
         [compareLabel]: compare?.score ?? null,
       };
     });
   }, [activeComposite, primaryTrend, compareTrend, compareLabel]);
+
+  const [trendGranularity, setTrendGranularity] = useState<'default' | 'monthly' | 'yearly'>('default');
+
+  // Yearly view: average every month that falls in the same year into one point per key.
+  const yearlyTrendData = useMemo(() => {
+    if (!activeComposite) return [];
+    const keys = [activeComposite.company, compareLabel];
+    const byYear = new Map<string, { sums: Record<string, number>; counts: Record<string, number> }>();
+
+    trendData.forEach((row) => {
+      const year = row.month.slice(0, 4);
+      const bucket = byYear.get(year) ?? { sums: {}, counts: {} };
+      keys.forEach((key) => {
+        const value = row[key];
+        if (typeof value === 'number') {
+          bucket.sums[key] = (bucket.sums[key] ?? 0) + value;
+          bucket.counts[key] = (bucket.counts[key] ?? 0) + 1;
+        }
+      });
+      byYear.set(year, bucket);
+    });
+
+    return [...byYear.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([year, bucket]) => {
+        const row: Record<string, number | string | null> = { month: year, label: year };
+        keys.forEach((key) => {
+          row[key] = bucket.counts[key] ? Number((bucket.sums[key] / bucket.counts[key]).toFixed(1)) : null;
+        });
+        return row;
+      });
+  }, [trendData, activeComposite, compareLabel]);
+
+  const displayedTrendData = trendGranularity === 'yearly' ? yearlyTrendData : trendData;
 
   const handleSelectCompany = (company: string) => {
     setSelectedCompany(company);
@@ -461,14 +505,33 @@ export function CompanyAnalysisPanel({ responses }: CompanyAnalysisPanelProps) {
 
           {/* Score trend - now below the section chart, also reflects the chosen comparison */}
           <div className="flex flex-col">
-            <h4 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              Score trend vs {compareLabel.toLowerCase()}
-            </h4>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-1">
+              <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Score trend vs {compareLabel.toLowerCase()}
+              </h4>
+              <div className="flex shrink-0 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {(['default', 'monthly', 'yearly'] as const).map((option, idx) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setTrendGranularity(option)}
+                    className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${idx > 0 ? 'border-l border-slate-200 dark:border-slate-700' : ''} ${
+                      trendGranularity === option
+                        ? 'bg-[#0063a9] text-white'
+                        : 'bg-white dark:bg-slate-950 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+                    }`}
+                    aria-pressed={trendGranularity === option}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="h-56 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
+                <LineChart data={displayedTrendData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
