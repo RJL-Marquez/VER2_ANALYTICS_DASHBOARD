@@ -204,7 +204,18 @@ export function generateMockResponses(
               comment = 'From: 01/01/2026 To: 30/06/2026';
               rating = 'N/A';
             } else if (q.inputType === 'text') {
-              comment = pick(positiveComments.concat(neutralComments), qSeed);
+              if (q.questionId.endsWith('OVERALL-FEEDBACK')) {
+                const overallFeedbacks = [
+                  "Excellent vendor overall. They have consistently exceeded our delivery and service expectations.",
+                  "A reliable partner. There are occasional coordination delays, but they always resolve issues promptly.",
+                  "Satisfactory performance throughout this period. We hope to see more proactive communication in the future.",
+                  "Overall good support, though some invoicing discrepancies require minor administrative follow-ups.",
+                  "They have proved to be a highly competent subcontractor with consistent quality of workmanship."
+                ];
+                comment = pick(overallFeedbacks, qSeed);
+              } else {
+                comment = pick(positiveComments.concat(neutralComments), qSeed);
+              }
               rating = 'N/A';
             } else if (q.inputType === 'typed-rating') {
               const isNa = seededRandom(qSeed) < NA_CHANCE && (q.validationRange?.allowNa ?? true);
@@ -316,7 +327,18 @@ export function generateAllMockResponses(
               comment = 'From: 01/01/2026 To: 30/06/2026';
               rating = 'N/A';
             } else if (q.inputType === 'text') {
-              comment = pick(positiveComments.concat(neutralComments), qSeed);
+              if (q.questionId.endsWith('OVERALL-FEEDBACK')) {
+                const overallFeedbacks = [
+                  "Excellent vendor overall. They have consistently exceeded our delivery and service expectations.",
+                  "A reliable partner. There are occasional coordination delays, but they always resolve issues promptly.",
+                  "Satisfactory performance throughout this period. We hope to see more proactive communication in the future.",
+                  "Overall good support, though some invoicing discrepancies require minor administrative follow-ups.",
+                  "They have proved to be a highly competent subcontractor with consistent quality of workmanship."
+                ];
+                comment = pick(overallFeedbacks, qSeed);
+              } else {
+                comment = pick(positiveComments.concat(neutralComments), qSeed);
+              }
               rating = 'N/A';
             } else if (q.inputType === 'typed-rating') {
               const isNa = seededRandom(qSeed) < NA_CHANCE && (q.validationRange?.allowNa ?? true);
@@ -445,7 +467,18 @@ export function generateSingleMockResponse(
         comment = 'From: 01/01/2026 To: 30/06/2026';
         rating = 'N/A';
       } else if (q.inputType === 'text') {
-        comment = pick(positiveComments.concat(neutralComments), qSeed);
+        if (q.questionId.endsWith('OVERALL-FEEDBACK')) {
+          const overallFeedbacks = [
+            "Excellent vendor overall. They have consistently exceeded our delivery and service expectations.",
+            "A reliable partner. There are occasional coordination delays, but they always resolve issues promptly.",
+            "Satisfactory performance throughout this period. We hope to see more proactive communication in the future.",
+            "Overall good support, though some invoicing discrepancies require minor administrative follow-ups.",
+            "They have proved to be a highly competent subcontractor with consistent quality of workmanship."
+          ];
+          comment = pick(overallFeedbacks, qSeed);
+        } else {
+          comment = pick(positiveComments.concat(neutralComments), qSeed);
+        }
         rating = 'N/A';
       } else if (q.inputType === 'typed-rating') {
         const isNa = Math.random() < NA_CHANCE && (q.validationRange?.allowNa ?? true);

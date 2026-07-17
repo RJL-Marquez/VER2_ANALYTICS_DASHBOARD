@@ -346,5 +346,29 @@ export const surveyQuestions: QuestionDefinition[] = [
     question: 'Do they include insurance options to cover potential loss or damage to our items?',
     questionCategory: 'Security',
     surveyTypes: ['Courier'],
+  },
+  // ==========================================
+  // OVERALL COMMENTS & FEEDBACK (General)
+  // ==========================================
+  {
+    questionId: 'Q-CON-OVERALL-FEEDBACK',
+    questionNumber: 46,
+    question: 'Overall Comments and Feedback on the Company',
+    questionCategory: 'General',
+    surveyTypes: ['Courier'],
+  },
+  {
+    questionId: 'Q-SUP-OVERALL-FEEDBACK',
+    questionNumber: 47,
+    question: 'Overall Comments and Feedback on the Company',
+    questionCategory: 'General',
+    surveyTypes: ['Supplier'],
+  },
+  {
+    questionId: 'Q-SUB-OVERALL-FEEDBACK',
+    questionNumber: 48,
+    question: 'Overall Comments and Feedback on the Company',
+    questionCategory: 'General',
+    surveyTypes: ['Subcontractor'],
   }
 ];

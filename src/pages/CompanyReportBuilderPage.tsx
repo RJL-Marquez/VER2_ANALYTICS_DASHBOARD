@@ -64,6 +64,57 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
   const [isExporting, setIsExporting] = useState<'pdf' | 'docx' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const [selectedComments, setSelectedComments] = useState<Record<string, boolean>>({});
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+  const [tempSelectedComments, setTempSelectedComments] = useState<Record<string, boolean>>({});
+
+  const overallFeedbackQuestionId = useMemo(() => {
+    return category === 'Courier' ? 'Q-CON-OVERALL-FEEDBACK' :
+           category === 'Supplier' ? 'Q-SUP-OVERALL-FEEDBACK' :
+           'Q-SUB-OVERALL-FEEDBACK';
+  }, [category]);
+
+  const respondentComments = useMemo(() => {
+    if (!selectedCompany) return [];
+    return responses.filter(
+      (r) =>
+        r.company === selectedCompany &&
+        r.surveyType === category &&
+        r.questionId === overallFeedbackQuestionId &&
+        r.comment &&
+        r.comment.trim() !== ''
+    );
+  }, [responses, selectedCompany, category, overallFeedbackQuestionId]);
+
+  useEffect(() => {
+    if (category && selectedCompany) {
+      const key = `selected_comments_${category}_${selectedCompany}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          setSelectedComments(JSON.parse(saved));
+        } catch (e) {
+          setSelectedComments({});
+        }
+      } else {
+        const defaultSelections: Record<string, boolean> = {};
+        respondentComments.forEach((c) => {
+          defaultSelections[c.responseId] = true;
+        });
+        setSelectedComments(defaultSelections);
+      }
+    }
+  }, [category, selectedCompany, respondentComments]);
+
+  const selectedCommentsList = useMemo(() => {
+    return respondentComments.filter((c) => selectedComments[c.responseId]);
+  }, [respondentComments, selectedComments]);
+
+  const handleOpenCommentsModal = () => {
+    setTempSelectedComments({ ...selectedComments });
+    setIsCommentsModalOpen(true);
+  };
+
   const barRef = useRef<HTMLDivElement>(null);
   const radarRef = useRef<HTMLDivElement>(null);
   const trendRef = useRef<HTMLDivElement>(null);
@@ -146,6 +197,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
         includeComments,
         questionRows,
         chartImages,
+        selectedCommentsList,
       };
       if (format === 'pdf') await exportCompanyReportAsPDF(data);
       else await exportCompanyReportAsDocx(data);
@@ -248,23 +300,35 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
 
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">4. Comments</h3>
-            <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
-              <input
-                type="checkbox"
-                checked={includeComments}
-                onChange={() => setIncludeComments((prev) => !prev)}
-                className="mt-0.5"
-              />
-              <span className="flex-1">
-                <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-200">
-                  <MessageSquare size={14} /> Include stakeholder comments
+            <div className="mt-2 space-y-2">
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800 bg-white dark:bg-slate-900/20">
+                <input
+                  type="checkbox"
+                  checked={includeComments}
+                  onChange={() => setIncludeComments((prev) => !prev)}
+                  className="mt-0.5"
+                />
+                <span className="flex-1">
+                  <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+                    <MessageSquare size={14} /> Include stakeholder comments
+                  </span>
+                  <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">
+                    Show selected respondent remarks at the end of the performance report.
+                  </span>
                 </span>
-                <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">
-                  The questionnaire doesn't collect free-text comments yet, so this section will appear blank until
-                  that field is added.
-                </span>
-              </span>
-            </label>
+              </label>
+
+              {includeComments && (
+                <button
+                  type="button"
+                  onClick={handleOpenCommentsModal}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-[#0063a9]/20 bg-[#0063a9]/5 px-4 py-2 text-xs font-semibold text-[#0063a9] hover:bg-[#0063a9]/10 transition dark:border-blue-900/40 dark:text-blue-300"
+                >
+                  <MessageSquare size={14} />
+                  <span>Review Stakeholder Remarks ({selectedCommentsList.length})</span>
+                </button>
+              )}
+            </div>
           </div>
         </aside>
 
@@ -287,16 +351,16 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
                   <div className="flex h-full flex-col items-center justify-center px-6 text-center">
                     <img src="/microgenesis_logo.png" alt="Microgenesis" className="h-14 w-auto" />
                     <div className="mt-7 h-px w-20 bg-[#0063a9]" />
-                    <h1 className="mt-7 text-2xl font-bold text-slate-800 dark:text-slate-100">Company Performance Report</h1>
-                    <p className="mt-2 text-lg font-bold text-[#0063a9]">{composite.company}</p>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    <h1 className="mt-7 text-3xl font-bold text-slate-800 dark:text-slate-100">Company Performance Report</h1>
+                    <p className="mt-2 text-xl font-bold text-[#0063a9]">{composite.company}</p>
+                    <p className="mt-1 text-base text-slate-500 dark:text-slate-400">
                       {surveyTypeDisplayLabel[category]} · Generated{' '}
                       {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                     <div className="mt-20 border-t border-slate-100 pt-4 text-center dark:border-slate-800">
-                      <p className="text-xs text-slate-400 dark:text-slate-500">Prepared for internal review by the</p>
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Microgenesis Supplier Management System</p>
-                      <p className="mt-1 text-[11px] italic text-slate-400 dark:text-slate-500">
+                      <p className="text-sm text-slate-400 dark:text-slate-500">Prepared for internal review by the</p>
+                      <p className="text-sm font-bold text-slate-500 dark:text-slate-300">Microgenesis Supplier Management System</p>
+                      <p className="mt-1 text-xs italic text-slate-400 dark:text-slate-500">
                         This document is confidential and intended solely for the named recipient.
                       </p>
                     </div>
@@ -306,7 +370,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
                 {/* Page 2 — Executive summary, bar graph, radar graph */}
                 <PagedSheet pageLabel="Page 2" footerRight={`Page 1 of ${contentPageCount}`}>
                   <ReportPageHeader company={composite.company} />
-                  <h2 className="mt-6 text-lg font-bold text-slate-800 dark:text-slate-100">Executive Summary</h2>
+                  <h2 className="mt-6 text-xl font-bold text-slate-800 dark:text-slate-100">Executive Summary</h2>
                   <div className="mt-3 grid grid-cols-3 gap-3">
                     <SummaryStat label="Composite score" value={`${formatNumber(composite.compositeScore)} / 100`} />
                     <SummaryStat label="Rating band" value={composite.band.label} />
@@ -417,9 +481,9 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
 
                     {graphs.perQuestion && (
                       <div className="mt-6">
-                        <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Per-Question Average Rating</h4>
+                        <h4 className="mb-2 text-base font-bold text-slate-800 dark:text-slate-100">Per-Question Average Rating</h4>
                         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-                          <table className="w-full text-left text-sm">
+                          <table className="w-full text-left text-sm sm:text-base">
                             <thead className="bg-[#0063a9] text-white">
                               <tr>
                                 <th className="px-3 py-2 font-semibold">Question</th>
@@ -443,10 +507,31 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
 
                     {includeComments && (
                       <div className="mt-6">
-                        <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Stakeholder Comments</h4>
-                        <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm italic text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                          No comments have been submitted yet — free-text feedback is not yet collected on this questionnaire.
-                        </p>
+                        <h4 className="mb-2 text-base font-bold text-slate-800 dark:text-slate-100">Stakeholder Comments</h4>
+                        {selectedCommentsList.length === 0 ? (
+                          <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm italic text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                            No stakeholder comments selected for display. Click "Review Stakeholder Remarks" to select comments.
+                          </p>
+                        ) : (
+                          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                            <table className="w-full text-left text-sm sm:text-base">
+                              <thead className="bg-[#0063a9] text-white">
+                                <tr>
+                                  <th className="px-3 py-2 font-semibold w-12">#</th>
+                                  <th className="px-3 py-2 font-semibold">Feedback / Comments</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedCommentsList.map((c, idx) => (
+                                  <tr key={c.responseId} className={idx % 2 === 0 ? 'bg-slate-50 dark:bg-slate-800/40' : ''}>
+                                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300 font-medium">{idx + 1}</td>
+                                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300 italic">"{c.comment}"</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     )}
                   </PagedSheet>
@@ -458,7 +543,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
       </div>
 
       {/* Bottom bar: always-visible cancel + export */}
-      <div className="panel sticky bottom-4 flex flex-wrap items-center justify-between gap-3 shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 z-10">
+      <div className="panel sticky bottom-4 flex flex-wrap items-center justify-between gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-200/80 dark:border-slate-800 ring-1 ring-slate-900/5 dark:ring-white/10 z-10">
         <button type="button" onClick={onBack} className="secondary-button">
           Cancel
         </button>
@@ -500,6 +585,118 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
           </span>
         )}
       </div>
+
+      {/* Review Comments Modal */}
+      {isCommentsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="panel w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in duration-200">
+            <div className="border-b border-slate-100 pb-4 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Review Respondent Comments</h3>
+              <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">
+                Select which comments should reflect on the final Company Report for <strong className="text-slate-700 dark:text-slate-300">{selectedCompany}</strong>. Unselected comments will be hidden from the report and exports.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+              {respondentComments.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-sm italic">
+                  No comments have been submitted for this company and category yet.
+                </div>
+              ) : (
+                <>
+                  {/* Select All / Deselect All Bar */}
+                  <div className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg dark:bg-slate-900/50 text-xs text-slate-500 font-medium">
+                    <span>{respondentComments.length} total comments found</span>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated: Record<string, boolean> = {};
+                          respondentComments.forEach(c => {
+                            updated[c.responseId] = true;
+                          });
+                          setTempSelectedComments(updated);
+                        }}
+                        className="text-[#0063a9] hover:underline dark:text-blue-400"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTempSelectedComments({});
+                        }}
+                        className="text-rose-600 hover:underline dark:text-rose-400"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {respondentComments.map((c) => {
+                      const isChecked = !!tempSelectedComments[c.responseId];
+                      return (
+                        <label
+                          key={c.responseId}
+                          className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition text-sm ${
+                            isChecked
+                              ? 'border-[#0063a9]/30 bg-[#0063a9]/5 dark:border-blue-900/30 dark:bg-blue-950/20'
+                              : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              setTempSelectedComments((prev) => ({
+                                ...prev,
+                                [c.responseId]: e.target.checked,
+                              }));
+                            }}
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                          />
+                          <div className="flex-1 space-y-1">
+                            <p className="text-slate-700 dark:text-slate-200 italic leading-relaxed">
+                              "{c.comment}"
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase dark:text-slate-500">
+                              Anonymous Respondent Feedback
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 flex justify-end gap-3 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsCommentsModalOpen(false)}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const key = `selected_comments_${category}_${selectedCompany}`;
+                  localStorage.setItem(key, JSON.stringify(tempSelectedComments));
+                  setSelectedComments(tempSelectedComments);
+                  setIsCommentsModalOpen(false);
+                }}
+                className="primary-button bg-[#0063a9] hover:bg-[#00528c]"
+              >
+                Save Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

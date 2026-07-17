@@ -22,13 +22,43 @@ function normalizeSurveyType(value: unknown): SurveyType {
   return 'Courier';
 }
 
-function normalizeCustomForm(form: CustomForm): CustomForm {
+function ensureOverallFeedbackQuestion(form: CustomForm): CustomForm {
+  const expectedId = 
+    form.surveyType === 'Courier' ? 'Q-CON-OVERALL-FEEDBACK' :
+    form.surveyType === 'Supplier' ? 'Q-SUP-OVERALL-FEEDBACK' :
+    'Q-SUB-OVERALL-FEEDBACK';
+
+  const hasQuestion = form.questions.some(q => q.questionId === expectedId);
+  if (hasQuestion) {
+    return form;
+  }
+
+  const maxNum = form.questions.reduce((max, q) => Math.max(max, q.questionNumber || 0), 0);
+  const nextNum = maxNum + 1;
+
+  const feedbackQuestion = {
+    questionId: expectedId,
+    questionNumber: nextNum,
+    question: 'Overall Comments and Feedback on the Company',
+    questionCategory: 'General',
+    section: 'Overall Comments & Feedback',
+    inputType: 'text' as const
+  };
+
   return {
+    ...form,
+    questions: [...form.questions, feedbackQuestion]
+  };
+}
+
+function normalizeCustomForm(form: CustomForm): CustomForm {
+  const normForm = {
     ...form,
     surveyType: normalizeSurveyType(form.surveyType),
     accessDepartments: form.accessDepartments?.length ? form.accessDepartments : ALL_DEPARTMENTS,
     accessRoles: form.accessRoles?.length ? form.accessRoles : [...ALL_SURVEY_ACCESS_ROLES],
   };
+  return ensureOverallFeedbackQuestion(normForm);
 }
 
 function normalizePartnerCompany(company: PartnerCompany): PartnerCompany {

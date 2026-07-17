@@ -18,9 +18,20 @@ interface ShellProps<T extends string> {
   children: ReactNode;
   renderDropdown?: (key: T) => ReactNode;
   pageHeading?: string;
+  sidebarExtra?: (isCollapsed: boolean) => ReactNode;
 }
 
-export function Shell<T extends string>({ pages, activePage, onPageChange, title, action, children, renderDropdown, pageHeading }: ShellProps<T>) {
+export function Shell<T extends string>({
+  pages,
+  activePage,
+  onPageChange,
+  title,
+  action,
+  children,
+  renderDropdown,
+  pageHeading,
+  sidebarExtra,
+}: ShellProps<T>) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [expandedKey, setExpandedKey] = useState<T | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -138,8 +149,8 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
             {isSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
           </button>
 
-          <aside className={`h-full overflow-y-auto py-6 transition-all duration-300 ${isSidebarCollapsed ? 'px-2' : 'px-3'}`}>
-            <nav className="space-y-4">
+          <aside className={`h-full flex flex-col justify-between py-6 transition-all duration-300 ${isSidebarCollapsed ? 'px-2' : 'px-3'} overflow-hidden`}>
+            <nav className="space-y-4 overflow-y-auto pr-1 flex-1">
               {pageGroups.map((group, groupIndex) => (
                 <div key={group.section ?? `group-${groupIndex}`}>
                   {group.section && (
@@ -209,6 +220,11 @@ export function Shell<T extends string>({ pages, activePage, onPageChange, title
                 </div>
               ))}
             </nav>
+            {sidebarExtra && (
+              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                {sidebarExtra(isSidebarCollapsed)}
+              </div>
+            )}
           </aside>
         </div>
 

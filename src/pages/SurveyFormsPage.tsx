@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ClipboardList, Plus, Search, Eye, FormInput, X, Check, Award, Building2, CalendarClock } from 'lucide-react';
+import { ClipboardList, Plus, Search, Eye, FormInput, X, Check, Award, Building2, CalendarClock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { CustomForm, SurveyType, PartnerCompany, SurveyAccessRole } from '../types/survey';
 import { StateMessage } from '../components/StateMessage';
 import { CompletionStatusBar } from '../components/CompletionStatusBar';
@@ -103,6 +103,12 @@ export function SurveyFormsPage({
   const [resetPasscode, setResetPasscode] = useState('');
   const [archiveError, setArchiveError] = useState('');
   const [resetError, setResetError] = useState('');
+
+  // Notification configuration states
+  const [modifyStep, setModifyStep] = useState<1 | 2>(1);
+  const [notificationFrequency, setNotificationFrequency] = useState(() => {
+    return localStorage.getItem('admin_reminder_frequency') || '24';
+  });
 
   // Identify unique set of evaluated companies for this user
   const userEvaluations = useMemo(() => {
@@ -240,6 +246,7 @@ export function SurveyFormsPage({
 
   const resetModifyState = () => {
     setIsModifyOpen(false);
+    setModifyStep(1);
     setOverrideDeadline(false);
     setOverrideStatus(false);
     setOverrideAccess(false);
@@ -250,6 +257,7 @@ export function SurveyFormsPage({
   };
 
   const openBulkModify = () => {
+    setModifyStep(1);
     setOverrideDeadline(false);
     setOverrideStatus(false);
     setOverrideAccess(false);
@@ -263,6 +271,7 @@ export function SurveyFormsPage({
   const openSingleModify = (survey: CustomForm) => {
     setSelectedSurveyIds(new Set([survey.id]));
     setIsSelectMode(false);
+    setModifyStep(1);
     setNewStatus(survey.status === 'Paused' ? 'Paused' : survey.status === 'Completed' ? 'Completed' : 'Running');
     setNewDeadlineDate(ddmmToYyyymmdd(survey.deadlineDate || ''));
     setAccessDepartments(survey.accessDepartments?.length ? survey.accessDepartments : departmentOptions);
@@ -320,6 +329,10 @@ export function SurveyFormsPage({
         updatedSurveysList.push(updated);
       }
     });
+
+    // Save selected notification frequency
+    localStorage.setItem('admin_reminder_frequency', notificationFrequency);
+    window.dispatchEvent(new Event('storage'));
 
     if (onUpdateSurveysBulk) {
       onUpdateSurveysBulk(updatedSurveysList);
@@ -459,20 +472,31 @@ export function SurveyFormsPage({
           </button>
           )
         ) : (
-          <div className="panel p-5 flex items-center justify-between border-dashed border-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/25 dark:bg-transparent">
+          <div className="panel p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-dashed border-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/25 dark:bg-transparent">
             <div className="space-y-1 flex-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Template Engine</span>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Custom Microsoft Forms</h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Instantly generate feedback schemas</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Instantly generate feedback schemas & notify employees</p>
             </div>
-            <button
-              onClick={onNavigateToCreate}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm transition cursor-pointer shrink-0"
-              type="button"
-            >
-              <Plus size={15} />
-              <span>Create Form</span>
-            </button>
+            <div className="flex flex-wrap gap-2.5 shrink-0 w-full sm:w-auto">
+              <button
+                onClick={() => setIsNotificationModalOpen(true)}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-lg bg-[#0063a9] hover:bg-[#00528c] text-white px-4 py-2.5 text-xs font-bold shadow-sm transition cursor-pointer"
+                type="button"
+                id="btn-admin-set-notification"
+              >
+                <CalendarClock size={15} />
+                <span>Set Notification</span>
+              </button>
+              <button
+                onClick={onNavigateToCreate}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm transition cursor-pointer"
+                type="button"
+              >
+                <Plus size={15} />
+                <span>Create Form</span>
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -903,16 +927,16 @@ export function SurveyFormsPage({
               />
 
               {/* Centered Modal Container */}
-              <div className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-5 animate-in zoom-in-95 duration-200">
+              <div className="relative w-full max-w-2xl h-[85vh] max-h-[85vh] rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 
-                {/* Modal Title Banner */}
-                <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex justify-between items-center">
+                {/* Modal Title/Header (Static) */}
+                <div className="border-b border-slate-100 dark:border-slate-800 p-5 flex justify-between items-center shrink-0">
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-950 dark:text-white">
                       {isSelectMode ? 'Bulk Modify Settings' : 'Modify Settings'}
                     </h3>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      Applying to {selectedSurveyIds.size} selected survey {selectedSurveyIds.size === 1 ? 'form' : 'forms'}
+                      Applying to {selectedSurveyIds.size} selected survey {selectedSurveyIds.size === 1 ? 'form' : 'forms'} (Step {modifyStep} of 2)
                     </p>
                   </div>
                   <button
@@ -924,188 +948,249 @@ export function SurveyFormsPage({
                   </button>
                 </div>
 
-                {/* Section 1: Survey Status & Archive */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                      Survey/s Status:
-                    </span>
+                {/* Scrollable Content Area */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  
+                  {modifyStep === 1 ? (
+                    <>
+                      {/* Section 1: Survey Status & Archive */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                            Survey/s Status:
+                          </span>
+                          <button
+                            onClick={() => {
+                              setArchivePasscode('');
+                              setArchiveError('');
+                              setIsArchiveConfirmOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30 px-3 py-1.5 text-xs font-bold transition cursor-pointer"
+                            type="button"
+                          >
+                            Archive Form/s
+                          </button>
+                        </div>
+
+                        {/* Radio Choice List */}
+                        <div className="space-y-2 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/60">
+                          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            <input
+                              type="radio"
+                              name="bulkStatus"
+                              checked={overrideStatus && newStatus === 'Running'}
+                              onChange={() => {
+                                setNewStatus('Running');
+                                setOverrideStatus(true);
+                              }}
+                              className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                            />
+                            <span>Active</span>
+                          </label>
+                          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            <input
+                              type="radio"
+                              name="bulkStatus"
+                              checked={overrideStatus && newStatus === 'Paused'}
+                              onChange={() => {
+                                setNewStatus('Paused');
+                                setOverrideStatus(true);
+                              }}
+                              className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                            />
+                            <span>Paused</span>
+                          </label>
+                          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            <input
+                              type="radio"
+                              name="bulkStatus"
+                              checked={overrideStatus && newStatus === 'Completed'}
+                              onChange={() => {
+                                setNewStatus('Completed');
+                                setOverrideStatus(true);
+                              }}
+                              className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
+                            />
+                            <span>Ended</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Section 2: Set Deadline */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
+                          Set Deadline
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0063a9] pl-10 cursor-pointer"
+                            value={newDeadlineDate}
+                            onChange={(e) => {
+                              setNewDeadlineDate(e.target.value);
+                              setOverrideDeadline(true);
+                            }}
+                          />
+                          <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Section 3: Survey Access */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
+                            Survey Access
+                          </label>
+                          {isSelectMode && (
+                            <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={overrideAccess}
+                                onChange={(event) => setOverrideAccess(event.target.checked)}
+                                className="h-4 w-4 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                              />
+                              <span>Update access</span>
+                            </label>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          This is the actual visibility control for this form. Checking a department/role here grants them access to this specific survey (and its companies) even if their account-wide category permission hasn't been changed.
+                        </p>
+
+                        <div className={`grid gap-4 md:grid-cols-2 ${!overrideAccess ? 'opacity-60' : ''}`}>
+                          <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Departments</span>
+                              <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  disabled={!overrideAccess}
+                                  checked={accessDepartments.length === departmentOptions.length}
+                                  onChange={(event) => {
+                                    setOverrideAccess(true);
+                                    setAccessDepartments(event.target.checked ? departmentOptions : []);
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                                />
+                                <span>All</span>
+                              </label>
+                            </div>
+                            <div className="space-y-1.5">
+                              {departmentOptions.map((department) => (
+                                <label key={department} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    disabled={!overrideAccess}
+                                    checked={accessDepartments.includes(department)}
+                                    onChange={() => toggleDepartmentAccess(department)}
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                                  />
+                                  <span>{department}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Roles</span>
+                              <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  disabled={!overrideAccess}
+                                  checked={accessRoles.length === roleOptions.length}
+                                  onChange={(event) => {
+                                    setOverrideAccess(true);
+                                    setAccessRoles(event.target.checked ? roleOptions : []);
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                                />
+                                <span>All</span>
+                              </label>
+                            </div>
+                            <div className="space-y-1.5">
+                              {roleOptions.map((role) => (
+                                <label key={role} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    disabled={!overrideAccess}
+                                    checked={accessRoles.includes(role)}
+                                    onChange={() => toggleRoleAccess(role)}
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
+                                  />
+                                  <span>{role}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Set Notification */}
+                      <div className="space-y-3 pt-2">
+                        <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
+                          Set Notification
+                        </label>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Configure the dispatch frequency interval of automated survey reminders sent to employees who have pending partner evaluations.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/60">
+                          {[
+                            { value: '4', label: 'Every 4 Hours (High Frequency)' },
+                            { value: '8', label: 'Every 8 Hours' },
+                            { value: '12', label: 'Every 12 Hours' },
+                            { value: '24', label: 'Every 24 Hours (Standard)' },
+                            { value: '48', label: 'Every 48 Hours' },
+                          ].map((opt) => (
+                            <label
+                              key={opt.value}
+                              className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition ${
+                                notificationFrequency === opt.value
+                                  ? 'border-[#0063a9] bg-blue-50/40 text-[#0063a9] dark:border-blue-500 dark:bg-blue-950/20 dark:text-blue-300'
+                                  : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800/40 dark:hover:bg-slate-850/30 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="popupReminderFreq"
+                                checked={notificationFrequency === opt.value}
+                                onChange={() => setNotificationFrequency(opt.value)}
+                                className="h-4 w-4 text-[#0063a9] focus:ring-[#0063a9] transition cursor-pointer"
+                              />
+                              <span>{opt.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                </div>
+
+                {/* Modal Footer (Static) */}
+                <div className="flex items-center justify-between p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 shrink-0">
+                  {modifyStep === 1 ? (
                     <button
-                      onClick={() => {
-                        setArchivePasscode('');
-                        setArchiveError('');
-                        setIsArchiveConfirmOpen(true);
-                      }}
-                      className="inline-flex items-center justify-center rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30 px-3 py-1.5 text-xs font-bold transition cursor-pointer"
+                      onClick={() => setModifyStep(2)}
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 dark:border-slate-750 dark:text-slate-300 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
                       type="button"
                     >
-                      Archive Form/s
+                      <span>Next</span>
+                      <ArrowRight size={14} />
                     </button>
-                  </div>
+                  ) : (
+                    <button
+                      onClick={() => setModifyStep(1)}
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 dark:border-slate-750 dark:text-slate-300 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
+                      type="button"
+                    >
+                      <ArrowLeft size={14} />
+                      <span>Back</span>
+                    </button>
+                  )}
 
-                  {/* Radio Choice List */}
-                  <div className="space-y-2 bg-slate-50/50 dark:bg-slate-950/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800/60">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <input
-                        type="radio"
-                        name="bulkStatus"
-                        checked={overrideStatus && newStatus === 'Running'}
-                        onChange={() => {
-                          setNewStatus('Running');
-                          setOverrideStatus(true);
-                        }}
-                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
-                      />
-                      <span>Active</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <input
-                        type="radio"
-                        name="bulkStatus"
-                        checked={overrideStatus && newStatus === 'Paused'}
-                        onChange={() => {
-                          setNewStatus('Paused');
-                          setOverrideStatus(true);
-                        }}
-                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
-                      />
-                      <span>Paused</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <input
-                        type="radio"
-                        name="bulkStatus"
-                        checked={overrideStatus && newStatus === 'Completed'}
-                        onChange={() => {
-                          setNewStatus('Completed');
-                          setOverrideStatus(true);
-                        }}
-                        className="h-4.5 w-4.5 text-[#0063a9] focus:ring-[#0063a9] transition"
-                      />
-                      <span>Ended</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Section 2: Set Deadline */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
-                    Set Deadline
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0063a9] pl-10 cursor-pointer"
-                      value={newDeadlineDate}
-                      onChange={(e) => {
-                        setNewDeadlineDate(e.target.value);
-                        setOverrideDeadline(true);
-                      }}
-                    />
-                    <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Section 3: Survey Access */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="text-sm font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider">
-                      Survey Access
-                    </label>
-                    {isSelectMode && (
-                      <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={overrideAccess}
-                          onChange={(event) => setOverrideAccess(event.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
-                        />
-                        <span>Update access</span>
-                      </label>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    This is the actual visibility control for this form. Checking a department/role here grants them access to this specific survey (and its companies) even if their account-wide category permission hasn't been changed.
-                  </p>
-
-                  <div className={`grid gap-4 md:grid-cols-2 ${!overrideAccess ? 'opacity-60' : ''}`}>
-                    <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Departments</span>
-                        <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            disabled={!overrideAccess}
-                            checked={accessDepartments.length === departmentOptions.length}
-                            onChange={(event) => {
-                              setOverrideAccess(true);
-                              setAccessDepartments(event.target.checked ? departmentOptions : []);
-                            }}
-                            className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
-                          />
-                          <span>All</span>
-                        </label>
-                      </div>
-                      <div className="space-y-1.5">
-                        {departmentOptions.map((department) => (
-                          <label key={department} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              disabled={!overrideAccess}
-                              checked={accessDepartments.includes(department)}
-                              onChange={() => toggleDepartmentAccess(department)}
-                              className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
-                            />
-                            <span>{department}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Roles</span>
-                        <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0063a9] dark:text-blue-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            disabled={!overrideAccess}
-                            checked={accessRoles.length === roleOptions.length}
-                            onChange={(event) => {
-                              setOverrideAccess(true);
-                              setAccessRoles(event.target.checked ? roleOptions : []);
-                            }}
-                            className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
-                          />
-                          <span>All</span>
-                        </label>
-                      </div>
-                      <div className="space-y-1.5">
-                        {roleOptions.map((role) => (
-                          <label key={role} className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              disabled={!overrideAccess}
-                              checked={accessRoles.includes(role)}
-                              onChange={() => toggleRoleAccess(role)}
-                              className="h-3.5 w-3.5 rounded border-slate-300 text-[#0063a9] focus:ring-[#0063a9]"
-                            />
-                            <span>{role}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Modal Footer Buttons */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-2">
-                  <button
-                    onClick={resetModifyState}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-bold uppercase tracking-wider cursor-pointer transition"
-                    type="button"
-                  >
-                    Cancel
-                  </button>
                   <div className="flex items-center gap-2.5">
                     <button
                       onClick={() => {

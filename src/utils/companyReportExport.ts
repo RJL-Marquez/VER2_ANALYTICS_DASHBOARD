@@ -51,6 +51,7 @@ export interface CompanyReportData {
   includeComments: boolean;
   questionRows: CompanyReportQuestionRow[];
   chartImages: CompanyReportChartImages;
+  selectedCommentsList?: { responseId: string; comment: string; respondentType: string; department?: string; submissionDate: string }[];
 }
 
 const BRAND = [0, 99, 169] as const;
@@ -123,16 +124,16 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   doc.line(pageWidth / 2 - 70, 258, pageWidth / 2 + 70, 258);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(21);
+  doc.setFontSize(23);
   doc.setTextColor(30, 30, 30);
   doc.text('Company Performance Report', pageWidth / 2, 312, { align: 'center' });
 
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setTextColor(...BRAND);
   doc.text(data.company, pageWidth / 2, 338, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
+  doc.setFontSize(10.5);
   doc.setTextColor(100);
   doc.text(`${data.surveyType} Evaluation  \u00b7  Generated ${data.generatedOn}`, pageWidth / 2, 358, { align: 'center' });
 
@@ -140,7 +141,7 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   doc.setLineWidth(0.75);
   doc.line(pageWidth / 2 - 90, 400, pageWidth / 2 + 90, 400);
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(9.5);
   doc.setTextColor(140);
   doc.text('Prepared for internal review by the', pageWidth / 2, pageHeight - 96, { align: 'center' });
   doc.setFont('helvetica', 'bold');
@@ -162,11 +163,11 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
       doc.addImage(logoDataUrl, 'PNG', marginLeft, 22, hw, hh);
     }
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(30, 30, 30);
     doc.text(data.company, pageWidth - marginLeft, 36, { align: 'right' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(8.5);
     doc.setTextColor(140);
     doc.text('Company Performance Report', pageWidth - marginLeft, 48, { align: 'right' });
     doc.setDrawColor(226, 232, 240);
@@ -185,7 +186,7 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   drawHeader();
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(14.5);
   doc.setTextColor(20, 20, 20);
   doc.text('Executive Summary', marginLeft, cursorY);
   cursorY += 16;
@@ -193,12 +194,12 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   // Score summary strip
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(marginLeft, cursorY, contentWidth, 48, 5, 5, 'S');
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setTextColor(100);
   doc.text('COMPOSITE SCORE', marginLeft + 12, cursorY + 17);
   doc.text('RATING BAND', marginLeft + 190, cursorY + 17);
   doc.text('EVALUATIONS', marginLeft + 340, cursorY + 17);
-  doc.setFontSize(12);
+  doc.setFontSize(13.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...BRAND);
   doc.text(`${data.composite.compositeScore.toFixed(1)} / 100`, marginLeft + 12, cursorY + 35);
@@ -214,7 +215,7 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
     const drawWidth = contentWidth * widthScale;
     const drawHeight = (height / width) * drawWidth;
     ensureSpace(drawHeight + 30);
-    doc.setFontSize(9.5);
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text(title, marginLeft, cursorY);
@@ -232,7 +233,7 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
 
   if (data.graphs.perQuestion) {
     ensureSpace(56);
-    doc.setFontSize(10.5);
+    doc.setFontSize(11.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text('Per-Question Average Rating', marginLeft, cursorY);
@@ -242,8 +243,8 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
       head: [['Question', 'Average Rating', 'Responses']],
       body: data.questionRows.map((row) => [row.question, `${row.average.toFixed(1)}`, String(row.responses)]),
       margin: { left: marginLeft, right: marginLeft, top: HEADER_BOTTOM + 16 },
-      styles: { fontSize: 8, cellPadding: 5 },
-      headStyles: { fillColor: BRAND as unknown as [number, number, number], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 9, cellPadding: 6 },
+      headStyles: { fillColor: BRAND as unknown as [number, number, number], textColor: 255, fontStyle: 'bold', fontSize: 9 },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       theme: 'striped',
       didDrawPage: () => drawHeader(),
@@ -252,19 +253,40 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
   }
 
   if (data.includeComments) {
-    ensureSpace(62);
-    doc.setFontSize(10.5);
+    const comments = data.selectedCommentsList || [];
+    ensureSpace(56);
+    doc.setFontSize(11.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
     doc.text('Stakeholder Comments', marginLeft, cursorY);
-    cursorY += 16;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(120);
-    doc.text('No comments have been submitted yet \u2014 free-text feedback is not yet collected on this questionnaire.', marginLeft, cursorY, {
-      maxWidth: contentWidth,
-    });
-    cursorY += 26;
+    cursorY += 8;
+
+    if (comments.length === 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120);
+      doc.text('No comments selected for display.', marginLeft, cursorY, {
+        maxWidth: contentWidth,
+      });
+      cursorY += 26;
+    } else {
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['#', 'Feedback / Comments']],
+        body: comments.map((c, idx) => [String(idx + 1), `"${c.comment}"`]),
+        margin: { left: marginLeft, right: marginLeft, top: HEADER_BOTTOM + 16 },
+        styles: { fontSize: 9, cellPadding: 6, fontStyle: 'italic' },
+        columnStyles: {
+          0: { fontStyle: 'normal', width: 25, halign: 'center' as const },
+          1: { fontStyle: 'italic' }
+        },
+        headStyles: { fillColor: BRAND as unknown as [number, number, number], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        theme: 'striped',
+        didDrawPage: () => drawHeader(),
+      });
+      cursorY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 22;
+    }
   }
 
   // Footer on every content page (cover page excluded)
@@ -407,42 +429,42 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
           new TableCell({
             shading: { fill: 'F8FAFC' },
             verticalAlign: VerticalAlign.CENTER,
-            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            margins: { top: 220, bottom: 220, left: 200, right: 200 },
             children: [
               new Paragraph({
-                spacing: { after: 40 },
-                children: [new TextRun({ text: 'COMPOSITE SCORE', bold: true, size: 15, color: MUTED_HEX })],
+                spacing: { after: 80 },
+                children: [new TextRun({ text: 'COMPOSITE SCORE', bold: true, size: 18, color: MUTED_HEX })],
               }),
               new Paragraph({
-                children: [new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100`, bold: true, size: 28, color: BRAND_HEX })],
+                children: [new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100`, bold: true, size: 56, color: BRAND_HEX })],
               }),
             ],
           }),
           new TableCell({
             shading: { fill: 'F8FAFC' },
             verticalAlign: VerticalAlign.CENTER,
-            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            margins: { top: 220, bottom: 220, left: 200, right: 200 },
             children: [
               new Paragraph({
-                spacing: { after: 40 },
-                children: [new TextRun({ text: 'RATING BAND', bold: true, size: 15, color: MUTED_HEX })],
+                spacing: { after: 80 },
+                children: [new TextRun({ text: 'RATING BAND', bold: true, size: 18, color: MUTED_HEX })],
               }),
               new Paragraph({
-                children: [new TextRun({ text: data.composite.band.label, bold: true, size: 22, color: INK_HEX })],
+                children: [new TextRun({ text: data.composite.band.label, bold: true, size: 36, color: INK_HEX })],
               }),
             ],
           }),
           new TableCell({
             shading: { fill: 'F8FAFC' },
             verticalAlign: VerticalAlign.CENTER,
-            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            margins: { top: 220, bottom: 220, left: 200, right: 200 },
             children: [
               new Paragraph({
-                spacing: { after: 40 },
-                children: [new TextRun({ text: 'EVALUATIONS', bold: true, size: 15, color: MUTED_HEX })],
+                spacing: { after: 80 },
+                children: [new TextRun({ text: 'EVALUATIONS', bold: true, size: 18, color: MUTED_HEX })],
               }),
               new Paragraph({
-                children: [new TextRun({ text: String(data.composite.evaluationCount), bold: true, size: 22, color: INK_HEX })],
+                children: [new TextRun({ text: String(data.composite.evaluationCount), bold: true, size: 36, color: INK_HEX })],
               }),
             ],
           }),
@@ -469,7 +491,7 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
   if (data.graphs.perQuestion) {
     bodyBlocks.push(
       new Paragraph({
-        children: [new TextRun({ text: 'Per-Question Average Rating', bold: true, size: 21, color: INK_HEX })],
+        children: [new TextRun({ text: 'Per-Question Average Rating', bold: true, size: 24, color: INK_HEX })],
         spacing: { before: 280, after: 110 },
       }),
     );
@@ -481,7 +503,7 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
             shading: { fill: BRAND_HEX },
             verticalAlign: VerticalAlign.CENTER,
             margins: { top: 60, bottom: 60, left: 100, right: 100 },
-            children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, color: 'FFFFFF', size: 16 })] })],
+            children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, color: 'FFFFFF', size: 18 })] })],
           }),
       ),
     });
@@ -492,17 +514,17 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
               margins: { top: 50, bottom: 50, left: 100, right: 100 },
-              children: [new Paragraph({ children: [new TextRun({ text: row.question, size: 16 })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: row.question, size: 18 })] })],
             }),
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
               margins: { top: 50, bottom: 50, left: 100, right: 100 },
-              children: [new Paragraph({ children: [new TextRun({ text: row.average.toFixed(1), size: 16 })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: row.average.toFixed(1), size: 18 })] })],
             }),
             new TableCell({
               shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
               margins: { top: 50, bottom: 50, left: 100, right: 100 },
-              children: [new Paragraph({ children: [new TextRun({ text: String(row.responses), size: 16 })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: String(row.responses), size: 18 })] })],
             }),
           ],
         }),
@@ -518,20 +540,82 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
   if (data.includeComments) {
     bodyBlocks.push(
       new Paragraph({
-        children: [new TextRun({ text: 'Stakeholder Comments', bold: true, size: 21, color: INK_HEX })],
+        children: [new TextRun({ text: 'Stakeholder Comments', bold: true, size: 24, color: INK_HEX })],
         spacing: { before: 280, after: 110 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: 'No comments have been submitted yet \u2014 free-text feedback is not yet collected on this questionnaire.',
-            italics: true,
-            size: 17,
-            color: MUTED_HEX,
-          }),
-        ],
-      }),
+      })
     );
+
+    const comments = data.selectedCommentsList || [];
+    if (comments.length === 0) {
+      bodyBlocks.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'No stakeholder comments selected for display.',
+              italics: true,
+              size: 18,
+              color: MUTED_HEX,
+            }),
+          ],
+        })
+      );
+    } else {
+      const commentsHeaderRow = new TableRow({
+        tableHeader: true,
+        children: [
+          new TableCell({
+            shading: { fill: BRAND_HEX },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 100, right: 100 },
+            width: { size: 8, type: WidthType.PERCENTAGE },
+            children: [new Paragraph({ children: [new TextRun({ text: '#', bold: true, color: 'FFFFFF', size: 18 })] })],
+          }),
+          new TableCell({
+            shading: { fill: BRAND_HEX },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 100, right: 100 },
+            width: { size: 92, type: WidthType.PERCENTAGE },
+            children: [new Paragraph({ children: [new TextRun({ text: 'Feedback / Comments', bold: true, color: 'FFFFFF', size: 18 })] })],
+          }),
+        ]
+      });
+
+      const commentRows = comments.map(
+        (c, idx) =>
+          new TableRow({
+            children: [
+              new TableCell({
+                shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
+                margins: { top: 50, bottom: 50, left: 100, right: 100 },
+                children: [new Paragraph({ children: [new TextRun({ text: String(idx + 1), size: 18 })] })],
+              }),
+              new TableCell({
+                shading: { fill: idx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' },
+                margins: { top: 50, bottom: 50, left: 100, right: 100 },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `"${c.comment}"`,
+                        italics: true,
+                        size: 18,
+                        color: '1E293B'
+                      })
+                    ]
+                  })
+                ],
+              })
+            ]
+          })
+      );
+
+      bodyBlocks.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [commentsHeaderRow, ...commentRows],
+        })
+      );
+    }
   }
 
   /* ---------------- Running header / footer for content pages ---------------- */

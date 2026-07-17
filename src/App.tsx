@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation, Archive, Database, UserCog } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
 import { NotificationBell } from './components/NotificationBell';
+import { EmployeeNotificationBell } from './components/EmployeeNotificationBell';
 import { Shell } from './layouts/Shell';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -722,9 +723,25 @@ export default function App() {
         title={activeTitle}
         pageHeading={pageHeading}
         renderDropdown={renderSidebarDropdown}
+        sidebarExtra={(isCollapsed) =>
+          !isAdmin && (
+            <EmployeeNotificationBell
+              userEmail={account || ''}
+              surveys={surveys}
+              partnerCompanies={partnerCompanies}
+              responses={responses}
+              onFillForm={(id) => {
+                setSelectedSurveyId(id);
+                setActivePage('fill-form');
+              }}
+              variant="sidebar"
+              isSidebarCollapsed={isCollapsed}
+            />
+          )
+        }
         action={
           <div className="flex items-center divide-x divide-blue-400/25">
-            {isAdmin && (
+            {isAdmin ? (
               <div className="pr-3">
                 <NotificationBell
                   notifications={notifications}
@@ -733,8 +750,22 @@ export default function App() {
                   onViewAll={() => setActivePage('notifications')}
                 />
               </div>
+            ) : (
+              <div className="pr-3">
+                <EmployeeNotificationBell
+                  userEmail={account || ''}
+                  surveys={surveys}
+                  partnerCompanies={partnerCompanies}
+                  responses={responses}
+                  onFillForm={(id) => {
+                    setSelectedSurveyId(id);
+                    setActivePage('fill-form');
+                  }}
+                  variant="header"
+                />
+              </div>
             )}
-            <div className={isAdmin ? 'px-3' : 'pr-3'}>
+            <div className="px-3">
               <button
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition cursor-pointer ${
                   darkMode ? 'bg-white/10 text-white' : 'text-blue-100 hover:text-white'
