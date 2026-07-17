@@ -15,6 +15,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -153,6 +154,17 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
     }
   };
 
+  const radarTickFormatter = (value: string) => {
+    if (!composite) return value;
+    const row = sectionChartData.find((r) => r.section === value);
+    if (!row) return value;
+    const companyVal = row[composite.company];
+    const peerVal = row[PEER_LABEL];
+    const companyStr = typeof companyVal === 'number' ? companyVal.toFixed(1) : '0.0';
+    const peerStr = typeof peerVal === 'number' ? peerVal.toFixed(1) : '0.0';
+    return `${value} (${companyStr} / ${peerStr})`;
+  };
+
   return (
     <div className="space-y-5">
       {/* Header / always-visible back option */}
@@ -172,20 +184,17 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
         <aside className="panel h-fit space-y-6 lg:sticky lg:top-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">1. Category</h3>
-            <div className="segmented-control mt-2 grid grid-cols-3">
+            <select
+              className="field mt-2"
+              value={category}
+              onChange={(event) => setCategory(event.target.value as SurveyType)}
+            >
               {CATEGORIES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setCategory(type)}
-                  className={`w-full py-2 text-center text-xs font-semibold ${
-                    category === type ? 'segmented-active text-[#0063a9] shadow-sm dark:text-blue-400' : ''
-                  }`}
-                >
+                <option key={type} value={type}>
                   {surveyTypeDisplayLabel[type]}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <div>
@@ -305,36 +314,71 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
                   </div>
 
                   {graphs.bar && (
-                    <div className="mt-6">
-                      <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Bar Graph</h4>
-                      <div ref={barRef} className="h-72 w-full bg-white dark:bg-slate-900">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={sectionChartData} margin={{ top: 10, right: 20, bottom: 10, left: -8 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="section" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={48} />
-                            <YAxis domain={sectionAxisDomain} tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Legend layout="vertical" verticalAlign="middle" align="right" iconSize={10} wrapperStyle={{ fontSize: 11, lineHeight: '20px' }} />
-                            <Bar dataKey={composite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey={PEER_LABEL} fill={PEER_COLOR} radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                    <div className="mt-4">
+                      <h4 className="mb-1 text-xs font-bold text-slate-700 dark:text-slate-200">Section Scores — Bar Graph</h4>
+                      <div ref={barRef} className="bg-white p-5 rounded-lg block dark:bg-slate-900">
+                        {/* HTML legend placed vertically on the left, above the chart */}
+                        <div className="mb-4 block text-left text-[11px] pl-2">
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: PRIMARY_COLOR }} />
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">{composite.company}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: PEER_COLOR }} />
+                            <span className="font-semibold text-slate-500 dark:text-slate-400">{PEER_LABEL}</span>
+                          </div>
+                        </div>
+                        {/* Centered Bar Chart */}
+                        <div className="h-[210px] w-full block">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={sectionChartData} margin={{ top: 24, right: 10, bottom: 5, left: -8 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                              <XAxis dataKey="section" tick={{ fontSize: 9.5 }} interval={0} height={24} />
+                              <YAxis domain={sectionAxisDomain} tick={{ fontSize: 10 }} />
+                              <Tooltip />
+                              <Bar dataKey={composite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                <LabelList dataKey={composite.company} position="top" formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val} style={{ fontSize: 13, fill: PRIMARY_COLOR, fontWeight: 'bold' }} />
+                              </Bar>
+                              <Bar dataKey={PEER_LABEL} fill={PEER_COLOR} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                <LabelList dataKey={PEER_LABEL} position="top" formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val} style={{ fontSize: 13, fill: PEER_COLOR, fontWeight: 'bold' }} />
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {graphs.radar && (
-                    <div className="mt-6">
-                      <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Radar Graph</h4>
-                      <div ref={radarRef} className="h-80 w-full bg-white dark:bg-slate-900">
+                    <div className="mt-4">
+                      <h4 className="mb-1 text-xs font-bold text-slate-700 dark:text-slate-200">Section Scores — Radar Graph</h4>
+                      <div ref={radarRef} className="h-[265px] w-full bg-white dark:bg-slate-900">
                         <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={sectionChartData} outerRadius="70%" margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                          <RadarChart data={sectionChartData} outerRadius="90%" margin={{ top: 20, right: 10, bottom: 0, left: 10 }}>
                             <PolarGrid />
-                            <PolarAngleAxis dataKey="section" tick={{ fontSize: 11 }} />
-                            <PolarRadiusAxis domain={sectionAxisDomain} tick={{ fontSize: 10 }} />
-                            <Radar name={composite.company} dataKey={composite.company} stroke={PRIMARY_COLOR} fill={PRIMARY_COLOR} fillOpacity={0.35} />
-                            <Radar name={PEER_LABEL} dataKey={PEER_LABEL} stroke={PEER_COLOR} fill={PEER_COLOR} fillOpacity={0.3} />
-                            <Legend layout="vertical" verticalAlign="middle" align="right" iconSize={10} wrapperStyle={{ fontSize: 11, lineHeight: '20px' }} />
+                            <PolarAngleAxis dataKey="section" tick={{ fontSize: 10 }} tickFormatter={radarTickFormatter} />
+                            <PolarRadiusAxis domain={sectionAxisDomain} tick={{ fontSize: 9 }} />
+                            <Radar
+                              name={composite.company}
+                              dataKey={composite.company}
+                              stroke={PRIMARY_COLOR}
+                              fill={PRIMARY_COLOR}
+                              fillOpacity={0.35}
+                              isAnimationActive={false}
+                            >
+                              <LabelList dataKey={composite.company} position="top" formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val} style={{ fontSize: 11, fill: PRIMARY_COLOR, fontWeight: 'bold' }} />
+                            </Radar>
+                            <Radar
+                              name={PEER_LABEL}
+                              dataKey={PEER_LABEL}
+                              stroke={PEER_COLOR}
+                              fill={PEER_COLOR}
+                              fillOpacity={0.3}
+                              isAnimationActive={false}
+                            >
+                              <LabelList dataKey={PEER_LABEL} position="bottom" formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val} style={{ fontSize: 11, fill: PEER_COLOR, fontWeight: 'bold' }} />
+                            </Radar>
+                            <Legend verticalAlign="top" align="left" layout="vertical" iconSize={10} wrapperStyle={{ fontSize: 10, paddingBottom: 12, left: 0 }} />
                             <Tooltip />
                           </RadarChart>
                         </ResponsiveContainer>
@@ -351,14 +395,17 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
                     {graphs.trend && (
                       <div className="mt-6">
                         <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Score Trend</h4>
-                        <div ref={trendRef} className="h-32 w-full bg-white dark:bg-slate-900">
+                        <div ref={trendRef} className="h-48 w-full bg-white dark:bg-slate-900">
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={trendChartData} margin={{ top: 6, right: 12, bottom: 0, left: -20 }}>
+                            <LineChart data={trendChartData} margin={{ top: 20, right: 16, bottom: 5, left: -10 }}>
                               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                              <XAxis dataKey="label" tick={{ fontSize: 6 }} tickLine={false} />
-                              <YAxis domain={[0, 100]} tick={{ fontSize: 6 }} tickLine={false} width={24} />
+                              <XAxis dataKey="label" tick={{ fontSize: 9 }} tickLine={false} />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickLine={false} width={30} />
                               <Tooltip />
-                              <Line type="monotone" dataKey="score" name={composite.company} stroke={PRIMARY_COLOR} strokeWidth={1.25} dot={{ r: 1.75 }} connectNulls />
+                              <Legend verticalAlign="top" align="left" layout="horizontal" iconSize={10} wrapperStyle={{ fontSize: 10, paddingBottom: 10, left: 0 }} />
+                              <Line type="monotone" dataKey="score" name={composite.company} stroke={PRIMARY_COLOR} strokeWidth={2} dot={{ r: 3 }} connectNulls isAnimationActive={false}>
+                                <LabelList dataKey="score" position="top" formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val} style={{ fontSize: 13, fill: PRIMARY_COLOR, fontWeight: 'bold' }} />
+                              </Line>
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -411,7 +458,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
       </div>
 
       {/* Bottom bar: always-visible cancel + export */}
-      <div className="panel sticky bottom-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="panel sticky bottom-4 flex flex-wrap items-center justify-between gap-3 shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 z-10">
         <button type="button" onClick={onBack} className="secondary-button">
           Cancel
         </button>

@@ -226,9 +226,9 @@ export async function exportCompanyReportAsPDF(data: CompanyReportData) {
 
   // Bar/radar: compact, roughly half the content width so both sit comfortably on one A4 page.
   // Trend: wider and shorter, spanning most of the content width so the x-axis has room to breathe.
-  if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar, 0.46);
-  if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar, 0.46);
-  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend, 0.8);
+  if (data.graphs.bar) await addImageSection('Section Scores \u2014 Bar Graph', data.chartImages.bar, 0.9);
+  if (data.graphs.radar) await addImageSection('Section Scores \u2014 Radar Graph', data.chartImages.radar, 0.9);
+  if (data.graphs.trend) await addImageSection('Score Trend', data.chartImages.trend, 0.9);
 
   if (data.graphs.perQuestion) {
     ensureSpace(56);
@@ -391,29 +391,79 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
   /* ---------------- Body content ---------------- */
   const bodyBlocks: (Paragraph | Table)[] = [];
 
+  const scoreSummaryTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 8, color: RULE_HEX },
+      bottom: { style: BorderStyle.SINGLE, size: 8, color: RULE_HEX },
+      left: { style: BorderStyle.SINGLE, size: 8, color: RULE_HEX },
+      right: { style: BorderStyle.SINGLE, size: 8, color: RULE_HEX },
+      insideVertical: { style: BorderStyle.SINGLE, size: 4, color: RULE_HEX },
+      insideHorizontal: { style: BorderStyle.NIL },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            shading: { fill: 'F8FAFC' },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            children: [
+              new Paragraph({
+                spacing: { after: 40 },
+                children: [new TextRun({ text: 'COMPOSITE SCORE', bold: true, size: 15, color: MUTED_HEX })],
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100`, bold: true, size: 28, color: BRAND_HEX })],
+              }),
+            ],
+          }),
+          new TableCell({
+            shading: { fill: 'F8FAFC' },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            children: [
+              new Paragraph({
+                spacing: { after: 40 },
+                children: [new TextRun({ text: 'RATING BAND', bold: true, size: 15, color: MUTED_HEX })],
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: data.composite.band.label, bold: true, size: 22, color: INK_HEX })],
+              }),
+            ],
+          }),
+          new TableCell({
+            shading: { fill: 'F8FAFC' },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 140, bottom: 140, left: 140, right: 140 },
+            children: [
+              new Paragraph({
+                spacing: { after: 40 },
+                children: [new TextRun({ text: 'EVALUATIONS', bold: true, size: 15, color: MUTED_HEX })],
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: String(data.composite.evaluationCount), bold: true, size: 22, color: INK_HEX })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
   bodyBlocks.push(
     new Paragraph({
       children: [new TextRun({ text: 'Executive Summary', bold: true, size: 26, color: INK_HEX })],
       spacing: { after: 160 },
     }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Composite Score:  ', bold: true, size: 19 }),
-        new TextRun({ text: `${data.composite.compositeScore.toFixed(1)} / 100    `, size: 19 }),
-        new TextRun({ text: 'Rating Band:  ', bold: true, size: 19 }),
-        new TextRun({ text: `${data.composite.band.label}    `, size: 19 }),
-        new TextRun({ text: 'Evaluations:  ', bold: true, size: 19 }),
-        new TextRun({ text: String(data.composite.evaluationCount), size: 19 }),
-      ],
-      border: { bottom: { color: RULE_HEX, space: 8, style: BorderStyle.SINGLE, size: 6 } },
-      spacing: { after: 220 },
-    }),
+    scoreSummaryTable,
+    new Paragraph({ spacing: { before: 180, after: 180 } })
   );
 
   // Bar/radar: compact (~45% of the ~624px content width) so both fit cleanly on one page.
   // Trend: wider (~80%) with a short, wide aspect so the x-axis has room, mirroring the dashboard view.
-  if (data.graphs.bar) bodyBlocks.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores \u2014 Bar Graph', 280)));
-  if (data.graphs.radar) bodyBlocks.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores \u2014 Radar Graph', 280)));
+  if (data.graphs.bar) bodyBlocks.push(...(await imageParagraph(data.chartImages.bar, 'Section Scores \u2014 Bar Graph', 500)));
+  if (data.graphs.radar) bodyBlocks.push(...(await imageParagraph(data.chartImages.radar, 'Section Scores \u2014 Radar Graph', 500)));
   if (data.graphs.trend) bodyBlocks.push(...(await imageParagraph(data.chartImages.trend, 'Score Trend', 500)));
 
   if (data.graphs.perQuestion) {
@@ -518,6 +568,15 @@ export async function exportCompanyReportAsDocx(data: CompanyReportData) {
   });
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+          },
+        },
+      },
+    },
     sections: [
       { properties: {}, children: coverChildren },
       { properties: {}, headers: { default: header }, footers: { default: footer }, children: bodyBlocks },

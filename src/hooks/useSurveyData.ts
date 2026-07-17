@@ -988,13 +988,18 @@ export function useSurveyData(accounts: SimulatableAccount[] = []) {
 
         let loadedResponses: SurveyResponse[] = [];
         const savedResponses = localStorage.getItem('survey_analytics_responses_v6');
-        if (savedResponses) {
-          loadedResponses = JSON.parse(savedResponses).map(normalizeSurveyResponse);
+        let parsedResponses: any[] = [];
+        try {
+          parsedResponses = savedResponses ? JSON.parse(savedResponses) : [];
+        } catch (e) {}
+
+        if (savedResponses && parsedResponses.length > 0) {
+          loadedResponses = parsedResponses.map(normalizeSurveyResponse);
           localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(loadedResponses));
         } else {
-          loadedResponses = [];
-          localStorage.setItem('survey_analytics_responses_v6', JSON.stringify([]));
-          localStorage.setItem('survey_analytics_full_dataset_active', 'false');
+          loadedResponses = generateAllMockResponses(loadedSurveys, loadedCompanies, FALLBACK_NON_ADMIN_USERS);
+          localStorage.setItem('survey_analytics_responses_v6', JSON.stringify(loadedResponses));
+          localStorage.setItem('survey_analytics_full_dataset_active', 'true');
         }
 
         if (isMountedRef.current) {
