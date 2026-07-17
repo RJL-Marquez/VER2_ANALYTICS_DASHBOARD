@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   BarChart3,
@@ -124,6 +124,7 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
 
   const anyGraphSelected = graphs.bar || graphs.radar || graphs.trend || graphs.perQuestion || includeComments;
   const canRunExport = Boolean(canExport && composite && anyGraphSelected && !isExporting);
+  const contentPageCount = graphs.trend || graphs.perQuestion || includeComments ? 2 : 1;
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (!composite || !selectedCompany) return;
@@ -258,127 +259,150 @@ export function CompanyReportBuilderPage({ responses, partnerCompanies, canExpor
           </div>
         </aside>
 
-        {/* Right: scrollable preview */}
+        {/* Right: paginated print preview */}
         <section className="panel flex flex-col">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Preview</h3>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Scroll to review the full report</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">Scroll to review each page — shown as it will print</span>
           </div>
 
-          <div className="max-h-[75vh] flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-100 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-8">
+          <div className="max-h-[75vh] flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-200/70 p-6 dark:border-slate-800 dark:bg-slate-950/60 sm:p-10">
             {!composite ? (
               <div className="flex h-64 items-center justify-center text-center text-sm text-slate-400 dark:text-slate-500">
                 Select a category and company on the left to generate a preview.
               </div>
             ) : (
-              <div className="mx-auto max-w-[760px] space-y-8 rounded-lg bg-white p-8 shadow dark:bg-slate-900 sm:p-10">
-                <header className="border-b border-slate-100 pb-6 dark:border-slate-800">
-                  <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#0063a9] dark:text-blue-400">
-                    Company Performance Report
-                  </p>
-                  <h1 className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100">{composite.company}</h1>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {surveyTypeDisplayLabel[category]} · Generated{' '}
-                    {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mx-auto flex flex-col items-center gap-10">
+                {/* Page 1 — Cover */}
+                <PagedSheet pageLabel="Page 1 · Cover">
+                  <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                    <img src="/microgenesis_logo.png" alt="Microgenesis" className="h-14 w-auto" />
+                    <div className="mt-7 h-px w-20 bg-[#0063a9]" />
+                    <h1 className="mt-7 text-2xl font-bold text-slate-800 dark:text-slate-100">Company Performance Report</h1>
+                    <p className="mt-2 text-lg font-bold text-[#0063a9]">{composite.company}</p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {surveyTypeDisplayLabel[category]} · Generated{' '}
+                      {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                    <div className="mt-20 border-t border-slate-100 pt-4 text-center dark:border-slate-800">
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Prepared for internal review by the</p>
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Microgenesis Supplier Management System</p>
+                      <p className="mt-1 text-[11px] italic text-slate-400 dark:text-slate-500">
+                        This document is confidential and intended solely for the named recipient.
+                      </p>
+                    </div>
+                  </div>
+                </PagedSheet>
+
+                {/* Page 2 — Executive summary, bar graph, radar graph */}
+                <PagedSheet pageLabel="Page 2" footerRight={`Page 1 of ${contentPageCount}`}>
+                  <ReportPageHeader company={composite.company} />
+                  <h2 className="mt-6 text-lg font-bold text-slate-800 dark:text-slate-100">Executive Summary</h2>
+                  <div className="mt-3 grid grid-cols-3 gap-3">
                     <SummaryStat label="Composite score" value={`${formatNumber(composite.compositeScore)} / 100`} />
                     <SummaryStat label="Rating band" value={composite.band.label} />
                     <SummaryStat label="Evaluations" value={String(composite.evaluationCount)} />
                   </div>
-                </header>
 
-                {graphs.bar && (
-                  <div>
-                    <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Bar Graph</h4>
-                    <div ref={barRef} className="h-72 w-full bg-white dark:bg-slate-900">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={sectionChartData} margin={{ top: 10, right: 20, bottom: 10, left: -8 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="section" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={48} />
-                          <YAxis domain={sectionAxisDomain} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                          <Bar dataKey={composite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
-                          <Bar dataKey={PEER_LABEL} fill={PEER_COLOR} radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                  {graphs.bar && (
+                    <div className="mt-6">
+                      <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Bar Graph</h4>
+                      <div ref={barRef} className="h-72 w-full bg-white dark:bg-slate-900">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={sectionChartData} margin={{ top: 10, right: 20, bottom: 10, left: -8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="section" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={48} />
+                            <YAxis domain={sectionAxisDomain} tick={{ fontSize: 11 }} />
+                            <Tooltip />
+                            <Legend layout="vertical" verticalAlign="middle" align="right" iconSize={10} wrapperStyle={{ fontSize: 11, lineHeight: '20px' }} />
+                            <Bar dataKey={composite.company} fill={PRIMARY_COLOR} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey={PEER_LABEL} fill={PEER_COLOR} radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {graphs.radar && (
-                  <div>
-                    <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Radar Graph</h4>
-                    <div ref={radarRef} className="h-80 w-full bg-white dark:bg-slate-900">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart data={sectionChartData} outerRadius="75%" margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                          <PolarGrid />
-                          <PolarAngleAxis dataKey="section" tick={{ fontSize: 11 }} />
-                          <PolarRadiusAxis domain={sectionAxisDomain} tick={{ fontSize: 10 }} />
-                          <Radar name={composite.company} dataKey={composite.company} stroke={PRIMARY_COLOR} fill={PRIMARY_COLOR} fillOpacity={0.35} />
-                          <Radar name={PEER_LABEL} dataKey={PEER_LABEL} stroke={PEER_COLOR} fill={PEER_COLOR} fillOpacity={0.3} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                          <Tooltip />
-                        </RadarChart>
-                      </ResponsiveContainer>
+                  {graphs.radar && (
+                    <div className="mt-6">
+                      <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Section Scores — Radar Graph</h4>
+                      <div ref={radarRef} className="h-80 w-full bg-white dark:bg-slate-900">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={sectionChartData} outerRadius="70%" margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                            <PolarGrid />
+                            <PolarAngleAxis dataKey="section" tick={{ fontSize: 11 }} />
+                            <PolarRadiusAxis domain={sectionAxisDomain} tick={{ fontSize: 10 }} />
+                            <Radar name={composite.company} dataKey={composite.company} stroke={PRIMARY_COLOR} fill={PRIMARY_COLOR} fillOpacity={0.35} />
+                            <Radar name={PEER_LABEL} dataKey={PEER_LABEL} stroke={PEER_COLOR} fill={PEER_COLOR} fillOpacity={0.3} />
+                            <Legend layout="vertical" verticalAlign="middle" align="right" iconSize={10} wrapperStyle={{ fontSize: 11, lineHeight: '20px' }} />
+                            <Tooltip />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </PagedSheet>
 
-                {graphs.trend && (
-                  <div>
-                    <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Score Trend</h4>
-                    <div ref={trendRef} className="h-32 w-full bg-white dark:bg-slate-900">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trendChartData}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="score" name={composite.company} stroke={PRIMARY_COLOR} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                    {trendChartData.length === 0 && (
-                      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Not enough dated submissions yet to plot a trend.</p>
+                {/* Page 3 — Score trend, per-question table, comments */}
+                {(graphs.trend || graphs.perQuestion || includeComments) && (
+                  <PagedSheet pageLabel="Page 3" footerRight={`Page 2 of ${contentPageCount}`}>
+                    <ReportPageHeader company={composite.company} />
+
+                    {graphs.trend && (
+                      <div className="mt-6">
+                        <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Score Trend</h4>
+                        <div ref={trendRef} className="h-32 w-full bg-white dark:bg-slate-900">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendChartData} margin={{ top: 6, right: 12, bottom: 0, left: -20 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                              <XAxis dataKey="label" tick={{ fontSize: 6 }} tickLine={false} />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 6 }} tickLine={false} width={24} />
+                              <Tooltip />
+                              <Line type="monotone" dataKey="score" name={composite.company} stroke={PRIMARY_COLOR} strokeWidth={1.25} dot={{ r: 1.75 }} connectNulls />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {trendChartData.length === 0 && (
+                          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Not enough dated submissions yet to plot a trend.</p>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {graphs.perQuestion && (
-                  <div>
-                    <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Per-Question Average Rating</h4>
-                    <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-                      <table className="w-full text-left text-sm">
-                        <thead className="bg-[#0063a9] text-white">
-                          <tr>
-                            <th className="px-3 py-2 font-semibold">Question</th>
-                            <th className="px-3 py-2 font-semibold">Average Rating</th>
-                            <th className="px-3 py-2 font-semibold">Responses</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {questionRows.map((row, idx) => (
-                            <tr key={row.question} className={idx % 2 === 0 ? 'bg-slate-50 dark:bg-slate-800/40' : ''}>
-                              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{row.question}</td>
-                              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{formatNumber(row.average)}</td>
-                              <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{row.responses}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                    {graphs.perQuestion && (
+                      <div className="mt-6">
+                        <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Per-Question Average Rating</h4>
+                        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-[#0063a9] text-white">
+                              <tr>
+                                <th className="px-3 py-2 font-semibold">Question</th>
+                                <th className="px-3 py-2 font-semibold">Average Rating</th>
+                                <th className="px-3 py-2 font-semibold">Responses</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {questionRows.map((row, idx) => (
+                                <tr key={row.question} className={idx % 2 === 0 ? 'bg-slate-50 dark:bg-slate-800/40' : ''}>
+                                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{row.question}</td>
+                                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{formatNumber(row.average)}</td>
+                                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{row.responses}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
 
-                {includeComments && (
-                  <div>
-                    <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Stakeholder Comments</h4>
-                    <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm italic text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                      No comments have been submitted yet — free-text feedback is not yet collected on this questionnaire.
-                    </p>
-                  </div>
+                    {includeComments && (
+                      <div className="mt-6">
+                        <h4 className="mb-2 font-semibold text-slate-700 dark:text-slate-200">Stakeholder Comments</h4>
+                        <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm italic text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                          No comments have been submitted yet — free-text feedback is not yet collected on this questionnaire.
+                        </p>
+                      </div>
+                    )}
+                  </PagedSheet>
                 )}
               </div>
             )}
@@ -438,6 +462,52 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{value}</p>
+    </div>
+  );
+}
+
+/** A single A4-proportioned sheet in the print preview, styled like a Word/PDF print-layout page. */
+function PagedSheet({
+  children,
+  pageLabel,
+  footerRight,
+}: {
+  children: ReactNode;
+  pageLabel: string;
+  footerRight?: string;
+}) {
+  const PAGE_WIDTH = 640;
+  const PAGE_HEIGHT = Math.round(PAGE_WIDTH * (297 / 210)); // A4 aspect ratio
+  return (
+    <div className="flex flex-col items-center">
+      <div
+        className="w-full rounded-sm bg-white shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10"
+        style={{ width: PAGE_WIDTH, minHeight: PAGE_HEIGHT, maxWidth: '100%' }}
+      >
+        <div className="flex h-full flex-col px-10 py-9 sm:px-12">
+          <div className="flex-1">{children}</div>
+          {footerRight && (
+            <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-3 text-[10px] text-slate-400 dark:border-slate-800 dark:text-slate-500">
+              <span>Microgenesis Supplier Management System — Confidential</span>
+              <span>{footerRight}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-[11px] font-medium text-slate-400 dark:text-slate-500">{pageLabel}</p>
+    </div>
+  );
+}
+
+/** The small running header (logo + company name) repeated at the top of each content page, mirroring the export. */
+function ReportPageHeader({ company }: { company: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+      <img src="/microgenesis_logo.png" alt="Microgenesis" className="h-6 w-auto" />
+      <div className="text-right">
+        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{company}</p>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500">Company Performance Report</p>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { BarChart3, Bell, FileText, LayoutDashboard, Moon, Search, Sun, Table2, FilePlus, ClipboardCheck, ArrowLeft, LogOut, ShieldAlert, Users, Presentation, Archive, Database, UserCog } from 'lucide-react';
 import { AccountMenu } from './components/AccountMenu';
-import { FilterPanel } from './components/FilterPanel';
 import { NotificationBell } from './components/NotificationBell';
 import { Shell } from './layouts/Shell';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -765,20 +764,6 @@ export default function App() {
         <div className="space-y-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1">{pageContent}</div>
-            
-            {/* Show Filter Panel only on Admin-view pages that need filters */}
-            {activePage === 'reports' && (
-              <aside className="xl:w-80">
-                <FilterPanel
-                  filters={filters}
-                  partnerCompanies={userAccessiblePartnerCompanies}
-                  onChange={setFilters}
-                  onReset={() => setFilters(initialFilters)}
-                  isDashboard={false}
-                  allowedSurveyTypes={userPermissions.surveyTypes}
-                />
-              </aside>
-            )}
           </div>
           
           {activePage !== 'notifications' && activePage !== 'create-form' && activePage !== 'fill-form' && activePage !== 'present' && (
